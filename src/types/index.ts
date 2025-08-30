@@ -17,19 +17,22 @@ export interface Arrow {
   control?: { x: number; y: number };
 }
 
-export type Mode = 'select' | 'arrow';
+export type Mode = 'select' | 'arrow' | 'trajectory';
 
 export interface BoardState {
   tokens: Token[];
   arrows: Arrow[];
+  trajectories: Trajectory[];
   mode: Mode;
   arrowStyle: 'solid' | 'dashed';
+  trajectoryType: 'pass' | 'movement';
   gridSnap: boolean;
   zoom: number;
   pan: { x: number; y: number };
   showFullField: boolean;
   selectedTokenId: string | null;
   selectedArrowId: string | null;
+  selectedTrajectoryId: string | null;
 }
 
 export interface HistoryState {
@@ -45,6 +48,13 @@ export interface Formation {
 export interface Point {
   x: number;
   y: number;
+}
+
+export interface Trajectory {
+  id: string;
+  points: Point[];
+  type: 'pass' | 'movement';
+  style: 'solid' | 'dashed';
 }
 
 export interface PitchDimensions {

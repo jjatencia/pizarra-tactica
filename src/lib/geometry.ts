@@ -58,10 +58,19 @@ export const screenToSVG = (
   pan: Point
 ): Point => {
   const rect = svgElement.getBoundingClientRect();
+  const viewBox = svgElement.viewBox.baseVal;
   
-  // Simple coordinate transformation
-  const x = ((screenPoint.x - rect.left) - pan.x) / zoom;
-  const y = ((screenPoint.y - rect.top) - pan.y) / zoom;
+  // Calculate the scale factor between screen and SVG coordinates
+  const scaleX = viewBox.width / rect.width;
+  const scaleY = viewBox.height / rect.height;
+  
+  // Convert screen coordinates to SVG coordinates
+  const relativeX = (screenPoint.x - rect.left) * scaleX;
+  const relativeY = (screenPoint.y - rect.top) * scaleY;
+  
+  // Apply zoom and pan transformations
+  const x = (relativeX - pan.x) / zoom + viewBox.x;
+  const y = (relativeY - pan.y) / zoom + viewBox.y;
   
   return { x, y };
 };

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { BoardState, Token, Arrow, Team, Formation, HistoryState } from '../types';
+import { BoardState, Token, Arrow, Trajectory, Team, Formation, HistoryState } from '../types';
 import { loadFromStorage, saveToStorage } from '../lib/localStorage';
 
 interface BoardStore extends BoardState {
@@ -18,9 +18,16 @@ interface BoardStore extends BoardState {
   removeArrow: (id: string) => void;
   selectArrow: (id: string | null) => void;
   
+  // Trajectory actions
+  addTrajectory: (points: { x: number; y: number }[], type: 'pass' | 'movement') => void;
+  updateTrajectory: (id: string, updates: Partial<Trajectory>) => void;
+  removeTrajectory: (id: string) => void;
+  selectTrajectory: (id: string | null) => void;
+  
   // Mode actions
   setMode: (mode: BoardState['mode']) => void;
   setArrowStyle: (style: 'solid' | 'dashed') => void;
+  setTrajectoryType: (type: 'pass' | 'movement') => void;
   
   // View actions
   setZoom: (zoom: number) => void;
@@ -49,14 +56,17 @@ interface BoardStore extends BoardState {
 const initialState: BoardState = {
   tokens: [],
   arrows: [],
+  trajectories: [],
   mode: 'select',
   arrowStyle: 'solid',
+  trajectoryType: 'pass',
   gridSnap: false,
   zoom: 1,
   pan: { x: 0, y: 0 },
   showFullField: true,
   selectedTokenId: null,
   selectedArrowId: null,
+  selectedTrajectoryId: null,
 };
 
 const initialHistory: HistoryState = {
@@ -161,7 +171,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     },
     
     selectToken: (id: string | null) => {
-      set({ selectedTokenId: id, selectedArrowId: null });
+      set({ selectedTokenId: id, selectedArrowId: null, selectedTrajectoryId: null });
     },
     
     addArrow: (from: { x: number; y: number }, to: { x: number; y: number }) => {
@@ -218,15 +228,75 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     },
     
     selectArrow: (id: string | null) => {
-      set({ selectedArrowId: id, selectedTokenId: null });
+      set({ selectedArrowId: id, selectedTokenId: null, selectedTrajectoryId: null });
     },
     
     setMode: (mode: BoardState['mode']) => {
-      set({ mode, selectedTokenId: null, selectedArrowId: null });
+      set({ mode, selectedTokenId: null, selectedArrowId: null, selectedTrajectoryId: null });
     },
     
     setArrowStyle: (arrowStyle: 'solid' | 'dashed') => {
       set({ arrowStyle });
+    },
+    
+    addTrajectory: (points: { x: number; y: number }[], type: 'pass' | 'movement') => {
+      const state = get();
+      const newTrajectory: Trajectory = {
+        id: generateId(),
+        points,
+        type,
+        style: type === 'pass' ? 'solid' : 'dashed',
+      };
+      
+      const newState = {
+        ...state,
+        trajectories: [...state.trajectories, newTrajectory],
+        selectedTrajectoryId: newTrajectory.id,
+      };
+      
+      set({
+        ...newState,
+        history: addToHistory(newState, state.history),
+      });
+    },
+    
+    updateTrajectory: (id: string, updates: Partial<Trajectory>) => {
+      const state = get();
+      const newTrajectories = state.trajectories.map(trajectory =>
+        trajectory.id === id ? { ...trajectory, ...updates } : trajectory
+      );
+      
+      const newState = {
+        ...state,
+        trajectories: newTrajectories,
+      };
+      
+      set({
+        ...newState,
+        history: addToHistory(newState, state.history),
+      });
+    },
+    
+    removeTrajectory: (id: string) => {
+      const state = get();
+      const newState = {
+        ...state,
+        trajectories: state.trajectories.filter(t => t.id !== id),
+        selectedTrajectoryId: state.selectedTrajectoryId === id ? null : state.selectedTrajectoryId,
+      };
+      
+      set({
+        ...newState,
+        history: addToHistory(newState, state.history),
+      });
+    },
+    
+    selectTrajectory: (id: string | null) => {
+      set({ selectedTrajectoryId: id, selectedTokenId: null, selectedArrowId: null });
+    },
+    
+    setTrajectoryType: (trajectoryType: 'pass' | 'movement') => {
+      set({ trajectoryType });
     },
     
     setZoom: (zoom: number) => {
@@ -356,14 +426,17 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       saveToStorage('boardState', {
         tokens: state.tokens,
         arrows: state.arrows,
+        trajectories: state.trajectories,
         mode: state.mode,
         arrowStyle: state.arrowStyle,
+        trajectoryType: state.trajectoryType,
         gridSnap: state.gridSnap,
         zoom: state.zoom,
         pan: state.pan,
         showFullField: state.showFullField,
         selectedTokenId: null, // Don't persist selection
         selectedArrowId: null,
+        selectedTrajectoryId: null,
       });
     },
     
@@ -375,6 +448,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
           ...savedState,
           selectedTokenId: null,
           selectedArrowId: null,
+          selectedTrajectoryId: null,
         };
         
         set({
@@ -392,6 +466,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       return JSON.stringify({
         tokens: state.tokens,
         arrows: state.arrows,
+        trajectories: state.trajectories,
         timestamp: new Date().toISOString(),
       }, null, 2);
     },
@@ -404,8 +479,10 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
             ...get(),
             tokens: parsed.tokens,
             arrows: parsed.arrows,
+            trajectories: parsed.trajectories || [],
             selectedTokenId: null,
             selectedArrowId: null,
+            selectedTrajectoryId: null,
           };
           
           set({
@@ -425,8 +502,10 @@ useBoardStore.subscribe((state) => {
   const currentState = {
     tokens: state.tokens,
     arrows: state.arrows,
+    trajectories: state.trajectories,
     mode: state.mode,
     arrowStyle: state.arrowStyle,
+    trajectoryType: state.trajectoryType,
     gridSnap: state.gridSnap,
     zoom: state.zoom,
     pan: state.pan,
