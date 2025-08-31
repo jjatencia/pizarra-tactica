@@ -50,13 +50,19 @@ function App() {
   
   // Calculate SVG dimensions to maintain aspect ratio
   const aspectRatio = viewBoxWidth / fieldHeight;
-  const toolbarHeight = 60; // Approximate toolbar height
-  const availableHeight = containerSize.height - toolbarHeight;
-  const availableWidth = containerSize.width;
+  
+  // More accurate toolbar height calculation for PWA
+  const toolbarHeight = 80; // Increased for PWA safe areas
+  const safeAreaBottom = 34; // Typical safe area bottom on iPad
+  const extraPadding = 20; // Extra padding for comfort
+  
+  const availableHeight = containerSize.height - toolbarHeight - safeAreaBottom - extraPadding;
+  const availableWidth = containerSize.width - 32; // Account for container padding
   
   let svgWidth = availableWidth;
   let svgHeight = availableWidth / aspectRatio;
   
+  // Ensure the field fits in available height with extra margin
   if (svgHeight > availableHeight) {
     svgHeight = availableHeight;
     svgWidth = availableHeight * aspectRatio;
@@ -97,17 +103,47 @@ function App() {
     clearCanvas,
   } = useSimpleDrawing(canvasRef);
   
-  // Handle container resize
+    // Handle container resize with PWA detection
   useEffect(() => {
     const updateSize = () => {
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
-        setContainerSize({ width: rect.width, height: rect.height });
+        
+        // Detect if we're in PWA mode
+        const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+        
+        let adjustedHeight = rect.height;
+        
+        if (isPWA) {
+          // In PWA mode, account for safe areas and ensure field is fully visible
+          const safeAreaTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-top') || '0');
+          const safeAreaBottom = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-bottom') || '0');
+          
+          // Use visual viewport if available (better for PWA)
+          if (window.visualViewport) {
+            adjustedHeight = window.visualViewport.height - safeAreaTop - safeAreaBottom;
+          } else {
+            adjustedHeight = window.innerHeight - safeAreaTop - safeAreaBottom;
+          }
+          
+          console.log('📱 PWA Mode - Adjusted height:', adjustedHeight, 'Original:', rect.height);
+        }
+        
+        setContainerSize({ width: rect.width, height: adjustedHeight });
       }
     };
-    
+
     updateSize();
     window.addEventListener('resize', updateSize);
+    
+    // Listen for visual viewport changes (PWA specific)
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', updateSize);
+      return () => {
+        window.removeEventListener('resize', updateSize);
+        window.visualViewport?.removeEventListener('resize', updateSize);
+      };
+    }
     
     return () => window.removeEventListener('resize', updateSize);
   }, []);
@@ -211,14 +247,18 @@ function App() {
   return (
     <div 
       ref={containerRef}
-      className="bg-gray-800 text-white overflow-hidden flex flex-col"
+      className="bg-gray-800 text-white overflow-hidden"
       style={{ 
         height: '100dvh',
-        minHeight: '100dvh'
+        minHeight: '100dvh',
+        display: 'grid',
+        gridTemplateRows: 'auto 1fr',
+        gridTemplateAreas: '"toolbar" "content"'
       }}
     >
       {/* Toolbar */}
-      <Toolbar
+      <div style={{ gridArea: 'toolbar', flexShrink: 0 }}>
+        <Toolbar
         svgRef={svgRef}
         onAddToken={handleAddToken}
         onAddObject={handleAddObject}
@@ -233,18 +273,29 @@ function App() {
         onUndoDraw={undoDraw}
         onRedoDraw={redoDraw}
         onClearCanvas={clearCanvas}
-      />
+        />
+      </div>
       
       {/* Main Content: Pitch */}
-      <main className="flex-1 flex items-center justify-center p-2">
-        <div id="board" className={clsx("w-full mx-auto shadow-2xl rounded-lg relative bg-gray-900 p-1", {
+      <main 
+        className="flex items-center justify-center p-2"
+        style={{ 
+          gridArea: 'content',
+          minHeight: 0,
+          height: '100%',
+          paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))'
+        }}
+      >
+        <div id="board" className={clsx("shadow-2xl rounded-lg relative bg-gray-900 p-1", {
           'erase-mode': mode === 'erase'
         })} style={{ 
           touchAction: 'none',
           aspectRatio: '105/68',
-          height: 'auto',
+          width: '100%',
+          height: '100%',
           maxWidth: '100%',
-          maxHeight: 'calc(100% - env(safe-area-inset-bottom) - 1rem)'
+          maxHeight: '100%',
+          objectFit: 'contain'
         }}>
           <div id="pitch" className="pitch w-full h-full rounded-md relative">
             <svg
