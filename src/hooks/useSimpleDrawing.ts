@@ -129,7 +129,7 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
       // For solid lines, draw immediately
       if (state.color === 'transparent') {
         // Eraser mode
-        ctx.lineWidth = 20;
+        ctx.lineWidth = 40; // Much wider eraser for better coverage
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.globalCompositeOperation = 'destination-out';
@@ -161,7 +161,7 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
             // Now draw the current dashed preview
             if (state.color === 'transparent') {
               // Eraser mode
-              ctx.lineWidth = 20;
+              ctx.lineWidth = 40; // Much wider eraser for better coverage
               ctx.lineCap = 'round';
               ctx.lineJoin = 'round';
               ctx.globalCompositeOperation = 'destination-out';
@@ -190,7 +190,7 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
           
           if (state.color === 'transparent') {
             // Eraser mode
-            ctx.lineWidth = 20;
+            ctx.lineWidth = 40; // Much wider eraser for better coverage
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
             ctx.globalCompositeOperation = 'destination-out';
