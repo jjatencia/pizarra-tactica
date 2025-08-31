@@ -88,13 +88,20 @@ export const PWAInstallPrompt: React.FC = () => {
               <p>Para instalar esta app en tu iPad:</p>
               <ol className="list-decimal list-inside space-y-1 text-xs">
                 <li>Asegúrate de estar en <strong>Safari</strong> (no Chrome ni otros navegadores)</li>
-                <li>Toca el botón de compartir <span className="inline-block">⤴️</span> en la barra inferior</li>
-                <li>Busca y selecciona "Añadir a pantalla de inicio"</li>
+                <li>Toca el botón de compartir <span className="inline-block">⤴️</span> en la barra inferior de Safari</li>
+                <li>Desplázate hacia abajo en el menú de opciones</li>
+                <li>Busca y selecciona "Añadir a pantalla de inicio" 📱</li>
                 <li>Confirma tocando "Añadir"</li>
               </ol>
-              <p className="text-xs text-yellow-400 mt-2">
-                ⚠️ Requisitos: Safari + HTTPS + visitar la página al menos 2 veces + interactuar con la página.
-              </p>
+              <div className="text-xs text-yellow-400 mt-2 space-y-1">
+                <p>⚠️ Si no aparece la opción "Añadir a pantalla de inicio":</p>
+                <ul className="list-disc list-inside ml-2 space-y-1">
+                  <li>Cierra Safari completamente y vuelve a abrir</li>
+                  <li>Asegúrate de estar en modo navegación normal (no privado)</li>
+                  <li>Verifica que estés en Safari (no en una app embebida)</li>
+                  <li>Intenta desde una nueva pestaña</li>
+                </ul>
+              </div>
             </div>
           ) : (
             <div className="text-sm text-slate-300">

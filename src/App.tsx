@@ -166,13 +166,13 @@ function App() {
                 id="preview-arrowhead-pass"
                 markerWidth="3"
                 markerHeight="3"
-                refX="2.5"
+                refX="0"
                 refY="1"
                 orient="auto"
                 markerUnits="strokeWidth"
               >
                 <path
-                  d="M0,0 L0,2 L2.5,1 z"
+                  d="M0,1 L2.5,0 L2.5,2 z"
                   fill="#8B5CF6"
                   stroke="none"
                 />
@@ -182,13 +182,13 @@ function App() {
                 id="preview-arrowhead-movement"
                 markerWidth="3"
                 markerHeight="3"
-                refX="2.5"
+                refX="0"
                 refY="1"
                 orient="auto"
                 markerUnits="strokeWidth"
               >
                 <path
-                  d="M0,0 L0,2 L2.5,1 z"
+                  d="M0,1 L2.5,0 L2.5,2 z"
                   fill="#F59E0B"
                   stroke="none"
                 />

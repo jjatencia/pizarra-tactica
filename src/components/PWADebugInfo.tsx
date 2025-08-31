@@ -11,12 +11,16 @@ export const PWADebugInfo: React.FC = () => {
         isLocalhost: window.location.hostname === 'localhost',
         userAgent: navigator.userAgent,
         isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent),
-        isSafari: /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent),
+        isSafari: /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent) && !/CriOS/.test(navigator.userAgent) && !/FxiOS/.test(navigator.userAgent),
         isStandalone: window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true,
         hasManifest: !!document.querySelector('link[rel="manifest"]'),
         hasServiceWorker: 'serviceWorker' in navigator,
         currentURL: window.location.href,
         referrer: document.referrer,
+        isInPrivateMode: false, // We'll detect this
+        manifestURL: document.querySelector('link[rel="manifest"]')?.getAttribute('href'),
+        hasAppleTouchIcon: !!document.querySelector('link[rel="apple-touch-icon"]'),
+        viewportMeta: document.querySelector('meta[name="viewport"]')?.getAttribute('content'),
       };
       setDebugInfo(info);
     };
@@ -52,11 +56,14 @@ export const PWADebugInfo: React.FC = () => {
         <div>📱 iOS: {debugInfo.isIOS ? '✅' : '❌'}</div>
         <div>🌐 Safari: {debugInfo.isSafari ? '✅' : '❌'}</div>
         <div>📋 Manifest: {debugInfo.hasManifest ? '✅' : '❌'}</div>
+        <div>🍎 Apple Touch Icon: {debugInfo.hasAppleTouchIcon ? '✅' : '❌'}</div>
         <div>⚙️ ServiceWorker: {debugInfo.hasServiceWorker ? '✅' : '❌'}</div>
         <div>📱 Standalone: {debugInfo.isStandalone ? '✅' : '❌'}</div>
-        <div className="pt-2 border-t border-slate-600">
+        <div className="pt-2 border-t border-slate-600 text-xs">
           <div>URL: {debugInfo.currentURL}</div>
-          <div>Referrer: {debugInfo.referrer || 'None'}</div>
+          <div>Manifest: {debugInfo.manifestURL || 'None'}</div>
+          <div>Viewport: {debugInfo.viewportMeta || 'None'}</div>
+          <div>User Agent: {debugInfo.userAgent?.substring(0, 50)}...</div>
         </div>
         {debugInfo.isIOS && !debugInfo.isSafari && (
           <div className="text-yellow-400 pt-2">
@@ -66,6 +73,11 @@ export const PWADebugInfo: React.FC = () => {
         {!debugInfo.isHTTPS && !debugInfo.isLocalhost && (
           <div className="text-red-400 pt-2">
             ❌ Se requiere HTTPS para PWA
+          </div>
+        )}
+        {debugInfo.isIOS && debugInfo.isSafari && debugInfo.isHTTPS && !debugInfo.isStandalone && (
+          <div className="text-blue-400 pt-2">
+            ℹ️ Todos los requisitos cumplidos. Si no aparece "Añadir a pantalla de inicio", puede ser que iOS aún no lo permita. Intenta cerrar Safari completamente y volver a abrir.
           </div>
         )}
       </div>
