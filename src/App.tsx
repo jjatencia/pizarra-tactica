@@ -2,20 +2,24 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import { useBoardStore } from './hooks/useBoardStore';
 import { usePointerInteractions } from './hooks/usePointerInteractions';
 import { useZoomPan } from './hooks/useZoomPan';
+import { useCanvasDrawing } from './hooks/useCanvasDrawing';
 import { Pitch } from './components/Pitch';
 import { Token } from './components/Token';
 import { ArrowsLayer } from './components/ArrowsLayer';
 import { TrajectoriesLayer } from './components/TrajectoriesLayer';
 import { Toolbar } from './components/Toolbar';
 import { PresetsPanel } from './components/PresetsPanel';
+import { FormationsModal } from './components/FormationsModal';
 import { Team } from './types';
 import { clampToField, snapToGrid } from './lib/geometry';
 
 function App() {
   const svgRef = useRef<SVGSVGElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [showPresets, setShowPresets] = useState(false);
+  const [showFormations, setShowFormations] = useState(false);
   
   const {
     tokens,
@@ -68,6 +72,25 @@ function App() {
     isDrawingTrajectory,
     trajectoryPreview,
   } = usePointerInteractions(svgRef, viewBoxWidth, fieldHeight);
+
+  // Canvas drawing
+  const {
+    isDrawing,
+    color: drawColor,
+    lineStyle: drawLineStyle,
+    canUndo: canUndoDraw,
+    canRedo: canRedoDraw,
+    startDrawing,
+    draw,
+    endDrawing,
+    undo: undoDraw,
+    redo: redoDraw,
+    setColor: setDrawColor,
+    setLineStyle: setDrawLineStyle,
+    // clearCanvas, // Commented out as not used yet
+    resizeCanvas,
+    saveHistory,
+  } = useCanvasDrawing(canvasRef);
   
   // Handle container resize
   useEffect(() => {
@@ -76,13 +99,20 @@ function App() {
         const rect = containerRef.current.getBoundingClientRect();
         setContainerSize({ width: rect.width, height: rect.height });
       }
+      resizeCanvas();
     };
     
     updateSize();
     window.addEventListener('resize', updateSize);
     
     return () => window.removeEventListener('resize', updateSize);
-  }, []);
+  }, [resizeCanvas]);
+
+  // Initialize canvas
+  useEffect(() => {
+    resizeCanvas();
+    saveHistory(); // Save initial blank state
+  }, [resizeCanvas, saveHistory]);
   
   // Load saved state on mount
   useEffect(() => {
@@ -118,6 +148,13 @@ function App() {
     
     addToken(team, position.x, position.y);
   }, [addToken, showFullField, fieldWidth, fieldHeight, viewBoxWidth, gridSnap]);
+
+  // Handle formation application
+  const handleApplyFormation = useCallback((team: Team, formation: string) => {
+    // This would need to be implemented in the store
+    // For now, we'll just close the modal
+    console.log(`Applying formation ${formation} to team ${team}`);
+  }, []);
   
   // Calculate transform for zoom and pan
   const transform = `translate(${pan.x}, ${pan.y}) scale(${zoom})`;
@@ -125,33 +162,54 @@ function App() {
   return (
     <div 
       ref={containerRef}
-      className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden"
+      className="bg-gray-800 text-white overflow-hidden h-screen flex flex-col"
     >
       {/* Toolbar */}
       <Toolbar
         svgRef={svgRef}
         onAddToken={handleAddToken}
         onShowPresets={() => setShowPresets(true)}
+        onShowFormations={() => setShowFormations(true)}
+        drawColor={drawColor}
+        drawLineStyle={drawLineStyle}
+        canUndoDraw={canUndoDraw}
+        canRedoDraw={canRedoDraw}
+        onSetDrawColor={setDrawColor}
+        onSetDrawLineStyle={setDrawLineStyle}
+        onUndoDraw={undoDraw}
+        onRedoDraw={redoDraw}
       />
       
-      {/* Main Board */}
-      <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
-        <div className="relative">
-          <svg
-            ref={svgRef}
-            width={svgWidth}
-            height={svgHeight}
-            viewBox={`0 0 ${viewBoxWidth} ${fieldHeight}`}
-            className="border border-slate-700 rounded-lg bg-pitch-grass select-none"
-            style={{
-              touchAction: isDragging || isDrawingTrajectory ? 'none' : 'pan-x pan-y pinch-zoom',
-              cursor: mode === 'trajectory' ? 'crosshair' : 'default',
-            }}
-            onPointerDown={handleSVGPointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerCancel}
-          >
+      {/* Main Content: Pitch */}
+      <main className="flex-1 flex items-center justify-center p-2">
+        <div id="board" className="w-full h-full aspect-[105/68] max-w-full max-h-full mx-auto shadow-2xl rounded-lg relative bg-gray-900 p-1">
+          <div id="pitch" className="pitch w-full h-full rounded-md relative">
+            {/* Drawing Canvas */}
+            <canvas 
+              ref={canvasRef}
+              className="drawing-canvas"
+              onPointerDown={startDrawing}
+              onPointerMove={draw}
+              onPointerUp={endDrawing}
+              onPointerLeave={endDrawing}
+            />
+            
+            <svg
+              ref={svgRef}
+              width={svgWidth}
+              height={svgHeight}
+              viewBox={`0 0 ${viewBoxWidth} ${fieldHeight}`}
+              className="w-full h-full select-none absolute top-0 left-0"
+              style={{
+                touchAction: isDragging || isDrawingTrajectory ? 'none' : 'pan-x pan-y pinch-zoom',
+                cursor: mode === 'trajectory' ? 'crosshair' : 'default',
+                pointerEvents: isDrawing ? 'none' : 'auto',
+              }}
+              onPointerDown={handleSVGPointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerCancel}
+            >
             <g transform={transform}>
               {/* Pitch */}
               <Pitch
@@ -203,36 +261,30 @@ function App() {
                 />
               ))}
             </g>
-          </svg>
-          
-          {/* Zoom indicator */}
-          {zoom !== 1 && (
-            <div className="absolute top-4 right-4 bg-slate-800 text-white px-2 py-1 rounded text-sm">
-              {Math.round(zoom * 100)}%
-            </div>
-          )}
+            </svg>
+            
+            {/* Zoom indicator */}
+            {zoom !== 1 && (
+              <div className="absolute top-4 right-4 bg-slate-800 text-white px-2 py-1 rounded text-sm">
+                {Math.round(zoom * 100)}%
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      </main>
+      
+      {/* Formations Modal */}
+      <FormationsModal
+        isOpen={showFormations}
+        onClose={() => setShowFormations(false)}
+        onApplyFormation={handleApplyFormation}
+      />
       
       {/* Presets Panel */}
       <PresetsPanel
         isOpen={showPresets}
         onClose={() => setShowPresets(false)}
       />
-      
-      {/* Status Bar */}
-      <div className="bg-slate-800 border-t border-slate-700 px-4 py-2 text-sm text-slate-400 flex justify-between items-center">
-        <div className="flex gap-4">
-          <span>Modo: {mode === 'select' ? 'Selección' : 'Trayectoria'}</span>
-          <span>Fichas: {tokens.filter(t => t.team === 'red').length}R / {tokens.filter(t => t.team === 'blue').length}A</span>
-          <span>Flechas: {arrows.length}</span>
-          <span>Trayectorias: {trajectories.length}</span>
-        </div>
-        <div className="flex gap-4">
-          {gridSnap && <span>📐 Rejilla</span>}
-          <span>{showFullField ? '🏟️ Campo completo' : '⚽ Medio campo'}</span>
-        </div>
-      </div>
     </div>
   );
 }
