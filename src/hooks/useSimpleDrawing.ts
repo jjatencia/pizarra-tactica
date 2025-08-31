@@ -89,7 +89,7 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     lastPointRef.current = coords;
 
     // Setup drawing context
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 8; // Increased from 4 to 8 for better visibility
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.strokeStyle = state.color;
@@ -97,7 +97,7 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     ctx.globalCompositeOperation = 'source-over';
     
     if (state.lineStyle === 'dashed') {
-      ctx.setLineDash([8, 6]);
+      ctx.setLineDash([12, 8]); // Larger dashes for better visibility
     } else {
       ctx.setLineDash([]);
     }
@@ -122,14 +122,52 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
 
     console.log('🖊️ Drawing line to:', coords);
 
-    // Draw line
-    ctx.beginPath();
-    ctx.moveTo(lastPointRef.current.x, lastPointRef.current.y);
-    ctx.lineTo(coords.x, coords.y);
-    ctx.stroke();
+    // Re-setup context for each stroke to ensure dashed lines work
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = state.color;
+    ctx.globalCompositeOperation = 'source-over';
+
+    if (state.lineStyle === 'dashed') {
+      // For dashed lines, draw individual dashes manually for better control
+      const distance = Math.sqrt(
+        Math.pow(coords.x - lastPointRef.current.x, 2) + 
+        Math.pow(coords.y - lastPointRef.current.y, 2)
+      );
+      
+      if (distance > 5) { // Only draw if moved enough distance
+        const dashLength = 15;
+        const gapLength = 10;
+        const totalLength = dashLength + gapLength;
+        const numDashes = Math.floor(distance / totalLength);
+        
+        const deltaX = (coords.x - lastPointRef.current.x) / distance;
+        const deltaY = (coords.y - lastPointRef.current.y) / distance;
+        
+        for (let i = 0; i <= numDashes; i++) {
+          const startX = lastPointRef.current.x + (deltaX * i * totalLength);
+          const startY = lastPointRef.current.y + (deltaY * i * totalLength);
+          const endX = startX + (deltaX * dashLength);
+          const endY = startY + (deltaY * dashLength);
+          
+          ctx.beginPath();
+          ctx.moveTo(startX, startY);
+          ctx.lineTo(endX, endY);
+          ctx.stroke();
+        }
+      }
+    } else {
+      // For solid lines, draw normally
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(lastPointRef.current.x, lastPointRef.current.y);
+      ctx.lineTo(coords.x, coords.y);
+      ctx.stroke();
+    }
     
     lastPointRef.current = coords;
-  }, [canvasRef, getCoords, state.isDrawing]);
+  }, [canvasRef, getCoords, state.isDrawing, state.color, state.lineStyle]);
 
   const endDrawing = useCallback(() => {
     if (!state.isDrawing || !canvasRef.current) return;
