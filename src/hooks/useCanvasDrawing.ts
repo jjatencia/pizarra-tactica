@@ -26,7 +26,9 @@ export const useCanvasDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     
     setDrawingState(prev => {
       const newHistory = prev.history.slice(0, prev.historyStep + 1);
-      newHistory.push(canvasRef.current!.toDataURL());
+      const dataURL = canvasRef.current!.toDataURL();
+      newHistory.push(dataURL);
+      console.log('Saving history. Step:', newHistory.length - 1, 'Total:', newHistory.length);
       return {
         ...prev,
         history: newHistory,
@@ -41,12 +43,13 @@ export const useCanvasDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
 
+    const devicePixelRatio = window.devicePixelRatio || 1;
     ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
     
     if (drawingState.history[drawingState.historyStep]) {
       const img = new Image();
       img.onload = () => {
-        ctx.drawImage(img, 0, 0);
+        ctx.drawImage(img, 0, 0, canvasRef.current!.width / devicePixelRatio, canvasRef.current!.height / devicePixelRatio);
       };
       img.src = drawingState.history[drawingState.historyStep];
     }
@@ -70,11 +73,14 @@ export const useCanvasDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
 
+    console.log('Starting drawing at:', coords, 'Color:', drawingState.color);
+
     setDrawingState(prev => ({ ...prev, isDrawing: true, currentPath: [coords] }));
 
     ctx.beginPath();
     ctx.lineWidth = 5;
     ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     
     if (drawingState.lineStyle === 'dashed') {
       ctx.setLineDash([8, 6]); // Smaller dashes for better turn visibility
@@ -91,6 +97,13 @@ export const useCanvasDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     }
 
     ctx.moveTo(coords.x, coords.y);
+    
+    // Draw a small dot to start the line
+    ctx.beginPath();
+    ctx.arc(coords.x, coords.y, 2, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(coords.x, coords.y);
   }, [canvasRef, getCoords, drawingState.lineStyle, drawingState.penMode, drawingState.color]);
 
   const draw = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -100,6 +113,8 @@ export const useCanvasDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
 
+    console.log('Drawing to:', coords);
+
     setDrawingState(prev => ({
       ...prev,
       currentPath: [...prev.currentPath, coords]
@@ -107,6 +122,8 @@ export const useCanvasDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
 
     ctx.lineTo(coords.x, coords.y);
     ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(coords.x, coords.y); // Reset path for smoother drawing
   }, [canvasRef, getCoords, drawingState.isDrawing]);
 
   const endDrawing = useCallback(() => {
@@ -121,24 +138,58 @@ export const useCanvasDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
   }, [canvasRef, drawingState.isDrawing, saveHistory]);
 
   const undo = useCallback(() => {
+    console.log('Undo called. Current step:', drawingState.historyStep, 'History length:', drawingState.history.length);
     if (drawingState.historyStep > 0) {
+      const newStep = drawingState.historyStep - 1;
       setDrawingState(prev => ({
         ...prev,
-        historyStep: prev.historyStep - 1
+        historyStep: newStep
       }));
-      redrawFromHistory();
+      
+      // Redraw immediately with the new step
+      if (!canvasRef.current) return;
+      const ctx = canvasRef.current.getContext('2d');
+      if (!ctx) return;
+
+      const devicePixelRatio = window.devicePixelRatio || 1;
+      ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      
+      if (drawingState.history[newStep]) {
+        const img = new Image();
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0, canvasRef.current!.width / devicePixelRatio, canvasRef.current!.height / devicePixelRatio);
+        };
+        img.src = drawingState.history[newStep];
+      }
     }
-  }, [drawingState.historyStep, redrawFromHistory]);
+  }, [drawingState.historyStep, drawingState.history, canvasRef]);
 
   const redo = useCallback(() => {
+    console.log('Redo called. Current step:', drawingState.historyStep, 'History length:', drawingState.history.length);
     if (drawingState.historyStep < drawingState.history.length - 1) {
+      const newStep = drawingState.historyStep + 1;
       setDrawingState(prev => ({
         ...prev,
-        historyStep: prev.historyStep + 1
+        historyStep: newStep
       }));
-      redrawFromHistory();
+      
+      // Redraw immediately with the new step
+      if (!canvasRef.current) return;
+      const ctx = canvasRef.current.getContext('2d');
+      if (!ctx) return;
+
+      const devicePixelRatio = window.devicePixelRatio || 1;
+      ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      
+      if (drawingState.history[newStep]) {
+        const img = new Image();
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0, canvasRef.current!.width / devicePixelRatio, canvasRef.current!.height / devicePixelRatio);
+        };
+        img.src = drawingState.history[newStep];
+      }
     }
-  }, [drawingState.historyStep, drawingState.history.length, redrawFromHistory]);
+  }, [drawingState.historyStep, drawingState.history, canvasRef]);
 
   const setColor = useCallback((color: string) => {
     setDrawingState(prev => ({
@@ -185,8 +236,23 @@ export const useCanvasDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     if (!container) return;
 
     const rect = container.getBoundingClientRect();
-    canvasRef.current.width = rect.width;
-    canvasRef.current.height = rect.height;
+    const devicePixelRatio = window.devicePixelRatio || 1;
+    
+    // Set canvas size accounting for device pixel ratio for crisp lines
+    canvasRef.current.width = rect.width * devicePixelRatio;
+    canvasRef.current.height = rect.height * devicePixelRatio;
+    
+    // Scale the canvas back down using CSS
+    canvasRef.current.style.width = rect.width + 'px';
+    canvasRef.current.style.height = rect.height + 'px';
+    
+    // Scale the drawing context
+    const ctx = canvasRef.current.getContext('2d');
+    if (ctx) {
+      ctx.scale(devicePixelRatio, devicePixelRatio);
+    }
+    
+    console.log('Canvas resized to:', rect.width, 'x', rect.height);
     redrawFromHistory();
   }, [canvasRef, redrawFromHistory]);
 

@@ -217,7 +217,7 @@ function App() {
       
       {/* Main Content: Pitch */}
       <main className="flex-1 flex items-center justify-center p-2">
-        <div id="board" className="w-full h-full aspect-[105/68] max-w-full max-h-full mx-auto shadow-2xl rounded-lg relative bg-gray-900 p-1">
+        <div id="board" className="w-full h-full aspect-[105/68] max-w-full max-h-full mx-auto shadow-2xl rounded-lg relative bg-gray-900 p-1" style={{ touchAction: 'none' }}>
           <div id="pitch" className="pitch w-full h-full rounded-md relative">
             {/* Drawing Canvas */}
             <canvas 
