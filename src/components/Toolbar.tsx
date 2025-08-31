@@ -122,8 +122,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       {/* Left Section: Title and Team Buttons */}
       <div className="flex items-center gap-2">
         <h1 className="text-xl font-bold text-green-400 hidden sm:block">Pizarra Táctica</h1>
-        <button 
-          onClick={() => onAddToken('red')}
+        <button
+          onClick={() => {
+            onAddToken('red');
+            onSetDrawingMode('move');
+          }}
           disabled={redTokens.length >= 11}
           className={clsx(
             "w-10 h-10 bg-red-600 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md hover:bg-red-500 transition-colors",
@@ -133,8 +136,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         >
           +
         </button>
-        <button 
-          onClick={() => onAddToken('blue')}
+        <button
+          onClick={() => {
+            onAddToken('blue');
+            onSetDrawingMode('move');
+          }}
           disabled={blueTokens.length >= 11}
           className={clsx(
             "w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md hover:bg-blue-500 transition-colors",
@@ -148,24 +154,33 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       
       {/* Center Section: Objects */}
       <div className="flex items-center gap-2 border-l border-r border-gray-700 px-3">
-        <button 
+        <button
           className="control-btn"
           title="Añadir Balón"
-          onClick={() => onAddObject('ball')}
+          onClick={() => {
+            onAddObject('ball');
+            onSetDrawingMode('move');
+          }}
         >
           <BallIcon />
         </button>
-        <button 
+        <button
           className="control-btn"
           title="Añadir Cono"
-          onClick={() => onAddObject('cone')}
+          onClick={() => {
+            onAddObject('cone');
+            onSetDrawingMode('move');
+          }}
         >
           <ConeIcon />
         </button>
-        <button 
+        <button
           className="control-btn"
           title="Añadir Mini Portería"
-          onClick={() => onAddObject('minigoal')}
+          onClick={() => {
+            onAddObject('minigoal');
+            onSetDrawingMode('move');
+          }}
         >
           <MiniGoalIcon />
         </button>
