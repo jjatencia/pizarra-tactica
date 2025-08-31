@@ -147,7 +147,7 @@ function App() {
             className="border border-slate-700 rounded-lg bg-pitch-grass select-none"
             style={{
               touchAction: isDragging || isDrawingTrajectory ? 'none' : 'pan-x pan-y pinch-zoom',
-              cursor: mode === 'arrow' ? 'crosshair' : mode === 'trajectory' ? 'crosshair' : 'default',
+              cursor: mode === 'trajectory' ? 'crosshair' : 'default',
             }}
             onPointerDown={handleSVGPointerDown}
             onPointerMove={handlePointerMove}
@@ -184,8 +184,8 @@ function App() {
                   x2={arrowPreview.to.x}
                   y2={arrowPreview.to.y}
                   stroke="white"
-                  strokeWidth="1"
-                  strokeDasharray="4,2"
+                  strokeWidth="0.8"
+                  strokeDasharray="3,2"
                   opacity="0.7"
                   style={{ pointerEvents: 'none' }}
                 />
@@ -199,8 +199,8 @@ function App() {
                     return `${path} L ${point.x} ${point.y}`;
                   }, '')}
                   stroke="white"
-                  strokeWidth="2"
-                  strokeDasharray="4,2"
+                  strokeWidth="1.2"
+                  strokeDasharray="3,2"
                   fill="none"
                   opacity="0.7"
                   style={{ pointerEvents: 'none' }}
@@ -238,7 +238,7 @@ function App() {
       {/* Status Bar */}
       <div className="bg-slate-800 border-t border-slate-700 px-4 py-2 text-sm text-slate-400 flex justify-between items-center">
         <div className="flex gap-4">
-          <span>Modo: {mode === 'select' ? 'Selección' : mode === 'arrow' ? 'Flecha' : 'Trayectoria'}</span>
+          <span>Modo: {mode === 'select' ? 'Selección' : 'Trayectoria'}</span>
           <span>Fichas: {tokens.filter(t => t.team === 'red').length}R / {tokens.filter(t => t.team === 'blue').length}A</span>
           <span>Flechas: {arrows.length}</span>
           <span>Trayectorias: {trajectories.length}</span>

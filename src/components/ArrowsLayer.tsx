@@ -85,8 +85,8 @@ export const ArrowsLayer: React.FC<ArrowsLayerProps> = ({
               d={pathData}
               fill="none"
               stroke={isSelected ? '#FBBF24' : 'white'}
-              strokeWidth={isSelected ? "1.5" : "1"}
-              strokeDasharray={arrow.style === 'dashed' ? '4,2' : 'none'}
+              strokeWidth={isSelected ? "1.2" : "0.8"}
+              strokeDasharray={arrow.style === 'dashed' ? '3,2' : 'none'}
               markerEnd={`url(#${markerId})`}
               style={{ cursor: 'pointer' }}
               onClick={(e) => {
@@ -100,7 +100,7 @@ export const ArrowsLayer: React.FC<ArrowsLayerProps> = ({
               d={pathData}
               fill="none"
               stroke="transparent"
-              strokeWidth="8"
+              strokeWidth="6"
               style={{ cursor: 'pointer' }}
               onClick={(e) => {
                 e.stopPropagation();
