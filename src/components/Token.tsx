@@ -19,10 +19,13 @@ export const Token: React.FC<TokenProps> = ({
   
   const isSelected = selectedTokenId === token.id;
   const radius = 3;
-  const hitRadius = 6; // Larger hit area for touch
+  const hitRadius = 8; // Larger hit area for better touch response on iPad
   
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     e.stopPropagation();
+    e.preventDefault();
+    
+    // Ensure immediate response for touch on iPad
     selectToken(token.id);
     onPointerDown(e, token);
   }, [token, onPointerDown, selectToken]);
@@ -54,7 +57,10 @@ export const Token: React.FC<TokenProps> = ({
         cy={token.y}
         r={hitRadius}
         fill="transparent"
-        style={{ cursor: 'grab' }}
+        style={{ 
+          cursor: 'grab',
+          touchAction: 'none' // Prevent default touch behaviors for smoother dragging
+        }}
         onPointerDown={handlePointerDown}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}

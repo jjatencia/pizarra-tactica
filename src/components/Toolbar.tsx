@@ -13,13 +13,11 @@ interface ToolbarProps {
 export const Toolbar: React.FC<ToolbarProps> = ({ svgRef, onAddToken, onShowPresets }) => {
   const {
     mode,
-    arrowStyle,
     trajectoryType,
     gridSnap,
     showFullField,
     tokens,
     setMode,
-    setArrowStyle,
     setTrajectoryType,
     toggleGridSnap,
     toggleFullField,
@@ -74,14 +72,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({ svgRef, onAddToken, onShowPres
         </button>
         <button
           className={clsx('btn btn-secondary text-sm', {
-            'btn-active': mode === 'arrow'
-          })}
-          onClick={() => setMode('arrow')}
-        >
-          ➡️ Flecha
-        </button>
-        <button
-          className={clsx('btn btn-secondary text-sm', {
             'btn-active': mode === 'trajectory'
           })}
           onClick={() => setMode('trajectory')}
@@ -117,31 +107,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({ svgRef, onAddToken, onShowPres
         </button>
       </div>
       
-      {/* Arrow Style (only show in arrow mode) */}
-      {mode === 'arrow' && (
-        <>
-          <div className="w-px h-6 bg-slate-600" />
-          <div className="flex gap-1">
-            <button
-              className={clsx('btn btn-secondary text-sm', {
-                'btn-active': arrowStyle === 'solid'
-              })}
-              onClick={() => setArrowStyle('solid')}
-            >
-              ━ Continua
-            </button>
-            <button
-              className={clsx('btn btn-secondary text-sm', {
-                'btn-active': arrowStyle === 'dashed'
-              })}
-              onClick={() => setArrowStyle('dashed')}
-            >
-              ┅ Discontinua
-            </button>
-          </div>
-        </>
-      )}
-      
       {/* Trajectory Type (only show in trajectory mode) */}
       {mode === 'trajectory' && (
         <>
@@ -153,7 +118,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ svgRef, onAddToken, onShowPres
               })}
               onClick={() => setTrajectoryType('pass')}
             >
-              ━ Pase
+              ┅ Pase
             </button>
             <button
               className={clsx('btn btn-secondary text-sm', {
@@ -161,7 +126,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ svgRef, onAddToken, onShowPres
               })}
               onClick={() => setTrajectoryType('movement')}
             >
-              ┅ Movimiento
+              ━ Movimiento
             </button>
           </div>
         </>

@@ -78,20 +78,7 @@ export const usePointerInteractions = (
   const handleSVGPointerDown = useCallback((e: React.PointerEvent) => {
     const svgPoint = getSVGPoint(e.clientX, e.clientY);
     
-    if (mode === 'arrow') {
-      // Start arrow creation
-      setDragState({
-        isDragging: false,
-        dragStartPoint: null,
-        dragToken: null,
-        arrowStart: svgPoint,
-        trajectoryPoints: [],
-        isDrawingTrajectory: false,
-      });
-      selectArrow(null);
-      selectToken(null);
-      selectTrajectory(null);
-    } else if (mode === 'trajectory') {
+    if (mode === 'trajectory') {
       // Start trajectory drawing
       setDragState({
         isDragging: false,
@@ -117,31 +104,25 @@ export const usePointerInteractions = (
     if (dragState.isDragging && dragState.dragToken && dragState.dragStartPoint) {
       e.preventDefault();
       
-      // Use requestAnimationFrame for smooth dragging
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
+      // For iPad touch, update immediately without requestAnimationFrame for maximum responsiveness
+      const svgPoint = getSVGPoint(e.clientX, e.clientY);
+      
+      // Calculate new position
+      let newPosition = {
+        x: svgPoint.x,
+        y: svgPoint.y,
+      };
+      
+      // Apply grid snapping
+      if (gridSnap) {
+        newPosition = snapToGrid(newPosition);
       }
       
-      animationFrameRef.current = requestAnimationFrame(() => {
-        const svgPoint = getSVGPoint(e.clientX, e.clientY);
-        
-        // Calculate new position
-        let newPosition = {
-          x: svgPoint.x,
-          y: svgPoint.y,
-        };
-        
-        // Apply grid snapping
-        if (gridSnap) {
-          newPosition = snapToGrid(newPosition);
-        }
-        
-        // Clamp to field boundaries
-        newPosition = clampToField(newPosition, fieldWidth, fieldHeight);
-        
-        // Update token position
-        updateToken(dragState.dragToken!.id, newPosition);
-      });
+      // Clamp to field boundaries
+      newPosition = clampToField(newPosition, fieldWidth, fieldHeight);
+      
+      // Update token position immediately for fluid movement
+      updateToken(dragState.dragToken!.id, newPosition);
       return;
     }
     
@@ -198,36 +179,7 @@ export const usePointerInteractions = (
       return;
     }
     
-    // Handle arrow creation
-    if (mode === 'arrow' && dragState.arrowStart) {
-      const distance = Math.sqrt(
-        Math.pow(svgPoint.x - dragState.arrowStart.x, 2) + 
-        Math.pow(svgPoint.y - dragState.arrowStart.y, 2)
-      );
-      
-      // Only create arrow if drag distance is significant
-      if (distance > 5) {
-        let endPoint = svgPoint;
-        
-        if (gridSnap) {
-          endPoint = snapToGrid(endPoint);
-        }
-        
-        endPoint = clampToField(endPoint, fieldWidth, fieldHeight);
-        
-        addArrow(dragState.arrowStart, endPoint);
-      }
-      
-      setDragState({
-        isDragging: false,
-        dragStartPoint: null,
-        dragToken: null,
-        arrowStart: null,
-        trajectoryPoints: [],
-        isDrawingTrajectory: false,
-      });
-      return;
-    }
+
     
     // Handle token dragging end
     if (dragState.isDragging) {
@@ -267,12 +219,9 @@ export const usePointerInteractions = (
     handlePointerUp,
     handlePointerCancel,
     isDragging: dragState.isDragging,
-    isCreatingArrow: mode === 'arrow' && dragState.arrowStart !== null,
+    isCreatingArrow: false,
     isDrawingTrajectory: dragState.isDrawingTrajectory,
     trajectoryPreview: dragState.trajectoryPoints,
-    arrowPreview: dragState.arrowStart ? {
-      from: dragState.arrowStart,
-      to: { x: 0, y: 0 }, // Will be updated in real-time
-    } : null,
+    arrowPreview: null,
   };
 };

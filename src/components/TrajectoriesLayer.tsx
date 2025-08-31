@@ -60,8 +60,8 @@ export const TrajectoriesLayer: React.FC<TrajectoriesLayerProps> = ({
         
         if (!pathData) return null;
 
-        const strokeColor = trajectory.type === 'pass' ? '#10B981' : '#F59E0B';
-        const strokeDasharray = trajectory.style === 'dashed' ? '8,4' : undefined;
+        const strokeColor = trajectory.type === 'pass' ? '#8B5CF6' : '#F59E0B'; // Changed from green to purple for better visibility
+        const strokeDasharray = trajectory.style === 'dashed' ? '6,3' : undefined;
 
         return (
           <g key={trajectory.id}>
@@ -69,7 +69,7 @@ export const TrajectoriesLayer: React.FC<TrajectoriesLayerProps> = ({
             <path
               d={pathData}
               stroke="transparent"
-              strokeWidth="8"
+              strokeWidth="6"
               fill="none"
               style={{ cursor: 'pointer' }}
               onClick={(e) => handleTrajectoryClick(e, trajectory)}
@@ -80,7 +80,7 @@ export const TrajectoriesLayer: React.FC<TrajectoriesLayerProps> = ({
             <path
               d={pathData}
               stroke={strokeColor}
-              strokeWidth={isSelected ? "3" : "2"}
+              strokeWidth={isSelected ? "1.8" : "1.2"}
               strokeDasharray={strokeDasharray}
               fill="none"
               opacity={isSelected ? 1 : 0.8}
@@ -92,7 +92,7 @@ export const TrajectoriesLayer: React.FC<TrajectoriesLayerProps> = ({
               <path
                 d={pathData}
                 stroke="#FBBF24"
-                strokeWidth="4"
+                strokeWidth="2.5"
                 fill="none"
                 opacity="0.5"
                 style={{ pointerEvents: 'none' }}
