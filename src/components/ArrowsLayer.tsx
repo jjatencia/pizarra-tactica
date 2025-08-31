@@ -14,7 +14,7 @@ export const ArrowsLayer: React.FC<ArrowsLayerProps> = ({
   onArrowSelect, 
   onArrowUpdate: _onArrowUpdate 
 }) => {
-  const { selectedArrowId } = useBoardStore();
+  const { selectedArrowId, mode, removeArrow } = useBoardStore();
   
   return (
     <g className="arrows-layer">
@@ -88,9 +88,15 @@ export const ArrowsLayer: React.FC<ArrowsLayerProps> = ({
               strokeWidth={isSelected ? "1.2" : "0.8"}
               strokeDasharray={arrow.style === 'dashed' ? '3,2' : 'none'}
               markerEnd={`url(#${markerId})`}
-              style={{ cursor: 'pointer' }}
+              style={{ cursor: mode === 'erase' ? 'crosshair' : 'pointer' }}
               onClick={(e) => {
                 e.stopPropagation();
+                // In erase mode, delete the arrow immediately
+                if (mode === 'erase') {
+                  console.log('🗑️ Erasing arrow:', arrow.id);
+                  removeArrow(arrow.id);
+                  return;
+                }
                 onArrowSelect(arrow.id);
               }}
             />
@@ -101,9 +107,15 @@ export const ArrowsLayer: React.FC<ArrowsLayerProps> = ({
               fill="none"
               stroke="transparent"
               strokeWidth="6"
-              style={{ cursor: 'pointer' }}
+              style={{ cursor: mode === 'erase' ? 'crosshair' : 'pointer' }}
               onClick={(e) => {
                 e.stopPropagation();
+                // In erase mode, delete the arrow immediately
+                if (mode === 'erase') {
+                  console.log('🗑️ Erasing arrow:', arrow.id);
+                  removeArrow(arrow.id);
+                  return;
+                }
                 onArrowSelect(arrow.id);
               }}
             />

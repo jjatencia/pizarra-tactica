@@ -12,6 +12,7 @@ import { PresetsPanel } from './components/PresetsPanel';
 import { FormationsModal } from './components/FormationsModal';
 import { Team, ObjectType } from './types';
 import { clampToField, snapToGrid } from './lib/geometry';
+import clsx from 'clsx';
 
 function App() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -92,6 +93,7 @@ function App() {
     setColor: setDrawColor,
     // setLineStyle: setDrawLineStyle, // Not used with new mode system
     setDrawingMode,
+    eraseAtPoint,
     clearCanvas,
   } = useSimpleDrawing(canvasRef);
   
@@ -176,9 +178,32 @@ function App() {
   const handleCanvasPointerDown = useCallback((e: any) => {
     if (drawingMode === 'move') return; // Don't handle canvas events in move mode
     
+    // In erase mode, erase at the touched point
+    if (mode === 'erase') {
+      if (!canvasRef.current) return;
+      
+      const rect = canvasRef.current.getBoundingClientRect();
+      let clientX, clientY;
+      
+      if (e.touches && e.touches[0]) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      }
+      
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+      
+      console.log('🗑️ Canvas erase at:', x, y);
+      eraseAtPoint(x, y);
+      return;
+    }
+    
     console.log('🎨 Canvas tap - starting drawing');
     startDrawing(e);
-  }, [startDrawing, drawingMode]);
+  }, [startDrawing, drawingMode, mode, eraseAtPoint, canvasRef]);
   
   // Calculate transform for zoom and pan
   const transform = `translate(${pan.x}, ${pan.y}) scale(${zoom})`;
@@ -208,7 +233,9 @@ function App() {
       
       {/* Main Content: Pitch */}
       <main className="flex-1 flex items-center justify-center p-2">
-        <div id="board" className="w-full h-full aspect-[105/68] max-w-full max-h-full mx-auto shadow-2xl rounded-lg relative bg-gray-900 p-1" style={{ touchAction: 'none' }}>
+        <div id="board" className={clsx("w-full h-full aspect-[105/68] max-w-full max-h-full mx-auto shadow-2xl rounded-lg relative bg-gray-900 p-1", {
+          'erase-mode': mode === 'erase'
+        })} style={{ touchAction: 'none' }}>
           <div id="pitch" className="pitch w-full h-full rounded-md relative">
             <svg
               ref={svgRef}
@@ -288,17 +315,18 @@ function App() {
                 touchAction: 'none',
                 zIndex: drawingMode === 'move' ? 1 : 10,
                 pointerEvents: drawingMode === 'move' ? 'none' : 'auto',
-                backgroundColor: 'transparent'
+                backgroundColor: 'transparent',
+                cursor: mode === 'erase' ? 'crosshair' : 'default'
               }}
               onMouseDown={(e) => {
                 console.log('🖱️ Mouse down on canvas');
                 handleCanvasPointerDown(e);
               }}
               onMouseMove={(e) => {
-                draw(e);
+                if (mode !== 'erase') draw(e);
               }}
               onMouseUp={() => {
-                endDrawing();
+                if (mode !== 'erase') endDrawing();
               }}
               onTouchStart={(e) => {
                 console.log('👆 Touch start on canvas');
@@ -307,11 +335,11 @@ function App() {
               }}
               onTouchMove={(e) => {
                 e.preventDefault();
-                draw(e);
+                if (mode !== 'erase') draw(e);
               }}
               onTouchEnd={(e) => {
                 e.preventDefault();
-                endDrawing();
+                if (mode !== 'erase') endDrawing();
               }}
             />
             

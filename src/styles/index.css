@@ -137,6 +137,20 @@
     box-shadow: 0 0 0 2px #111827, 0 0 0 4px #4ADE80; /* Manual ring effect */
   }
 
+  /* Eraser mode styles */
+  .erase-mode {
+    cursor: crosshair !important;
+  }
+  
+  .erase-mode .token-group {
+    cursor: crosshair !important;
+  }
+  
+  .erase-mode path,
+  .erase-mode line {
+    cursor: crosshair !important;
+  }
+
   /* Legacy button styles for compatibility */
   .btn {
     @apply px-3 py-2 rounded-lg font-medium transition-colors duration-200 touch-manipulation;
