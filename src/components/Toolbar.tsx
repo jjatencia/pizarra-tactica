@@ -41,12 +41,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 }) => {
   
   const {
-    mode,
     // trajectoryType,
     // gridSnap,
     // showFullField,
     tokens,
-    setMode,
     // setTrajectoryType,
     // toggleGridSnap,
     // toggleFullField,
