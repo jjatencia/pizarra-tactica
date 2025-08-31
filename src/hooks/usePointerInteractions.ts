@@ -24,6 +24,7 @@ export const usePointerInteractions = (
     pan,
     gridSnap,
     trajectoryType,
+    tokens,
 
     updateToken,
     addArrow,
@@ -57,7 +58,7 @@ export const usePointerInteractions = (
   }, [svgRef, zoom, pan]);
   
   const handleTokenPointerDown = useCallback((e: React.PointerEvent, token: Token) => {
-    if (mode !== 'select') return;
+    // Allow token dragging in any mode
     
     e.preventDefault();
     e.stopPropagation();
@@ -125,13 +126,8 @@ export const usePointerInteractions = (
         y: dragState.dragTokenOriginalPosition!.y + deltaY,
       };
       
-      // Apply grid snapping
-      if (gridSnap) {
-        newPosition = snapToGrid(newPosition);
-      }
-      
-      // Remove field clamping to allow positioning anywhere
-      // newPosition = clampToField(newPosition, fieldWidth, fieldHeight);
+      // Don't apply grid snapping during drag for fluid movement
+      // Grid snapping will be applied when drag ends
       
       // Update token position immediately for fluid movement
       updateToken(dragState.dragToken!.id, newPosition);
@@ -194,7 +190,17 @@ export const usePointerInteractions = (
 
     
     // Handle token dragging end
-    if (dragState.isDragging) {
+    if (dragState.isDragging && dragState.dragToken) {
+      // Apply grid snapping at the end of drag for final position
+      if (gridSnap) {
+        const currentToken = tokens.find(t => t.id === dragState.dragToken!.id);
+        if (currentToken) {
+          const currentPosition = { x: currentToken.x, y: currentToken.y };
+          const snappedPosition = snapToGrid(currentPosition);
+          updateToken(dragState.dragToken.id, snappedPosition);
+        }
+      }
+      
       setDragState({
         isDragging: false,
         dragStartPoint: null,
@@ -212,7 +218,7 @@ export const usePointerInteractions = (
       document.body.style.userSelect = '';
       document.body.style.webkitUserSelect = '';
     }
-  }, [mode, dragState, getSVGPoint, gridSnap, fieldWidth, fieldHeight, addArrow, addTrajectory, trajectoryType]);
+  }, [mode, dragState, getSVGPoint, gridSnap, fieldWidth, fieldHeight, addArrow, addTrajectory, trajectoryType, tokens, updateToken]);
   
   const handlePointerCancel = useCallback((_e: React.PointerEvent) => {
     setDragState({

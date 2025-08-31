@@ -229,7 +229,6 @@ function App() {
       {/* Status Bar */}
       <div className="bg-slate-800 border-t border-slate-700 px-4 py-2 text-sm text-slate-400 flex justify-between items-center">
         <div className="flex gap-4">
-          <span>Modo: {mode === 'select' ? 'Selección' : 'Trayectoria'}</span>
           <span>Fichas: {tokens.filter(t => t.team === 'red').length}R / {tokens.filter(t => t.team === 'blue').length}A</span>
           <span>Flechas: {arrows.length}</span>
           <span>Trayectorias: {trajectories.length}</span>

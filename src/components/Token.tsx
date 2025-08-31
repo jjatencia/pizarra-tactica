@@ -90,7 +90,7 @@ export const Token: React.FC<TokenProps> = ({
       {/* Token number */}
       <text
         x={token.x}
-        y={token.y + 0.5}
+        y={token.y}
         textAnchor="middle"
         dominantBaseline="central"
         fill="white"
