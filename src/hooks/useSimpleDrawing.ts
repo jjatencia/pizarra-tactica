@@ -149,32 +149,55 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
       ctx.lineTo(coords.x, coords.y);
       ctx.stroke();
     } else if (state.drawingMode === 'displacement') {
-      // For dashed lines, redraw the entire path with preview
-      if (newPath.length > 1) {
-        // Clear and redraw from history first
-        if (state.history[state.historyStep]) {
-          const img = new Image();
-          img.onload = () => {
-            ctx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
-            ctx.drawImage(img, 0, 0);
-            
-            // Now draw the current dashed preview
-            if (state.color === 'transparent') {
-              // Eraser mode
-              ctx.lineWidth = 40; // Much wider eraser for better coverage
-              ctx.lineCap = 'round';
-              ctx.lineJoin = 'round';
-              ctx.globalCompositeOperation = 'destination-out';
-              ctx.setLineDash([25, 15]); // Dashed eraser
-            } else {
-              // Normal dashed drawing
+      // For transparent color (eraser), treat it like solid lines to avoid clearing canvas
+      if (state.color === 'transparent') {
+        // Eraser mode - draw like solid lines but with eraser effect
+        ctx.lineWidth = 40; // Much wider eraser for better coverage
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.setLineDash([]);
+
+        ctx.beginPath();
+        ctx.moveTo(lastPointRef.current.x, lastPointRef.current.y);
+        ctx.lineTo(coords.x, coords.y);
+        ctx.stroke();
+      } else {
+        // For dashed lines, redraw the entire path with preview
+        if (newPath.length > 1) {
+          // Clear and redraw from history first
+          if (state.history[state.historyStep]) {
+            const img = new Image();
+            img.onload = () => {
+              ctx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
+              ctx.drawImage(img, 0, 0);
+              
+              // Now draw the current dashed preview
               ctx.lineWidth = 8;
               ctx.lineCap = 'round';
               ctx.lineJoin = 'round';
               ctx.strokeStyle = state.color;
               ctx.globalCompositeOperation = 'source-over';
               ctx.setLineDash([25, 15]);
-            }
+              
+              ctx.beginPath();
+              ctx.moveTo(newPath[0].x, newPath[0].y);
+              for (let i = 1; i < newPath.length; i++) {
+                ctx.lineTo(newPath[i].x, newPath[i].y);
+              }
+              ctx.stroke();
+            };
+            img.src = state.history[state.historyStep];
+          } else {
+            // No history, just draw the preview
+            ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+            
+            ctx.lineWidth = 8;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = state.color;
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.setLineDash([25, 15]);
             
             ctx.beginPath();
             ctx.moveTo(newPath[0].x, newPath[0].y);
@@ -182,35 +205,7 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
               ctx.lineTo(newPath[i].x, newPath[i].y);
             }
             ctx.stroke();
-          };
-          img.src = state.history[state.historyStep];
-        } else {
-          // No history, just draw the preview
-          ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-          
-          if (state.color === 'transparent') {
-            // Eraser mode
-            ctx.lineWidth = 40; // Much wider eraser for better coverage
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.globalCompositeOperation = 'destination-out';
-            ctx.setLineDash([25, 15]); // Dashed eraser
-          } else {
-            // Normal dashed drawing
-            ctx.lineWidth = 8;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.strokeStyle = state.color;
-            ctx.globalCompositeOperation = 'source-over';
-            ctx.setLineDash([25, 15]);
           }
-          
-          ctx.beginPath();
-          ctx.moveTo(newPath[0].x, newPath[0].y);
-          for (let i = 1; i < newPath.length; i++) {
-            ctx.lineTo(newPath[i].x, newPath[i].y);
-          }
-          ctx.stroke();
         }
       }
     }

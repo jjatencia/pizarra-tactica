@@ -99,7 +99,6 @@ function App() {
     setColor: setDrawColor,
     // setLineStyle: setDrawLineStyle, // Not used with new mode system
     setDrawingMode,
-    eraseAtPoint,
     clearCanvas,
   } = useSimpleDrawing(canvasRef);
   
@@ -214,32 +213,9 @@ function App() {
   const handleCanvasPointerDown = useCallback((e: any) => {
     if (drawingMode === 'move') return; // Don't handle canvas events in move mode
     
-    // In erase mode (but not when using transparent color for drawing), erase at the touched point
-    if (mode === 'erase' && drawColor !== 'transparent') {
-      if (!canvasRef.current) return;
-      
-      const rect = canvasRef.current.getBoundingClientRect();
-      let clientX, clientY;
-      
-      if (e.touches && e.touches[0]) {
-        clientX = e.touches[0].clientX;
-        clientY = e.touches[0].clientY;
-      } else {
-        clientX = e.clientX;
-        clientY = e.clientY;
-      }
-      
-      const x = clientX - rect.left;
-      const y = clientY - rect.top;
-      
-      console.log('🗑️ Canvas erase at:', x, y);
-      eraseAtPoint(x, y);
-      return;
-    }
-    
     console.log('🎨 Canvas tap - starting drawing');
     startDrawing(e);
-  }, [startDrawing, drawingMode, mode, eraseAtPoint, canvasRef, drawColor]);
+  }, [startDrawing, drawingMode]);
   
   // Calculate transform for zoom and pan
   const transform = `translate(${pan.x}, ${pan.y}) scale(${zoom})`;
@@ -377,17 +353,17 @@ function App() {
                 zIndex: drawingMode === 'move' ? 1 : 10,
                 pointerEvents: drawingMode === 'move' ? 'none' : 'auto',
                 backgroundColor: 'transparent',
-                cursor: mode === 'erase' ? 'crosshair' : 'default'
+                cursor: drawColor === 'transparent' ? 'crosshair' : 'default'
               }}
               onMouseDown={(e) => {
                 console.log('🖱️ Mouse down on canvas');
                 handleCanvasPointerDown(e);
               }}
               onMouseMove={(e) => {
-                if (mode !== 'erase' || drawColor === 'transparent') draw(e);
+                draw(e);
               }}
               onMouseUp={() => {
-                if (mode !== 'erase' || drawColor === 'transparent') endDrawing();
+                endDrawing();
               }}
               onTouchStart={(e) => {
                 console.log('👆 Touch start on canvas');
@@ -396,11 +372,11 @@ function App() {
               }}
               onTouchMove={(e) => {
                 e.preventDefault();
-                if (mode !== 'erase' || drawColor === 'transparent') draw(e);
+                draw(e);
               }}
               onTouchEnd={(e) => {
                 e.preventDefault();
-                if (mode !== 'erase' || drawColor === 'transparent') endDrawing();
+                endDrawing();
               }}
             />
             

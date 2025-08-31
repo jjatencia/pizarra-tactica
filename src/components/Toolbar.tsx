@@ -109,14 +109,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     </svg>
   );
 
-  const EraserIcon = () => (
-    <svg viewBox="0 0 100 100" className="w-6 h-6">
-      <rect x="10" y="40" width="80" height="30" rx="5" fill="#E5E7EB" stroke="#6B7280" strokeWidth="2"/>
-      <rect x="15" y="45" width="70" height="20" rx="3" fill="#F3F4F6"/>
-      <circle cx="25" cy="55" r="2" fill="#EF4444"/>
-      <path d="M35 50 L45 60 M45 50 L35 60" stroke="#EF4444" strokeWidth="2" strokeLinecap="round"/>
-    </svg>
-  );
+
 
   const colorOptions = [
     { color: 'white', className: 'bg-white border-2 border-gray-400' },
@@ -177,15 +170,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           onClick={() => onAddObject('minigoal')}
         >
           <MiniGoalIcon />
-        </button>
-        <button 
-          className={clsx('control-btn', {
-            'bg-red-600 text-white': mode === 'erase'
-          })}
-          title="Borrador Selectivo - Toca líneas para borrarlas"
-          onClick={() => setMode(mode === 'erase' ? 'select' : 'erase')}
-        >
-          <EraserIcon />
         </button>
       </div>
 
