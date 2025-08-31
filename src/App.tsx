@@ -179,7 +179,9 @@ function App() {
     const now = Date.now();
     const timeDiff = now - lastCanvasTapRef.current;
     
-    if (timeDiff < 400) { // Increased time window
+    console.log('🎨 Canvas tap, Time diff:', timeDiff);
+    
+    if (timeDiff < 400 && timeDiff > 10) {
       // Double tap detected - undo last drawing
       console.log('🗑️ Double tap undo drawing');
       undoDraw();
@@ -321,6 +323,19 @@ function App() {
               }}
               onTouchEnd={(e) => {
                 e.preventDefault();
+                
+                // Check for double tap on canvas
+                const now = Date.now();
+                const timeDiff = now - lastCanvasTapRef.current;
+                
+                console.log('👆 Canvas touch end, Time diff:', timeDiff);
+                
+                if (timeDiff < 400 && timeDiff > 10 && drawingMode !== 'move') {
+                  console.log('🗑️ Canvas double tap undo');
+                  undoDraw();
+                  return;
+                }
+                
                 endDrawing();
               }}
             />

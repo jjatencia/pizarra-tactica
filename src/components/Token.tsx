@@ -31,7 +31,9 @@ export const Token: React.FC<TokenProps> = ({
     const now = Date.now();
     const timeDiff = now - lastTapRef.current;
     
-    if (timeDiff < 400) { // Increased time window for better detection
+    console.log('👆 Token tap:', token.id, 'Time diff:', timeDiff);
+    
+    if (timeDiff < 400 && timeDiff > 10) {
       // Double tap detected - delete the token
       console.log('🗑️ Double tap delete token:', token.id);
       removeToken(token.id);
@@ -40,7 +42,7 @@ export const Token: React.FC<TokenProps> = ({
     
     lastTapRef.current = now;
     
-    // Ensure immediate response for touch on iPad
+    // Proceed with normal interaction immediately
     selectToken(token.id);
     onPointerDown(e, token);
   }, [token, onPointerDown, selectToken, removeToken]);
@@ -178,6 +180,20 @@ export const Token: React.FC<TokenProps> = ({
         onPointerDown={handlePointerDown}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
+        onTouchEnd={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          
+          const now = Date.now();
+          const timeDiff = now - lastTapRef.current;
+          
+          console.log('👆 Touch end on token:', token.id, 'Time diff:', timeDiff);
+          
+          if (timeDiff < 400 && timeDiff > 10) {
+            console.log('🗑️ Touch double tap delete token:', token.id);
+            removeToken(token.id);
+          }
+        }}
       />
       
       {/* Render the appropriate object */}
