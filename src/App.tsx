@@ -8,6 +8,7 @@ import { ArrowsLayer } from './components/ArrowsLayer';
 import { TrajectoriesLayer } from './components/TrajectoriesLayer';
 import { Toolbar } from './components/Toolbar';
 import { PresetsPanel } from './components/PresetsPanel';
+import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { Team } from './types';
 import { clampToField, snapToGrid } from './lib/geometry';
 
@@ -191,7 +192,7 @@ function App() {
                   }, '')}
                   stroke={trajectoryType === 'pass' ? '#8B5CF6' : '#F59E0B'}
                   strokeWidth="1.2"
-                  strokeDasharray={trajectoryType === 'movement' ? '3,2' : undefined}
+                  strokeDasharray={trajectoryType === 'movement' ? '1.5,1' : undefined}
                   fill="none"
                   opacity="0.7"
                   style={{ pointerEvents: 'none' }}
@@ -227,6 +228,9 @@ function App() {
         isOpen={showPresets}
         onClose={() => setShowPresets(false)}
       />
+      
+      {/* PWA Install Prompt */}
+      <PWAInstallPrompt />
       
       {/* Status Bar */}
       <div className="bg-slate-800 border-t border-slate-700 px-4 py-2 text-sm text-slate-400 flex justify-between items-center">
