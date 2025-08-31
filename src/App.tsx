@@ -176,13 +176,13 @@ function App() {
   }, [addObject, showFullField, fieldWidth, fieldHeight, viewBoxWidth, gridSnap]);
 
   // Handle canvas double tap for clearing last drawing
-  const handleCanvasPointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+  const handleCanvasPointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     const now = Date.now();
     const timeDiff = now - lastCanvasTapRef.current;
     
     if (timeDiff < 300) {
       // Double tap detected - undo last drawing
-      handleDoubleTapClear(e);
+      handleDoubleTapClear(e as any);
       return;
     }
     
@@ -227,32 +227,10 @@ function App() {
               onPointerMove={draw}
               onPointerUp={endDrawing}
               onPointerLeave={endDrawing}
-              onTouchStart={(e) => {
-                e.preventDefault();
-                const touch = e.touches[0];
-                const pointerEvent = new PointerEvent('pointerdown', {
-                  clientX: touch.clientX,
-                  clientY: touch.clientY,
-                  pointerId: 1,
-                  pointerType: 'touch'
-                });
-                handleCanvasPointerDown(pointerEvent as any);
-              }}
-              onTouchMove={(e) => {
-                e.preventDefault();
-                const touch = e.touches[0];
-                const pointerEvent = new PointerEvent('pointermove', {
-                  clientX: touch.clientX,
-                  clientY: touch.clientY,
-                  pointerId: 1,
-                  pointerType: 'touch'
-                });
-                draw(pointerEvent as any);
-              }}
-              onTouchEnd={(e) => {
-                e.preventDefault();
-                endDrawing();
-              }}
+              onTouchStart={handleCanvasPointerDown}
+              onTouchMove={draw}
+              onTouchEnd={endDrawing}
+              style={{ touchAction: 'none' }}
             />
             
             <svg

@@ -1,8 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef } from 'react';
 
 interface DrawingState {
   isDrawing: boolean;
-  currentPath: { x: number; y: number }[];
   history: string[];
   historyStep: number;
   color: string;
@@ -13,13 +12,14 @@ interface DrawingState {
 export const useCanvasDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) => {
   const [drawingState, setDrawingState] = useState<DrawingState>({
     isDrawing: false,
-    currentPath: [],
     history: [],
     historyStep: -1,
     color: 'white',
     lineStyle: 'solid',
     penMode: true,
   });
+
+  const lastPointRef = useRef<{ x: number; y: number } | null>(null);
 
   const saveHistory = useCallback(() => {
     if (!canvasRef.current) return;
@@ -37,105 +37,94 @@ export const useCanvasDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     });
   }, [canvasRef]);
 
-  const redrawFromHistory = useCallback(() => {
-    if (!canvasRef.current) return;
-    
-    const ctx = canvasRef.current.getContext('2d');
-    if (!ctx) return;
-
-    const devicePixelRatio = window.devicePixelRatio || 1;
-    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-    
-    if (drawingState.history[drawingState.historyStep]) {
-      const img = new Image();
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0, canvasRef.current!.width / devicePixelRatio, canvasRef.current!.height / devicePixelRatio);
-      };
-      img.src = drawingState.history[drawingState.historyStep];
-    }
-  }, [canvasRef, drawingState.history, drawingState.historyStep]);
-
-  const getCoords = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+  const getCoords = useCallback((e: React.PointerEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!canvasRef.current) return { x: 0, y: 0 };
     
     const rect = canvasRef.current.getBoundingClientRect();
+    let clientX, clientY;
+    
+    if ('touches' in e) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+    
     return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+      x: clientX - rect.left,
+      y: clientY - rect.top,
     };
   }, [canvasRef]);
 
-  const startDrawing = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+  const startDrawing = useCallback((e: React.PointerEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!canvasRef.current) return;
     
     e.preventDefault();
+    e.stopPropagation();
+    
     const coords = getCoords(e);
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
 
     console.log('Starting drawing at:', coords, 'Color:', drawingState.color);
 
-    setDrawingState(prev => ({ ...prev, isDrawing: true, currentPath: [coords] }));
+    setDrawingState(prev => ({ ...prev, isDrawing: true }));
+    lastPointRef.current = coords;
 
-    ctx.beginPath();
+    // Set up drawing context
     ctx.lineWidth = 5;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+    ctx.strokeStyle = drawingState.color;
+    ctx.fillStyle = drawingState.color;
+    ctx.globalCompositeOperation = drawingState.penMode ? 'source-over' : 'destination-out';
     
     if (drawingState.lineStyle === 'dashed') {
-      ctx.setLineDash([8, 6]); // Smaller dashes for better turn visibility
+      ctx.setLineDash([8, 6]);
     } else {
       ctx.setLineDash([]);
     }
 
-    if (drawingState.penMode) {
-      ctx.strokeStyle = drawingState.color;
-      ctx.globalCompositeOperation = 'source-over';
-    } else {
+    if (!drawingState.penMode) {
       ctx.lineWidth = 25;
-      ctx.globalCompositeOperation = 'destination-out';
     }
 
-    ctx.moveTo(coords.x, coords.y);
-    
-    // Draw a small dot to start the line
+    // Draw a starting dot
     ctx.beginPath();
-    ctx.arc(coords.x, coords.y, 2, 0, 2 * Math.PI);
+    ctx.arc(coords.x, coords.y, 3, 0, 2 * Math.PI);
     ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(coords.x, coords.y);
-  }, [canvasRef, getCoords, drawingState.lineStyle, drawingState.penMode, drawingState.color]);
+  }, [canvasRef, getCoords, drawingState.color, drawingState.lineStyle, drawingState.penMode]);
 
-  const draw = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!drawingState.isDrawing || !canvasRef.current) return;
+  const draw = useCallback((e: React.PointerEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (!drawingState.isDrawing || !canvasRef.current || !lastPointRef.current) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
     
     const coords = getCoords(e);
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
 
-    console.log('Drawing to:', coords);
+    console.log('Drawing line from:', lastPointRef.current, 'to:', coords);
 
-    setDrawingState(prev => ({
-      ...prev,
-      currentPath: [...prev.currentPath, coords]
-    }));
-
+    // Draw line from last point to current point
+    ctx.beginPath();
+    ctx.moveTo(lastPointRef.current.x, lastPointRef.current.y);
     ctx.lineTo(coords.x, coords.y);
     ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(coords.x, coords.y); // Reset path for smoother drawing
+    
+    lastPointRef.current = coords;
   }, [canvasRef, getCoords, drawingState.isDrawing]);
 
   const endDrawing = useCallback(() => {
-    if (!drawingState.isDrawing || !canvasRef.current) return;
+    if (!drawingState.isDrawing) return;
     
-    const ctx = canvasRef.current.getContext('2d');
-    if (!ctx) return;
-
-    setDrawingState(prev => ({ ...prev, isDrawing: false, currentPath: [] }));
-    ctx.closePath();
+    console.log('Ending drawing');
+    setDrawingState(prev => ({ ...prev, isDrawing: false }));
+    lastPointRef.current = null;
     saveHistory();
-  }, [canvasRef, drawingState.isDrawing, saveHistory]);
+  }, [drawingState.isDrawing, saveHistory]);
 
   const undo = useCallback(() => {
     console.log('Undo called. Current step:', drawingState.historyStep, 'History length:', drawingState.history.length);
@@ -146,18 +135,17 @@ export const useCanvasDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
         historyStep: newStep
       }));
       
-      // Redraw immediately with the new step
+      // Redraw immediately
       if (!canvasRef.current) return;
       const ctx = canvasRef.current.getContext('2d');
       if (!ctx) return;
 
-      const devicePixelRatio = window.devicePixelRatio || 1;
       ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
       
       if (drawingState.history[newStep]) {
         const img = new Image();
         img.onload = () => {
-          ctx.drawImage(img, 0, 0, canvasRef.current!.width / devicePixelRatio, canvasRef.current!.height / devicePixelRatio);
+          ctx.drawImage(img, 0, 0);
         };
         img.src = drawingState.history[newStep];
       }
@@ -173,18 +161,17 @@ export const useCanvasDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
         historyStep: newStep
       }));
       
-      // Redraw immediately with the new step
+      // Redraw immediately
       if (!canvasRef.current) return;
       const ctx = canvasRef.current.getContext('2d');
       if (!ctx) return;
 
-      const devicePixelRatio = window.devicePixelRatio || 1;
       ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
       
       if (drawingState.history[newStep]) {
         const img = new Image();
         img.onload = () => {
-          ctx.drawImage(img, 0, 0, canvasRef.current!.width / devicePixelRatio, canvasRef.current!.height / devicePixelRatio);
+          ctx.drawImage(img, 0, 0);
         };
         img.src = drawingState.history[newStep];
       }
@@ -192,6 +179,7 @@ export const useCanvasDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
   }, [drawingState.historyStep, drawingState.history, canvasRef]);
 
   const setColor = useCallback((color: string) => {
+    console.log('Setting color to:', color);
     setDrawingState(prev => ({
       ...prev,
       color,
@@ -200,6 +188,7 @@ export const useCanvasDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
   }, []);
 
   const setLineStyle = useCallback((lineStyle: 'solid' | 'dashed') => {
+    console.log('Setting line style to:', lineStyle);
     setDrawingState(prev => ({ ...prev, lineStyle }));
   }, []);
 
@@ -218,17 +207,6 @@ export const useCanvasDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     saveHistory();
   }, [canvasRef, saveHistory]);
 
-  const handleDoubleTapClear = useCallback((_e: React.PointerEvent<HTMLCanvasElement>) => {
-    // Simple approach: double tap anywhere on canvas clears the last drawing
-    if (drawingState.historyStep > 0) {
-      setDrawingState(prev => ({
-        ...prev,
-        historyStep: prev.historyStep - 1
-      }));
-      redrawFromHistory();
-    }
-  }, [drawingState.historyStep, redrawFromHistory]);
-
   const resizeCanvas = useCallback(() => {
     if (!canvasRef.current) return;
     
@@ -236,25 +214,32 @@ export const useCanvasDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     if (!container) return;
 
     const rect = container.getBoundingClientRect();
-    const devicePixelRatio = window.devicePixelRatio || 1;
     
-    // Set canvas size accounting for device pixel ratio for crisp lines
-    canvasRef.current.width = rect.width * devicePixelRatio;
-    canvasRef.current.height = rect.height * devicePixelRatio;
-    
-    // Scale the canvas back down using CSS
-    canvasRef.current.style.width = rect.width + 'px';
-    canvasRef.current.style.height = rect.height + 'px';
-    
-    // Scale the drawing context
-    const ctx = canvasRef.current.getContext('2d');
-    if (ctx) {
-      ctx.scale(devicePixelRatio, devicePixelRatio);
-    }
+    // Set canvas size directly
+    canvasRef.current.width = rect.width;
+    canvasRef.current.height = rect.height;
     
     console.log('Canvas resized to:', rect.width, 'x', rect.height);
-    redrawFromHistory();
-  }, [canvasRef, redrawFromHistory]);
+    
+    // Restore the last drawing if any
+    if (drawingState.history[drawingState.historyStep]) {
+      const ctx = canvasRef.current.getContext('2d');
+      if (ctx) {
+        const img = new Image();
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0);
+        };
+        img.src = drawingState.history[drawingState.historyStep];
+      }
+    }
+  }, [canvasRef, drawingState.history, drawingState.historyStep]);
+
+  const handleDoubleTapClear = useCallback((_e: React.PointerEvent<HTMLCanvasElement>) => {
+    // Simple approach: double tap anywhere on canvas undoes last drawing
+    if (drawingState.historyStep > 0) {
+      undo();
+    }
+  }, [drawingState.historyStep, undo]);
 
   return {
     // State
