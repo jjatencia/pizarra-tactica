@@ -211,7 +211,11 @@ function App() {
   return (
     <div 
       ref={containerRef}
-      className="bg-gray-800 text-white overflow-hidden h-screen flex flex-col"
+      className="bg-gray-800 text-white overflow-hidden flex flex-col"
+      style={{ 
+        height: '100dvh',
+        minHeight: '100dvh'
+      }}
     >
       {/* Toolbar */}
       <Toolbar
@@ -233,9 +237,15 @@ function App() {
       
       {/* Main Content: Pitch */}
       <main className="flex-1 flex items-center justify-center p-2">
-        <div id="board" className={clsx("w-full h-full aspect-[105/68] max-w-full max-h-full mx-auto shadow-2xl rounded-lg relative bg-gray-900 p-1", {
+        <div id="board" className={clsx("w-full mx-auto shadow-2xl rounded-lg relative bg-gray-900 p-1", {
           'erase-mode': mode === 'erase'
-        })} style={{ touchAction: 'none' }}>
+        })} style={{ 
+          touchAction: 'none',
+          aspectRatio: '105/68',
+          height: 'auto',
+          maxWidth: '100%',
+          maxHeight: 'calc(100% - env(safe-area-inset-bottom) - 1rem)'
+        }}>
           <div id="pitch" className="pitch w-full h-full rounded-md relative">
             <svg
               ref={svgRef}
