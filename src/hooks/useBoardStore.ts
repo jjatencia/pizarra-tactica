@@ -32,6 +32,7 @@ interface BoardStore extends BoardState {
   // View actions
   setZoom: (zoom: number) => void;
   setPan: (pan: { x: number; y: number }) => void;
+  resetView: () => void;
   toggleGridSnap: () => void;
   toggleFullField: () => void;
   
@@ -305,6 +306,10 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     
     setPan: (pan: { x: number; y: number }) => {
       set({ pan });
+    },
+    
+    resetView: () => {
+      set({ zoom: 1, pan: { x: 0, y: 0 } });
     },
     
     toggleGridSnap: () => {

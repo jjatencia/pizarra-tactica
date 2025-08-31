@@ -21,6 +21,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ svgRef, onAddToken, onShowPres
     setTrajectoryType,
     toggleGridSnap,
     toggleFullField,
+    resetView,
     reset,
     mirror,
     undo,
@@ -141,6 +142,13 @@ export const Toolbar: React.FC<ToolbarProps> = ({ svgRef, onAddToken, onShowPres
           onClick={toggleGridSnap}
         >
           📐 Rejilla
+        </button>
+        <button
+          className="btn btn-secondary text-sm"
+          onClick={resetView}
+          title="Resetear zoom y posición del campo"
+        >
+          🎯 Centrar
         </button>
       </div>
       

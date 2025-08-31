@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { useBoardStore } from './hooks/useBoardStore';
 import { usePointerInteractions } from './hooks/usePointerInteractions';
-import { useZoomPan } from './hooks/useZoomPan';
+// import { useZoomPan } from './hooks/useZoomPan'; // DISABLED
 import { Pitch } from './components/Pitch';
 import { Token } from './components/Token';
 import { ArrowsLayer } from './components/ArrowsLayer';
@@ -25,8 +25,6 @@ function App() {
     trajectories,
     mode,
     trajectoryType,
-    zoom,
-    pan,
     showFullField,
     gridSnap,
     selectedTokenId,
@@ -36,6 +34,7 @@ function App() {
     updateArrow,
     selectTrajectory,
     updateTrajectory,
+    resetView,
     load,
   } = useBoardStore();
   
@@ -58,8 +57,8 @@ function App() {
     svgWidth = availableHeight * aspectRatio;
   }
   
-  // Zoom and pan setup
-  const { attachWheelListener, attachTouchListeners } = useZoomPan(svgRef);
+  // Zoom and pan setup - DISABLED to prevent accidental movement
+  // const { attachWheelListener, attachTouchListeners } = useZoomPan(svgRef);
   
   // Pointer interactions
   const {
@@ -88,23 +87,24 @@ function App() {
     return () => window.removeEventListener('resize', updateSize);
   }, []);
   
-  // Load saved state on mount
+  // Load saved state on mount and reset view
   useEffect(() => {
     load();
-  }, [load]);
+    resetView(); // Reset zoom and pan to initial position
+  }, [load, resetView]);
   
-  // Setup zoom/pan event listeners
-  useEffect(() => {
-    if (!svgRef.current) return;
-    
-    const cleanupWheel = attachWheelListener(svgRef.current);
-    const cleanupTouch = attachTouchListeners(svgRef.current);
-    
-    return () => {
-      cleanupWheel();
-      cleanupTouch();
-    };
-  }, [attachWheelListener, attachTouchListeners]);
+  // Setup zoom/pan event listeners - DISABLED
+  // useEffect(() => {
+  //   if (!svgRef.current) return;
+  //   
+  //   const cleanupWheel = attachWheelListener(svgRef.current);
+  //   const cleanupTouch = attachTouchListeners(svgRef.current);
+  //   
+  //   return () => {
+  //     cleanupWheel();
+  //     cleanupTouch();
+  //   };
+  // }, [attachWheelListener, attachTouchListeners]);
   
   // Handle adding tokens
   const handleAddToken = useCallback((team: Team) => {
@@ -123,8 +123,8 @@ function App() {
     addToken(team, position.x, position.y);
   }, [addToken, showFullField, fieldWidth, fieldHeight, viewBoxWidth, gridSnap]);
   
-  // Calculate transform for zoom and pan
-  const transform = `translate(${pan.x}, ${pan.y}) scale(${zoom})`;
+  // Calculate transform for zoom and pan - FIXED to prevent movement
+  const transform = `translate(0, 0) scale(1)`;
   
   return (
     <div 
@@ -148,7 +148,7 @@ function App() {
             viewBox={`0 0 ${viewBoxWidth} ${fieldHeight}`}
             className="border border-slate-700 rounded-lg bg-pitch-grass select-none"
             style={{
-              touchAction: isDragging || isDrawingTrajectory ? 'none' : 'pan-x pan-y pinch-zoom',
+              touchAction: 'none', // Disable all touch gestures including zoom and pan
               cursor: mode === 'trajectory' ? 'crosshair' : 'default',
               userSelect: 'none',
               WebkitUserSelect: 'none',
@@ -218,12 +218,7 @@ function App() {
             </g>
           </svg>
           
-          {/* Zoom indicator */}
-          {zoom !== 1 && (
-            <div className="absolute top-4 right-4 bg-slate-800 text-white px-2 py-1 rounded text-sm">
-              {Math.round(zoom * 100)}%
-            </div>
-          )}
+          {/* Zoom indicator - REMOVED since zoom is disabled */}
         </div>
       </div>
       
