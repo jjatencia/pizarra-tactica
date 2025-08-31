@@ -65,10 +65,8 @@ function App() {
     handlePointerUp,
     handlePointerCancel,
     isDragging,
-    isCreatingArrow,
     isDrawingTrajectory,
     trajectoryPreview,
-    arrowPreview,
   } = usePointerInteractions(svgRef, viewBoxWidth, fieldHeight);
   
   // Handle container resize
@@ -176,20 +174,7 @@ function App() {
                 onTrajectoryUpdate={updateTrajectory}
               />
               
-              {/* Arrow preview while creating */}
-              {isCreatingArrow && arrowPreview && (
-                <line
-                  x1={arrowPreview.from.x}
-                  y1={arrowPreview.from.y}
-                  x2={arrowPreview.to.x}
-                  y2={arrowPreview.to.y}
-                  stroke="white"
-                  strokeWidth="0.8"
-                  strokeDasharray="3,2"
-                  opacity="0.7"
-                  style={{ pointerEvents: 'none' }}
-                />
-              )}
+
               
               {/* Trajectory preview while drawing */}
               {isDrawingTrajectory && trajectoryPreview.length > 1 && (
