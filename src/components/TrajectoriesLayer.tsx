@@ -54,6 +54,43 @@ export const TrajectoriesLayer: React.FC<TrajectoriesLayerProps> = ({
 
   return (
     <g className="trajectories-layer">
+      <defs>
+        {/* Arrow markers for trajectories */}
+        <marker
+          id="trajectory-arrowhead-pass"
+          markerWidth="8"
+          markerHeight="8"
+          refX="7"
+          refY="3"
+          orient="auto"
+          markerUnits="strokeWidth"
+        >
+          <path
+            d="M0,0 L0,6 L7,3 z"
+            fill="#8B5CF6"
+            stroke="#8B5CF6"
+            strokeWidth="0.5"
+          />
+        </marker>
+        
+        <marker
+          id="trajectory-arrowhead-movement"
+          markerWidth="8"
+          markerHeight="8"
+          refX="7"
+          refY="3"
+          orient="auto"
+          markerUnits="strokeWidth"
+        >
+          <path
+            d="M0,0 L0,6 L7,3 z"
+            fill="#F59E0B"
+            stroke="#F59E0B"
+            strokeWidth="0.5"
+          />
+        </marker>
+      </defs>
+      
       {trajectories.map((trajectory) => {
         const isSelected = selectedTrajectoryId === trajectory.id;
         const pathData = createPathFromPoints(trajectory.points);
@@ -62,6 +99,7 @@ export const TrajectoriesLayer: React.FC<TrajectoriesLayerProps> = ({
 
         const strokeColor = trajectory.type === 'pass' ? '#8B5CF6' : '#F59E0B'; // Changed from green to purple for better visibility
         const strokeDasharray = trajectory.style === 'dashed' ? '1.5,1' : undefined;
+        const markerEnd = trajectory.type === 'pass' ? 'url(#trajectory-arrowhead-pass)' : 'url(#trajectory-arrowhead-movement)';
 
         return (
           <g key={trajectory.id}>
@@ -84,6 +122,7 @@ export const TrajectoriesLayer: React.FC<TrajectoriesLayerProps> = ({
               strokeDasharray={strokeDasharray}
               fill="none"
               opacity={isSelected ? 1 : 0.8}
+              markerEnd={markerEnd}
               style={{ pointerEvents: 'none' }}
             />
             

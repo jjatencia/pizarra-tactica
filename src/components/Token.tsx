@@ -18,7 +18,7 @@ export const Token: React.FC<TokenProps> = ({
   isDragging = false,
   isInteractionDisabled = false
 }) => {
-  const { selectedTokenId, selectToken } = useBoardStore();
+  const { selectedTokenId, selectToken, removeToken } = useBoardStore();
   
   const isSelected = selectedTokenId === token.id;
   const radius = 3;
@@ -37,10 +37,14 @@ export const Token: React.FC<TokenProps> = ({
   }, [token, onPointerDown, selectToken, isInteractionDisabled]);
   
   const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+    if (isInteractionDisabled) return;
+    
     e.stopPropagation();
-    // TODO: Show number/color edit dialog
-    console.log('Double click on token', token.id);
-  }, [token.id]);
+    e.preventDefault();
+    
+    // Delete token on double click/tap
+    removeToken(token.id);
+  }, [token.id, removeToken, isInteractionDisabled]);
   
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();

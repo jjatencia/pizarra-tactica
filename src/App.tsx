@@ -159,6 +159,43 @@ function App() {
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerCancel}
           >
+            <defs>
+              {/* Arrow markers for trajectory preview */}
+              <marker
+                id="preview-arrowhead-pass"
+                markerWidth="8"
+                markerHeight="8"
+                refX="7"
+                refY="3"
+                orient="auto"
+                markerUnits="strokeWidth"
+              >
+                <path
+                  d="M0,0 L0,6 L7,3 z"
+                  fill="#8B5CF6"
+                  stroke="#8B5CF6"
+                  strokeWidth="0.5"
+                />
+              </marker>
+              
+              <marker
+                id="preview-arrowhead-movement"
+                markerWidth="8"
+                markerHeight="8"
+                refX="7"
+                refY="3"
+                orient="auto"
+                markerUnits="strokeWidth"
+              >
+                <path
+                  d="M0,0 L0,6 L7,3 z"
+                  fill="#F59E0B"
+                  stroke="#F59E0B"
+                  strokeWidth="0.5"
+                />
+              </marker>
+            </defs>
+            
             <g transform={transform}>
               {/* Pitch */}
               <Pitch
@@ -193,6 +230,7 @@ function App() {
                   stroke={trajectoryType === 'pass' ? '#8B5CF6' : '#F59E0B'}
                   strokeWidth="1.2"
                   strokeDasharray={trajectoryType === 'movement' ? '1.5,1' : undefined}
+                  markerEnd={trajectoryType === 'pass' ? 'url(#preview-arrowhead-pass)' : 'url(#preview-arrowhead-movement)'}
                   fill="none"
                   opacity="0.7"
                   style={{ pointerEvents: 'none' }}

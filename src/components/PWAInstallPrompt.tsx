@@ -25,17 +25,25 @@ export const PWAInstallPrompt: React.FC = () => {
                       (window.navigator as any).standalone === true;
     setIsStandalone(standalone);
 
+    // Don't show install prompt in development environment (Cursor)
+    const isDevelopment = window.location.hostname === 'localhost' || 
+                         window.location.hostname === '127.0.0.1' ||
+                         window.location.hostname.includes('cursor') ||
+                         window.location.port !== '';
+    
     // Handle beforeinstallprompt event (for Android/Chrome)
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-      setShowInstallPrompt(true);
+      if (!isDevelopment) {
+        setShowInstallPrompt(true);
+      }
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // For iOS, show install prompt if not standalone and not dismissed
-    if (ios && !standalone && !localStorage.getItem('pwa-install-dismissed')) {
+    // For iOS, show install prompt if not standalone, not dismissed, and not in development
+    if (ios && !standalone && !localStorage.getItem('pwa-install-dismissed') && !isDevelopment) {
       setShowInstallPrompt(true);
     }
 
@@ -76,10 +84,14 @@ export const PWAInstallPrompt: React.FC = () => {
             <div className="text-sm text-slate-300 space-y-2">
               <p>Para instalar esta app en tu iPad:</p>
               <ol className="list-decimal list-inside space-y-1 text-xs">
-                <li>Toca el botón de compartir <span className="inline-block">⤴️</span> en Safari</li>
-                <li>Selecciona "Añadir a pantalla de inicio"</li>
+                <li>Asegúrate de estar en <strong>Safari</strong> (no Chrome ni otros navegadores)</li>
+                <li>Toca el botón de compartir <span className="inline-block">⤴️</span> en la barra inferior</li>
+                <li>Busca y selecciona "Añadir a pantalla de inicio"</li>
                 <li>Confirma tocando "Añadir"</li>
               </ol>
+              <p className="text-xs text-yellow-400 mt-2">
+                ⚠️ Si no funciona, asegúrate de estar accediendo desde una URL pública (no localhost).
+              </p>
             </div>
           ) : (
             <div className="text-sm text-slate-300">
