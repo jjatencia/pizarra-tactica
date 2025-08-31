@@ -2,7 +2,7 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import { useBoardStore } from './hooks/useBoardStore';
 import { usePointerInteractions } from './hooks/usePointerInteractions';
 import { useZoomPan } from './hooks/useZoomPan';
-import { useCanvasDrawing } from './hooks/useCanvasDrawing';
+import { useSimpleDrawing } from './hooks/useSimpleDrawing';
 import { Pitch } from './components/Pitch';
 import { Token } from './components/Token';
 import { ArrowsLayer } from './components/ArrowsLayer';
@@ -78,7 +78,7 @@ function App() {
 
   // Canvas drawing
   const {
-    isDrawing,
+    // isDrawing, // Not used in current implementation
     color: drawColor,
     lineStyle: drawLineStyle,
     canUndo: canUndoDraw,
@@ -90,11 +90,7 @@ function App() {
     redo: redoDraw,
     setColor: setDrawColor,
     setLineStyle: setDrawLineStyle,
-    // clearCanvas, // Commented out as not used yet
-    resizeCanvas,
-    saveHistory,
-    handleDoubleTapClear,
-  } = useCanvasDrawing(canvasRef);
+  } = useSimpleDrawing(canvasRef);
   
   // Handle container resize
   useEffect(() => {
@@ -103,20 +99,18 @@ function App() {
         const rect = containerRef.current.getBoundingClientRect();
         setContainerSize({ width: rect.width, height: rect.height });
       }
-      resizeCanvas();
     };
     
     updateSize();
     window.addEventListener('resize', updateSize);
     
     return () => window.removeEventListener('resize', updateSize);
-  }, [resizeCanvas]);
+  }, []);
 
   // Initialize canvas
   useEffect(() => {
-    resizeCanvas();
-    saveHistory(); // Save initial blank state
-  }, [resizeCanvas, saveHistory]);
+    // Canvas initialization is handled by the useSimpleDrawing hook
+  }, []);
   
   // Load saved state on mount
   useEffect(() => {
@@ -176,19 +170,19 @@ function App() {
   }, [addObject, showFullField, fieldWidth, fieldHeight, viewBoxWidth, gridSnap]);
 
   // Handle canvas double tap for clearing last drawing
-  const handleCanvasPointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const handleCanvasPointerDown = useCallback((e: any) => {
     const now = Date.now();
     const timeDiff = now - lastCanvasTapRef.current;
     
     if (timeDiff < 300) {
       // Double tap detected - undo last drawing
-      handleDoubleTapClear(e as any);
+      undoDraw();
       return;
     }
     
     lastCanvasTapRef.current = now;
     startDrawing(e);
-  }, [handleDoubleTapClear, startDrawing]);
+  }, [undoDraw, startDrawing]);
   
   // Calculate transform for zoom and pan
   const transform = `translate(${pan.x}, ${pan.y}) scale(${zoom})`;
@@ -219,20 +213,6 @@ function App() {
       <main className="flex-1 flex items-center justify-center p-2">
         <div id="board" className="w-full h-full aspect-[105/68] max-w-full max-h-full mx-auto shadow-2xl rounded-lg relative bg-gray-900 p-1" style={{ touchAction: 'none' }}>
           <div id="pitch" className="pitch w-full h-full rounded-md relative">
-            {/* Drawing Canvas */}
-            <canvas 
-              ref={canvasRef}
-              className="drawing-canvas"
-              onPointerDown={handleCanvasPointerDown}
-              onPointerMove={draw}
-              onPointerUp={endDrawing}
-              onPointerLeave={endDrawing}
-              onTouchStart={handleCanvasPointerDown}
-              onTouchMove={draw}
-              onTouchEnd={endDrawing}
-              style={{ touchAction: 'none' }}
-            />
-            
             <svg
               ref={svgRef}
               width={svgWidth}
@@ -240,9 +220,10 @@ function App() {
               viewBox={`0 0 ${viewBoxWidth} ${fieldHeight}`}
               className="w-full h-full select-none absolute top-0 left-0"
               style={{
-                touchAction: 'none', // Disable all touch actions including pinch-zoom
+                touchAction: 'none',
                 cursor: mode === 'trajectory' ? 'crosshair' : 'default',
-                pointerEvents: isDrawing ? 'none' : 'auto',
+                pointerEvents: 'auto',
+                zIndex: 1,
               }}
               onPointerDown={handleSVGPointerDown}
               onPointerMove={handlePointerMove}
@@ -302,9 +283,44 @@ function App() {
             </g>
             </svg>
             
+            {/* Drawing Canvas - Above SVG */}
+            <canvas 
+              ref={canvasRef}
+              className="absolute top-0 left-0 w-full h-full"
+              style={{ 
+                touchAction: 'none',
+                zIndex: 10,
+                pointerEvents: 'auto',
+                backgroundColor: 'transparent'
+              }}
+              onMouseDown={(e) => {
+                console.log('🖱️ Mouse down on canvas');
+                handleCanvasPointerDown(e);
+              }}
+              onMouseMove={(e) => {
+                draw(e);
+              }}
+              onMouseUp={() => {
+                endDrawing();
+              }}
+              onTouchStart={(e) => {
+                console.log('👆 Touch start on canvas');
+                e.preventDefault();
+                handleCanvasPointerDown(e);
+              }}
+              onTouchMove={(e) => {
+                e.preventDefault();
+                draw(e);
+              }}
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                endDrawing();
+              }}
+            />
+            
             {/* Zoom indicator */}
             {zoom !== 1 && (
-              <div className="absolute top-4 right-4 bg-slate-800 text-white px-2 py-1 rounded text-sm">
+              <div className="absolute top-4 right-4 bg-slate-800 text-white px-2 py-1 rounded text-sm" style={{ zIndex: 3 }}>
                 {Math.round(zoom * 100)}%
               </div>
             )}
