@@ -7,6 +7,7 @@ interface DragState {
   isDragging: boolean;
   dragStartPoint: Point | null;
   dragToken: Token | null;
+  dragTokenOriginalPosition: Point | null;
   arrowStart: Point | null;
   trajectoryPoints: Point[];
   isDrawingTrajectory: boolean;
@@ -36,6 +37,7 @@ export const usePointerInteractions = (
     isDragging: false,
     dragStartPoint: null,
     dragToken: null,
+    dragTokenOriginalPosition: null,
     arrowStart: null,
     trajectoryPoints: [],
     isDrawingTrajectory: false,
@@ -66,13 +68,18 @@ export const usePointerInteractions = (
       isDragging: true,
       dragStartPoint: svgPoint,
       dragToken: token,
+      dragTokenOriginalPosition: { x: token.x, y: token.y },
       arrowStart: null,
       trajectoryPoints: [],
       isDrawingTrajectory: false,
     });
     
-    // Capture pointer
+    // Capture pointer for better touch tracking
     (e.target as Element).setPointerCapture(e.pointerId);
+    
+    // Disable text selection and other interactions during drag
+    document.body.style.userSelect = 'none';
+    document.body.style.webkitUserSelect = 'none';
   }, [mode, getSVGPoint]);
   
   const handleSVGPointerDown = useCallback((e: React.PointerEvent) => {
@@ -84,6 +91,7 @@ export const usePointerInteractions = (
         isDragging: false,
         dragStartPoint: null,
         dragToken: null,
+        dragTokenOriginalPosition: null,
         arrowStart: null,
         trajectoryPoints: [svgPoint],
         isDrawingTrajectory: true,
@@ -107,10 +115,14 @@ export const usePointerInteractions = (
       // For iPad touch, update immediately without requestAnimationFrame for maximum responsiveness
       const svgPoint = getSVGPoint(e.clientX, e.clientY);
       
-      // Calculate new position
+      // Calculate offset from the initial drag start point to current position
+      const deltaX = svgPoint.x - dragState.dragStartPoint.x;
+      const deltaY = svgPoint.y - dragState.dragStartPoint.y;
+      
+      // Calculate new position based on token's original position plus the drag offset
       let newPosition = {
-        x: svgPoint.x,
-        y: svgPoint.y,
+        x: dragState.dragTokenOriginalPosition!.x + deltaX,
+        y: dragState.dragTokenOriginalPosition!.y + deltaY,
       };
       
       // Apply grid snapping
@@ -118,8 +130,8 @@ export const usePointerInteractions = (
         newPosition = snapToGrid(newPosition);
       }
       
-      // Clamp to field boundaries
-      newPosition = clampToField(newPosition, fieldWidth, fieldHeight);
+      // Remove field clamping to allow positioning anywhere
+      // newPosition = clampToField(newPosition, fieldWidth, fieldHeight);
       
       // Update token position immediately for fluid movement
       updateToken(dragState.dragToken!.id, newPosition);
@@ -137,11 +149,10 @@ export const usePointerInteractions = (
       if (!lastPoint || Math.sqrt(
         Math.pow(svgPoint.x - lastPoint.x, 2) + Math.pow(svgPoint.y - lastPoint.y, 2)
       ) > 3) {
-        const clampedPoint = clampToField(svgPoint, fieldWidth, fieldHeight);
-        
+        // Allow trajectory points anywhere, no field clamping
         setDragState(prev => ({
           ...prev,
-          trajectoryPoints: [...prev.trajectoryPoints, clampedPoint],
+          trajectoryPoints: [...prev.trajectoryPoints, svgPoint],
         }));
       }
     }
@@ -160,8 +171,8 @@ export const usePointerInteractions = (
         if (Math.sqrt(
           Math.pow(svgPoint.x - lastPoint.x, 2) + Math.pow(svgPoint.y - lastPoint.y, 2)
         ) > 3) {
-          const clampedPoint = clampToField(svgPoint, fieldWidth, fieldHeight);
-          finalPoints.push(clampedPoint);
+          // Allow final trajectory point anywhere, no field clamping
+          finalPoints.push(svgPoint);
         }
         
         // Create trajectory
@@ -172,6 +183,7 @@ export const usePointerInteractions = (
         isDragging: false,
         dragStartPoint: null,
         dragToken: null,
+        dragTokenOriginalPosition: null,
         arrowStart: null,
         trajectoryPoints: [],
         isDrawingTrajectory: false,
@@ -187,6 +199,7 @@ export const usePointerInteractions = (
         isDragging: false,
         dragStartPoint: null,
         dragToken: null,
+        dragTokenOriginalPosition: null,
         arrowStart: null,
         trajectoryPoints: [],
         isDrawingTrajectory: false,
@@ -194,6 +207,10 @@ export const usePointerInteractions = (
       
       // Release pointer capture
       (e.target as Element).releasePointerCapture(e.pointerId);
+      
+      // Restore normal text selection
+      document.body.style.userSelect = '';
+      document.body.style.webkitUserSelect = '';
     }
   }, [mode, dragState, getSVGPoint, gridSnap, fieldWidth, fieldHeight, addArrow, addTrajectory, trajectoryType]);
   
@@ -206,6 +223,10 @@ export const usePointerInteractions = (
       trajectoryPoints: [],
       isDrawingTrajectory: false,
     });
+    
+    // Restore normal cursor and text selection
+    document.body.style.userSelect = '';
+    document.body.style.webkitUserSelect = '';
     
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);

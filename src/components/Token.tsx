@@ -8,12 +8,13 @@ interface TokenProps {
   fieldWidth: number;
   fieldHeight: number;
   onPointerDown: (e: React.PointerEvent, token: TokenType) => void;
+  isDragging?: boolean;
 }
 
 export const Token: React.FC<TokenProps> = ({ 
   token, 
-   
-  onPointerDown 
+  onPointerDown,
+  isDragging = false
 }) => {
   const { selectedTokenId, selectToken } = useBoardStore();
   
@@ -27,6 +28,7 @@ export const Token: React.FC<TokenProps> = ({
     
     // Ensure immediate response for touch on iPad
     selectToken(token.id);
+    
     onPointerDown(e, token);
   }, [token, onPointerDown, selectToken]);
   
@@ -58,8 +60,12 @@ export const Token: React.FC<TokenProps> = ({
         r={hitRadius}
         fill="transparent"
         style={{ 
-          cursor: 'grab',
-          touchAction: 'none' // Prevent default touch behaviors for smoother dragging
+          cursor: isDragging ? 'grabbing' : 'grab',
+          touchAction: 'none', // Prevent default touch behaviors for smoother dragging
+          userSelect: 'none',
+          webkitUserSelect: 'none',
+          webkitTouchCallout: 'none', // Disable iOS callout menu
+          webkitTapHighlightColor: 'transparent' // Remove tap highlight on mobile
         }}
         onPointerDown={handlePointerDown}
         onDoubleClick={handleDoubleClick}
@@ -74,7 +80,11 @@ export const Token: React.FC<TokenProps> = ({
         fill={teamColors[token.team]}
         stroke={isSelected ? '#FBBF24' : 'white'}
         strokeWidth={isSelected ? 0.4 : 0.2}
-        style={{ pointerEvents: 'none' }}
+        opacity={isDragging ? 0.8 : 1}
+        style={{ 
+          pointerEvents: 'none',
+          filter: isDragging ? 'drop-shadow(0 0 4px rgba(0,0,0,0.3))' : 'none'
+        }}
       />
       
       {/* Token number */}

@@ -19,6 +19,12 @@ export const clampToField = (point: Point, fieldWidth: number, fieldHeight: numb
   };
 };
 
+// Alternative function for unrestricted positioning
+export const allowAnywherePosition = (point: Point): Point => {
+  // Return the point as-is, allowing positioning anywhere
+  return point;
+};
+
 export const getBezierControlPoint = (from: Point, to: Point, curvature: number = 0.3): Point => {
   const midX = (from.x + to.x) / 2;
   const midY = (from.y + to.y) / 2;

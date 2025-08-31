@@ -26,6 +26,7 @@ function App() {
     pan,
     showFullField,
     gridSnap,
+    selectedTokenId,
 
     addToken,
     selectArrow,
@@ -146,6 +147,10 @@ function App() {
             style={{
               touchAction: isDragging || isDrawingTrajectory ? 'none' : 'pan-x pan-y pinch-zoom',
               cursor: mode === 'trajectory' ? 'crosshair' : 'default',
+              userSelect: 'none',
+              webkitUserSelect: 'none',
+              webkitTouchCallout: 'none',
+              webkitTapHighlightColor: 'transparent'
             }}
             onPointerDown={handleSVGPointerDown}
             onPointerMove={handlePointerMove}
@@ -200,6 +205,7 @@ function App() {
                   fieldWidth={viewBoxWidth}
                   fieldHeight={fieldHeight}
                   onPointerDown={handleTokenPointerDown}
+                  isDragging={isDragging && token.id === selectedTokenId}
                 />
               ))}
             </g>
