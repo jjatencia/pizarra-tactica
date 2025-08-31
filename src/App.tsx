@@ -20,6 +20,7 @@ function App() {
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [showPresets, setShowPresets] = useState(false);
   const [showFormations, setShowFormations] = useState(false);
+  const lastCanvasTapRef = useRef<number>(0);
   
   const {
     tokens,
@@ -33,6 +34,7 @@ function App() {
 
     addToken,
     addObject,
+    applyFormationByName,
     selectArrow,
     updateArrow,
     selectTrajectory,
@@ -69,7 +71,7 @@ function App() {
     handlePointerMove,
     handlePointerUp,
     handlePointerCancel,
-    isDragging,
+    // isDragging, // Not used with new canvas drawing
     isDrawingTrajectory,
     trajectoryPreview,
   } = usePointerInteractions(svgRef, viewBoxWidth, fieldHeight);
@@ -91,6 +93,7 @@ function App() {
     // clearCanvas, // Commented out as not used yet
     resizeCanvas,
     saveHistory,
+    handleDoubleTapClear,
   } = useCanvasDrawing(canvasRef);
   
   // Handle container resize
@@ -152,10 +155,8 @@ function App() {
 
   // Handle formation application
   const handleApplyFormation = useCallback((team: Team, formation: string) => {
-    // This would need to be implemented in the store
-    // For now, we'll just close the modal
-    console.log(`Applying formation ${formation} to team ${team}`);
-  }, []);
+    applyFormationByName(formation, team);
+  }, [applyFormationByName]);
 
   // Handle adding objects
   const handleAddObject = useCallback((type: ObjectType) => {
@@ -173,6 +174,21 @@ function App() {
     
     addObject(type, position.x, position.y);
   }, [addObject, showFullField, fieldWidth, fieldHeight, viewBoxWidth, gridSnap]);
+
+  // Handle canvas double tap for clearing last drawing
+  const handleCanvasPointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    const now = Date.now();
+    const timeDiff = now - lastCanvasTapRef.current;
+    
+    if (timeDiff < 300) {
+      // Double tap detected - undo last drawing
+      handleDoubleTapClear(e);
+      return;
+    }
+    
+    lastCanvasTapRef.current = now;
+    startDrawing(e);
+  }, [handleDoubleTapClear, startDrawing]);
   
   // Calculate transform for zoom and pan
   const transform = `translate(${pan.x}, ${pan.y}) scale(${zoom})`;
@@ -207,10 +223,36 @@ function App() {
             <canvas 
               ref={canvasRef}
               className="drawing-canvas"
-              onPointerDown={startDrawing}
+              onPointerDown={handleCanvasPointerDown}
               onPointerMove={draw}
               onPointerUp={endDrawing}
               onPointerLeave={endDrawing}
+              onTouchStart={(e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const pointerEvent = new PointerEvent('pointerdown', {
+                  clientX: touch.clientX,
+                  clientY: touch.clientY,
+                  pointerId: 1,
+                  pointerType: 'touch'
+                });
+                handleCanvasPointerDown(pointerEvent as any);
+              }}
+              onTouchMove={(e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const pointerEvent = new PointerEvent('pointermove', {
+                  clientX: touch.clientX,
+                  clientY: touch.clientY,
+                  pointerId: 1,
+                  pointerType: 'touch'
+                });
+                draw(pointerEvent as any);
+              }}
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                endDrawing();
+              }}
             />
             
             <svg
@@ -220,7 +262,7 @@ function App() {
               viewBox={`0 0 ${viewBoxWidth} ${fieldHeight}`}
               className="w-full h-full select-none absolute top-0 left-0"
               style={{
-                touchAction: isDragging || isDrawingTrajectory ? 'none' : 'pan-x pan-y pinch-zoom',
+                touchAction: 'none', // Disable all touch actions including pinch-zoom
                 cursor: mode === 'trajectory' ? 'crosshair' : 'default',
                 pointerEvents: isDrawing ? 'none' : 'auto',
               }}

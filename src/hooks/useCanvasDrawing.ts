@@ -167,6 +167,17 @@ export const useCanvasDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     saveHistory();
   }, [canvasRef, saveHistory]);
 
+  const handleDoubleTapClear = useCallback((_e: React.PointerEvent<HTMLCanvasElement>) => {
+    // Simple approach: double tap anywhere on canvas clears the last drawing
+    if (drawingState.historyStep > 0) {
+      setDrawingState(prev => ({
+        ...prev,
+        historyStep: prev.historyStep - 1
+      }));
+      redrawFromHistory();
+    }
+  }, [drawingState.historyStep, redrawFromHistory]);
+
   const resizeCanvas = useCallback(() => {
     if (!canvasRef.current) return;
     
@@ -198,5 +209,6 @@ export const useCanvasDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     clearCanvas,
     resizeCanvas,
     saveHistory,
+    handleDoubleTapClear,
   };
 };

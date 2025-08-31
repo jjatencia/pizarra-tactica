@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { Token as TokenType, ObjectType } from '../types';
 import { useBoardStore } from '../hooks/useBoardStore';
 
@@ -15,21 +15,34 @@ export const Token: React.FC<TokenProps> = ({
    
   onPointerDown 
 }) => {
-  const { selectedTokenId, selectToken } = useBoardStore();
+  const { selectedTokenId, selectToken, removeToken } = useBoardStore();
+  const lastTapRef = useRef<number>(0);
   
   const isSelected = selectedTokenId === token.id;
   const objectType: ObjectType = token.type || 'player';
-  const radius = objectType === 'player' ? 3 : objectType === 'ball' ? 2 : 3;
+  const radius = objectType === 'player' ? 3 : objectType === 'ball' ? 2 : objectType === 'cone' ? 2 : 3;
   const hitRadius = 8; // Larger hit area for better touch response on iPad
   
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     e.stopPropagation();
     e.preventDefault();
     
+    // Double tap detection
+    const now = Date.now();
+    const timeDiff = now - lastTapRef.current;
+    
+    if (timeDiff < 300) {
+      // Double tap detected - delete the token
+      removeToken(token.id);
+      return;
+    }
+    
+    lastTapRef.current = now;
+    
     // Ensure immediate response for touch on iPad
     selectToken(token.id);
     onPointerDown(e, token);
-  }, [token, onPointerDown, selectToken]);
+  }, [token, onPointerDown, selectToken, removeToken]);
   
   const handleDoubleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
