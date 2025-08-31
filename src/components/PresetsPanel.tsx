@@ -1,8 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useBoardStore } from '../hooks/useBoardStore';
 import { formations, getFormationForTeam } from '../lib/formations';
 import { Team } from '../types';
-import clsx from 'clsx';
 
 interface PresetsPanelProps {
   isOpen: boolean;
@@ -10,102 +9,42 @@ interface PresetsPanelProps {
 }
 
 export const PresetsPanel: React.FC<PresetsPanelProps> = ({ isOpen, onClose }) => {
-  const { applyFormation, tokens } = useBoardStore();
-  
-  const redTokens = tokens.filter(t => t.team === 'red');
-  const blueTokens = tokens.filter(t => t.team === 'blue');
-  
-  const handleApplyFormation = (formationName: string, team: Team) => {
-    const formation = formations.find(f => f.name === formationName);
-    if (formation) {
-      const teamFormation = getFormationForTeam(formation, team);
-      applyFormation(teamFormation, team);
-    }
-  };
-  
+  const { applyFormation } = useBoardStore();
+  const [team, setTeam] = useState<Team>('blue');
+  const [formationName, setFormationName] = useState<string>(formations[0]?.name || '4-3-3');
+
   if (!isOpen) return null;
-  
+
+  const handleApply = () => {
+    const formation = formations.find(f => f.name === formationName);
+    if (!formation) return;
+    const teamFormation = getFormationForTeam(formation, team);
+    applyFormation(teamFormation, team);
+    onClose();
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Formaciones</h2>
-          <button
-            className="btn btn-secondary"
-            onClick={onClose}
-          >
-            ✕
-          </button>
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+      <div className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+        <h2 className="text-2xl font-bold mb-4">Seleccionar Formación</h2>
+        <div className="mb-4">
+          <label className="block mb-2">Equipo:</label>
+          <select value={team} onChange={(e) => setTeam(e.target.value as Team)} className="w-full bg-gray-700 rounded p-2">
+            <option value="red">Equipo Rojo</option>
+            <option value="blue">Equipo Azul</option>
+          </select>
         </div>
-        
-        <div className="space-y-4">
-          {formations.map((formation) => (
-            <div key={formation.name} className="border border-slate-700 rounded-lg p-4">
-              <h3 className="font-semibold mb-3">{formation.name}</h3>
-              
-              <div className="flex gap-2 mb-2">
-                <button
-                  className={clsx('btn btn-team-blue text-sm flex-1', {
-                    'opacity-50 cursor-not-allowed': blueTokens.length > 0
-                  })}
-                  onClick={() => handleApplyFormation(formation.name, 'blue')}
-                  disabled={blueTokens.length > 0}
-                >
-                  Aplicar Azules
-                </button>
-                <button
-                  className={clsx('btn btn-team-red text-sm flex-1', {
-                    'opacity-50 cursor-not-allowed': redTokens.length > 0
-                  })}
-                  onClick={() => handleApplyFormation(formation.name, 'red')}
-                  disabled={redTokens.length > 0}
-                >
-                  Aplicar Rojas
-                </button>
-              </div>
-              
-              {(blueTokens.length > 0 || redTokens.length > 0) && (
-                <p className="text-xs text-slate-400">
-                  Elimina las fichas existentes antes de aplicar una formación
-                </p>
-              )}
-              
-              {/* Mini field preview */}
-              <div className="mt-3 bg-slate-900 rounded p-2">
-                <svg
-                  viewBox="0 0 105 68"
-                  className="w-full h-16 border border-slate-600 rounded"
-                >
-                  {/* Field */}
-                  <rect width="105" height="68" fill="#1B5E20" stroke="white" strokeWidth="0.5" />
-                  <line x1="52.5" y1="0" x2="52.5" y2="68" stroke="white" strokeWidth="0.3" />
-                  <circle cx="52.5" cy="34" r="9.15" fill="none" stroke="white" strokeWidth="0.3" />
-                  
-                  {/* Formation tokens */}
-                  {formation.tokens.map((token, index) => (
-                    <circle
-                      key={index}
-                      cx={token.x}
-                      cy={token.y}
-                      r="1.5"
-                      fill="#3B82F6"
-                      stroke="white"
-                      strokeWidth="0.2"
-                    />
-                  ))}
-                </svg>
-              </div>
-            </div>
-          ))}
+        <div className="mb-6">
+          <label className="block mb-2">Formación:</label>
+          <select value={formationName} onChange={(e) => setFormationName(e.target.value)} className="w-full bg-gray-700 rounded p-2">
+            {formations.map(f => (
+              <option key={f.name} value={f.name}>{f.name}</option>
+            ))}
+          </select>
         </div>
-        
-        <div className="mt-6 pt-4 border-t border-slate-700">
-          <h3 className="font-semibold mb-2">Instrucciones</h3>
-          <ul className="text-sm text-slate-400 space-y-1">
-            <li>• Las formaciones se aplican desde la perspectiva del equipo azul</li>
-            <li>• El equipo rojo se coloca automáticamente en posición espejo</li>
-            <li>• Limpia el campo antes de aplicar una nueva formación</li>
-          </ul>
+        <div className="flex justify-end gap-4">
+          <button className="bg-gray-600 hover:bg-gray-500 py-2 px-4 rounded" onClick={onClose}>Cancelar</button>
+          <button className="bg-green-600 hover:bg-green-500 py-2 px-4 rounded" onClick={handleApply}>Aplicar</button>
         </div>
       </div>
     </div>

@@ -4,6 +4,7 @@ import { usePointerInteractions } from './hooks/usePointerInteractions';
 import { useZoomPan } from './hooks/useZoomPan';
 import { Pitch } from './components/Pitch';
 import { Token } from './components/Token';
+import { Decoration } from './components/Decoration';
 import { ArrowsLayer } from './components/ArrowsLayer';
 import { TrajectoriesLayer } from './components/TrajectoriesLayer';
 import { Toolbar } from './components/Toolbar';
@@ -19,6 +20,7 @@ function App() {
   
   const {
     tokens,
+    decorations,
     arrows,
     trajectories,
     mode,
@@ -60,6 +62,7 @@ function App() {
   // Pointer interactions
   const {
     handleTokenPointerDown,
+    handleDecorationPointerDown,
     handleSVGPointerDown,
     handlePointerMove,
     handlePointerUp,
@@ -200,6 +203,15 @@ function App() {
                   fieldWidth={viewBoxWidth}
                   fieldHeight={fieldHeight}
                   onPointerDown={handleTokenPointerDown}
+                />
+              ))}
+
+              {/* Decorations */}
+              {decorations.map((deco) => (
+                <Decoration
+                  key={deco.id}
+                  decoration={deco}
+                  onPointerDown={handleDecorationPointerDown}
                 />
               ))}
             </g>

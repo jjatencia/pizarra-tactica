@@ -28,6 +28,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ svgRef, onAddToken, onShowPres
     canRedo,
     exportState,
     importState,
+    addDecoration,
   } = useBoardStore();
   
   const redTokens = tokens.filter(t => t.team === 'red');
@@ -85,11 +86,17 @@ export const Toolbar: React.FC<ToolbarProps> = ({ svgRef, onAddToken, onShowPres
       {/* Divider */}
       <div className="w-px h-6 bg-slate-600" />
       
-      {/* Ball/Cone/MiniGoal placeholders (mapped to future features) */}
+      {/* Ball/Cone/MiniGoal */}
       <div className="flex items-center gap-2">
-        <button className="control-btn" title="Añadir Balón">⚽</button>
-        <button className="control-btn" title="Añadir Cono">▲</button>
-        <button className="control-btn" title="Añadir Mini Portería">▭</button>
+        <button className="control-btn" title="Añadir Balón" onClick={() => {
+          if (!svgRef.current) return; const rect = svgRef.current.viewBox.baseVal; addDecoration('ball', rect.width / 2, rect.height / 2);
+        }}>⚽</button>
+        <button className="control-btn" title="Añadir Cono" onClick={() => {
+          if (!svgRef.current) return; const rect = svgRef.current.viewBox.baseVal; addDecoration('cone', rect.width / 2, rect.height / 2);
+        }}>▲</button>
+        <button className="control-btn" title="Añadir Mini Portería" onClick={() => {
+          if (!svgRef.current) return; const rect = svgRef.current.viewBox.baseVal; addDecoration('minigoal', rect.width / 2, rect.height / 2);
+        }}>▭</button>
       </div>
       
       {/* Divider */}

@@ -1,12 +1,13 @@
 import { useCallback, useRef, useState } from 'react';
 import { useBoardStore } from './useBoardStore';
-import { Token, Point } from '../types';
+import { Token, Point, Decoration } from '../types';
 import { clampToField, snapToGrid, screenToSVG } from '../lib/geometry';
 
 interface DragState {
   isDragging: boolean;
   dragStartPoint: Point | null;
   dragToken: Token | null;
+  dragDecoration: Decoration | null;
   arrowStart: Point | null;
   trajectoryPoints: Point[];
   isDrawingTrajectory: boolean;
@@ -25,9 +26,11 @@ export const usePointerInteractions = (
     trajectoryType,
 
     updateToken,
+    updateDecoration,
     addArrow,
     addTrajectory,
     selectToken,
+    selectDecoration,
     selectArrow,
     selectTrajectory,
   } = useBoardStore();
@@ -36,6 +39,7 @@ export const usePointerInteractions = (
     isDragging: false,
     dragStartPoint: null,
     dragToken: null,
+    dragDecoration: null,
     arrowStart: null,
     trajectoryPoints: [],
     isDrawingTrajectory: false,
@@ -66,12 +70,30 @@ export const usePointerInteractions = (
       isDragging: true,
       dragStartPoint: svgPoint,
       dragToken: token,
+      dragDecoration: null,
       arrowStart: null,
       trajectoryPoints: [],
       isDrawingTrajectory: false,
     });
     
     // Capture pointer
+    (e.target as Element).setPointerCapture(e.pointerId);
+  }, [mode, getSVGPoint]);
+  
+  const handleDecorationPointerDown = useCallback((e: React.PointerEvent, deco: Decoration) => {
+    if (mode !== 'select') return;
+    e.preventDefault();
+    e.stopPropagation();
+    const svgPoint = getSVGPoint(e.clientX, e.clientY);
+    setDragState({
+      isDragging: true,
+      dragStartPoint: svgPoint,
+      dragToken: null,
+      dragDecoration: deco,
+      arrowStart: null,
+      trajectoryPoints: [],
+      isDrawingTrajectory: false,
+    });
     (e.target as Element).setPointerCapture(e.pointerId);
   }, [mode, getSVGPoint]);
   
@@ -84,20 +106,23 @@ export const usePointerInteractions = (
         isDragging: false,
         dragStartPoint: null,
         dragToken: null,
+        dragDecoration: null,
         arrowStart: null,
         trajectoryPoints: [svgPoint],
         isDrawingTrajectory: true,
       });
       selectArrow(null);
       selectToken(null);
+      selectDecoration(null);
       selectTrajectory(null);
     } else {
       // Clear selection
       selectToken(null);
+      selectDecoration(null);
       selectArrow(null);
       selectTrajectory(null);
     }
-  }, [mode, getSVGPoint, selectToken, selectArrow, selectTrajectory]);
+  }, [mode, getSVGPoint, selectToken, selectArrow, selectTrajectory, selectDecoration]);
   
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     // Handle token dragging
@@ -126,6 +151,17 @@ export const usePointerInteractions = (
       return;
     }
     
+    // Handle decoration dragging
+    if (dragState.isDragging && dragState.dragDecoration && dragState.dragStartPoint) {
+      e.preventDefault();
+      const svgPoint = getSVGPoint(e.clientX, e.clientY);
+      let newPosition = { x: svgPoint.x, y: svgPoint.y };
+      if (gridSnap) newPosition = snapToGrid(newPosition);
+      newPosition = clampToField(newPosition, fieldWidth, fieldHeight);
+      updateDecoration(dragState.dragDecoration!.id, newPosition);
+      return;
+    }
+    
     // Handle trajectory drawing
     if (dragState.isDrawingTrajectory && mode === 'trajectory') {
       e.preventDefault();
@@ -145,7 +181,7 @@ export const usePointerInteractions = (
         }));
       }
     }
-  }, [dragState, getSVGPoint, gridSnap, fieldWidth, fieldHeight, updateToken, mode]);
+  }, [dragState, getSVGPoint, gridSnap, fieldWidth, fieldHeight, updateToken, updateDecoration, mode]);
   
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
     const svgPoint = getSVGPoint(e.clientX, e.clientY);
@@ -172,6 +208,7 @@ export const usePointerInteractions = (
         isDragging: false,
         dragStartPoint: null,
         dragToken: null,
+        dragDecoration: null,
         arrowStart: null,
         trajectoryPoints: [],
         isDrawingTrajectory: false,
@@ -179,14 +216,13 @@ export const usePointerInteractions = (
       return;
     }
     
-
-    
-    // Handle token dragging end
+    // Handle token/decoration dragging end
     if (dragState.isDragging) {
       setDragState({
         isDragging: false,
         dragStartPoint: null,
         dragToken: null,
+        dragDecoration: null,
         arrowStart: null,
         trajectoryPoints: [],
         isDrawingTrajectory: false,
@@ -202,6 +238,7 @@ export const usePointerInteractions = (
       isDragging: false,
       dragStartPoint: null,
       dragToken: null,
+      dragDecoration: null,
       arrowStart: null,
       trajectoryPoints: [],
       isDrawingTrajectory: false,
@@ -214,6 +251,7 @@ export const usePointerInteractions = (
   
   return {
     handleTokenPointerDown,
+    handleDecorationPointerDown,
     handleSVGPointerDown,
     handlePointerMove,
     handlePointerUp,

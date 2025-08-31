@@ -19,10 +19,20 @@ export interface Arrow {
 
 export type Mode = 'select' | 'arrow' | 'trajectory';
 
+export type DecorationType = 'ball' | 'cone' | 'minigoal';
+
+export interface Decoration {
+  id: string;
+  type: DecorationType;
+  x: number;
+  y: number;
+}
+
 export interface BoardState {
   tokens: Token[];
   arrows: Arrow[];
   trajectories: Trajectory[];
+  decorations: Decoration[];
   mode: Mode;
   arrowStyle: 'solid' | 'dashed';
   trajectoryType: 'pass' | 'movement';
@@ -33,6 +43,7 @@ export interface BoardState {
   selectedTokenId: string | null;
   selectedArrowId: string | null;
   selectedTrajectoryId: string | null;
+  selectedDecorationId?: string | null;
 }
 
 export interface HistoryState {

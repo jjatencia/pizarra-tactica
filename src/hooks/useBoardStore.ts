@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { BoardState, Token, Arrow, Trajectory, Team, Formation, HistoryState } from '../types';
+import { BoardState, Token, Arrow, Trajectory, Team, Formation, HistoryState, Decoration, DecorationType } from '../types';
 import { loadFromStorage, saveToStorage } from '../lib/localStorage';
 
 interface BoardStore extends BoardState {
@@ -23,6 +23,12 @@ interface BoardStore extends BoardState {
   updateTrajectory: (id: string, updates: Partial<Trajectory>) => void;
   removeTrajectory: (id: string) => void;
   selectTrajectory: (id: string | null) => void;
+  
+  // Decoration actions
+  addDecoration: (type: DecorationType, x: number, y: number) => void;
+  updateDecoration: (id: string, updates: Partial<Decoration>) => void;
+  removeDecoration: (id: string) => void;
+  selectDecoration: (id: string | null) => void;
   
   // Mode actions
   setMode: (mode: BoardState['mode']) => void;
@@ -57,6 +63,7 @@ const initialState: BoardState = {
   tokens: [],
   arrows: [],
   trajectories: [],
+  decorations: [],
   mode: 'select',
   arrowStyle: 'solid',
   trajectoryType: 'pass',
@@ -67,6 +74,7 @@ const initialState: BoardState = {
   selectedTokenId: null,
   selectedArrowId: null,
   selectedTrajectoryId: null,
+  selectedDecorationId: null,
 };
 
 const initialHistory: HistoryState = {
@@ -171,7 +179,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     },
     
     selectToken: (id: string | null) => {
-      set({ selectedTokenId: id, selectedArrowId: null, selectedTrajectoryId: null });
+      set({ selectedTokenId: id, selectedArrowId: null, selectedTrajectoryId: null, selectedDecorationId: null });
     },
     
     addArrow: (from: { x: number; y: number }, to: { x: number; y: number }) => {
@@ -228,11 +236,11 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     },
     
     selectArrow: (id: string | null) => {
-      set({ selectedArrowId: id, selectedTokenId: null, selectedTrajectoryId: null });
+      set({ selectedArrowId: id, selectedTokenId: null, selectedTrajectoryId: null, selectedDecorationId: null });
     },
     
     setMode: (mode: BoardState['mode']) => {
-      set({ mode, selectedTokenId: null, selectedArrowId: null, selectedTrajectoryId: null });
+      set({ mode, selectedTokenId: null, selectedArrowId: null, selectedTrajectoryId: null, selectedDecorationId: null });
     },
     
     setArrowStyle: (arrowStyle: 'solid' | 'dashed') => {
@@ -292,11 +300,49 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     },
     
     selectTrajectory: (id: string | null) => {
-      set({ selectedTrajectoryId: id, selectedTokenId: null, selectedArrowId: null });
+      set({ selectedTrajectoryId: id, selectedTokenId: null, selectedArrowId: null, selectedDecorationId: null });
     },
     
     setTrajectoryType: (trajectoryType: 'pass' | 'movement') => {
       set({ trajectoryType });
+    },
+
+    // Decorations
+    addDecoration: (type: DecorationType, x: number, y: number) => {
+      const state = get();
+      const newDecoration: Decoration = {
+        id: generateId(),
+        type,
+        x,
+        y,
+      };
+      const newState = {
+        ...state,
+        decorations: [...state.decorations, newDecoration],
+        selectedDecorationId: newDecoration.id,
+      };
+      set({
+        ...newState,
+        history: addToHistory(newState, state.history),
+      });
+    },
+    updateDecoration: (id: string, updates: Partial<Decoration>) => {
+      const state = get();
+      const newDecorations = state.decorations.map(d => d.id === id ? { ...d, ...updates } : d);
+      const newState = { ...state, decorations: newDecorations };
+      set({ ...newState, history: addToHistory(newState, state.history) });
+    },
+    removeDecoration: (id: string) => {
+      const state = get();
+      const newState = {
+        ...state,
+        decorations: state.decorations.filter(d => d.id !== id),
+        selectedDecorationId: state.selectedDecorationId === id ? null : state.selectedDecorationId,
+      };
+      set({ ...newState, history: addToHistory(newState, state.history) });
+    },
+    selectDecoration: (id: string | null) => {
+      set({ selectedDecorationId: id, selectedTokenId: null, selectedArrowId: null, selectedTrajectoryId: null });
     },
     
     setZoom: (zoom: number) => {
@@ -322,6 +368,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         pan: get().pan,
         showFullField: get().showFullField,
         gridSnap: get().gridSnap,
+        decorations: [],
       };
       
       set({
@@ -350,6 +397,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         ...state,
         tokens: mirroredTokens,
         arrows: mirroredArrows,
+        decorations: state.decorations.map(d => ({ ...d, x: fieldWidth - d.x })),
       };
       
       set({
@@ -427,6 +475,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         tokens: state.tokens,
         arrows: state.arrows,
         trajectories: state.trajectories,
+        decorations: state.decorations,
         mode: state.mode,
         arrowStyle: state.arrowStyle,
         trajectoryType: state.trajectoryType,
@@ -437,6 +486,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         selectedTokenId: null, // Don't persist selection
         selectedArrowId: null,
         selectedTrajectoryId: null,
+        selectedDecorationId: null,
       });
     },
     
@@ -449,6 +499,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
           selectedTokenId: null,
           selectedArrowId: null,
           selectedTrajectoryId: null,
+          selectedDecorationId: null,
         };
         
         set({
@@ -467,6 +518,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         tokens: state.tokens,
         arrows: state.arrows,
         trajectories: state.trajectories,
+        decorations: state.decorations,
         timestamp: new Date().toISOString(),
       }, null, 2);
     },
@@ -480,9 +532,11 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
             tokens: parsed.tokens,
             arrows: parsed.arrows,
             trajectories: parsed.trajectories || [],
+            decorations: parsed.decorations || [],
             selectedTokenId: null,
             selectedArrowId: null,
             selectedTrajectoryId: null,
+            selectedDecorationId: null,
           };
           
           set({
