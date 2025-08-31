@@ -12,12 +12,21 @@ export const TrajectoriesLayer: React.FC<TrajectoriesLayerProps> = ({
   trajectories,
   onTrajectorySelect,
 }) => {
-  const { selectedTrajectoryId, removeTrajectory } = useBoardStore();
+  const { selectedTrajectoryId, removeTrajectory, mode } = useBoardStore();
 
   const handleTrajectoryClick = useCallback((e: React.MouseEvent, trajectory: Trajectory) => {
     e.stopPropagation();
+    
+    // In erase mode, delete the trajectory immediately
+    if (mode === 'erase') {
+      console.log('🗑️ Erasing trajectory:', trajectory.id);
+      removeTrajectory(trajectory.id);
+      return;
+    }
+    
+    // In normal mode, select the trajectory
     onTrajectorySelect(trajectory.id);
-  }, [onTrajectorySelect]);
+  }, [onTrajectorySelect, mode, removeTrajectory]);
 
   const handleTrajectoryDoubleClick = useCallback((e: React.MouseEvent, trajectory: Trajectory) => {
     e.stopPropagation();
@@ -71,7 +80,7 @@ export const TrajectoriesLayer: React.FC<TrajectoriesLayerProps> = ({
               stroke="transparent"
               strokeWidth="6"
               fill="none"
-              style={{ cursor: 'pointer' }}
+              style={{ cursor: mode === 'erase' ? 'crosshair' : 'pointer' }}
               onClick={(e) => handleTrajectoryClick(e, trajectory)}
               onDoubleClick={(e) => handleTrajectoryDoubleClick(e, trajectory)}
             />

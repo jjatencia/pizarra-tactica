@@ -5,6 +5,14 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Define safe area variables for better browser support */
+    --safe-area-inset-top: env(safe-area-inset-top, 0px);
+    --safe-area-inset-right: env(safe-area-inset-right, 0px);
+    --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-inset-left: env(safe-area-inset-left, 0px);
+  }
+  
   html {
     font-family: 'Inter', system-ui, sans-serif;
     touch-action: none; /* Disable all touch gestures */
@@ -28,6 +36,13 @@
     user-scalable: no;
     zoom: 1;
     -webkit-text-size-adjust: 100%;
+    /* PWA Safe Area Support */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height for better mobile support */
   }
   
   * {
@@ -135,6 +150,109 @@
     background-color: #22C55E; /* green-500 */
     transform: scale(1.1);
     box-shadow: 0 0 0 2px #111827, 0 0 0 4px #4ADE80; /* Manual ring effect */
+  }
+
+  /* Eraser mode styles */
+  .erase-mode {
+    cursor: crosshair !important;
+  }
+  
+  .erase-mode .token-group {
+    cursor: crosshair !important;
+  }
+  
+  .erase-mode path,
+  .erase-mode line {
+    cursor: crosshair !important;
+  }
+
+  /* PWA Safe Area Support */
+  #root {
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    /* Ensure content doesn't go behind safe areas */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  /* Adjust main content area for safe areas */
+  main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Add extra padding for PWA safe areas */
+    padding: max(0.5rem, env(safe-area-inset-top)) max(0.5rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(0.5rem, env(safe-area-inset-left));
+    /* Ensure full visibility on PWA */
+    min-height: 0;
+    overflow: visible;
+  }
+  
+  /* Board container adjustments for PWA */
+  #board {
+    /* Ensure the board fits within safe areas */
+    max-height: calc(100% - env(safe-area-inset-bottom));
+    margin-bottom: env(safe-area-inset-bottom);
+  }
+  
+  /* Pitch container adjustments */
+  #pitch {
+    /* Ensure pitch is fully visible */
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+  }
+
+  /* PWA specific adjustments for iOS */
+  @media (display-mode: standalone) {
+    html, body {
+      /* Remove all default padding in PWA mode */
+      padding: 0 !important;
+      margin: 0 !important;
+      height: 100vh !important;
+      height: 100dvh !important;
+      overflow: hidden !important;
+    }
+    
+    #root {
+      /* Full viewport in PWA */
+      height: 100vh !important;
+      height: 100dvh !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      /* Only add safe area padding where needed */
+      padding-top: env(safe-area-inset-top) !important;
+      padding-left: env(safe-area-inset-left) !important;
+      padding-right: env(safe-area-inset-right) !important;
+      /* NO bottom padding here - handled in main */
+    }
+    
+    main {
+      /* Use all available space minus safe area */
+      padding: 0.5rem !important;
+      padding-bottom: calc(0.5rem + env(safe-area-inset-bottom)) !important;
+      height: 100% !important;
+      min-height: 0 !important;
+    }
+    
+    #board {
+      /* Force board to use all available space */
+      width: 100% !important;
+      height: 100% !important;
+      max-width: 100% !important;
+      max-height: 100% !important;
+      margin: 0 !important;
+    }
+    
+    #pitch {
+      /* Ensure pitch uses full board space */
+      width: 100% !important;
+      height: 100% !important;
+    }
   }
 
   /* Legacy button styles for compatibility */

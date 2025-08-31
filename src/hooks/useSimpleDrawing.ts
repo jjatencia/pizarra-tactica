@@ -299,6 +299,35 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     setState(prev => ({ ...prev, drawingMode }));
   }, []);
 
+  const eraseAtPoint = useCallback((x: number, y: number) => {
+    if (!canvasRef.current) return;
+    
+    console.log('🗑️ Erasing at point:', x, y);
+    const ctx = canvasRef.current.getContext('2d');
+    if (!ctx) return;
+
+    // Create a circular eraser area
+    const eraserRadius = 20;
+    
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.arc(x, y, eraserRadius, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    
+    // Save to history
+    const dataURL = canvasRef.current.toDataURL();
+    setState(prev => {
+      const newHistory = prev.history.slice(0, prev.historyStep + 1);
+      newHistory.push(dataURL);
+      return {
+        ...prev,
+        history: newHistory,
+        historyStep: newHistory.length - 1
+      };
+    });
+  }, [canvasRef]);
+
   const clearCanvas = useCallback(() => {
     if (!canvasRef.current) return;
     
@@ -344,6 +373,7 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     setColor,
     setLineStyle,
     setDrawingMode,
+    eraseAtPoint,
     clearCanvas,
   };
 };

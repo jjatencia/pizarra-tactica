@@ -91,6 +91,11 @@ export const usePointerInteractions = (
       selectArrow(null);
       selectToken(null);
       selectTrajectory(null);
+    } else if (mode === 'erase') {
+      // In erase mode, just clear selections - individual elements handle their own deletion
+      selectToken(null);
+      selectArrow(null);
+      selectTrajectory(null);
     } else {
       // Clear selection
       selectToken(null);

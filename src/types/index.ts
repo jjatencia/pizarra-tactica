@@ -19,7 +19,7 @@ export interface Arrow {
   control?: { x: number; y: number };
 }
 
-export type Mode = 'select' | 'arrow' | 'trajectory';
+export type Mode = 'select' | 'arrow' | 'trajectory' | 'erase';
 export type DrawingMode = 'move' | 'pass' | 'displacement';
 
 export interface BoardState {

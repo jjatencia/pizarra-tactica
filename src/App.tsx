@@ -12,6 +12,7 @@ import { PresetsPanel } from './components/PresetsPanel';
 import { FormationsModal } from './components/FormationsModal';
 import { Team, ObjectType } from './types';
 import { clampToField, snapToGrid } from './lib/geometry';
+import clsx from 'clsx';
 
 function App() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -49,13 +50,19 @@ function App() {
   
   // Calculate SVG dimensions to maintain aspect ratio
   const aspectRatio = viewBoxWidth / fieldHeight;
-  const toolbarHeight = 60; // Approximate toolbar height
-  const availableHeight = containerSize.height - toolbarHeight;
-  const availableWidth = containerSize.width;
+  
+  // More accurate toolbar height calculation for PWA
+  const toolbarHeight = 80; // Increased for PWA safe areas
+  const safeAreaBottom = 34; // Typical safe area bottom on iPad
+  const extraPadding = 20; // Extra padding for comfort
+  
+  const availableHeight = containerSize.height - toolbarHeight - safeAreaBottom - extraPadding;
+  const availableWidth = containerSize.width - 32; // Account for container padding
   
   let svgWidth = availableWidth;
   let svgHeight = availableWidth / aspectRatio;
   
+  // Ensure the field fits in available height with extra margin
   if (svgHeight > availableHeight) {
     svgHeight = availableHeight;
     svgWidth = availableHeight * aspectRatio;
@@ -92,20 +99,51 @@ function App() {
     setColor: setDrawColor,
     // setLineStyle: setDrawLineStyle, // Not used with new mode system
     setDrawingMode,
+    eraseAtPoint,
     clearCanvas,
   } = useSimpleDrawing(canvasRef);
   
-  // Handle container resize
+    // Handle container resize with PWA detection
   useEffect(() => {
     const updateSize = () => {
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
-        setContainerSize({ width: rect.width, height: rect.height });
+        
+        // Detect if we're in PWA mode
+        const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+        
+        let adjustedHeight = rect.height;
+        
+        if (isPWA) {
+          // In PWA mode, account for safe areas and ensure field is fully visible
+          const safeAreaTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-top') || '0');
+          const safeAreaBottom = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-bottom') || '0');
+          
+          // Use visual viewport if available (better for PWA)
+          if (window.visualViewport) {
+            adjustedHeight = window.visualViewport.height - safeAreaTop - safeAreaBottom;
+          } else {
+            adjustedHeight = window.innerHeight - safeAreaTop - safeAreaBottom;
+          }
+          
+          console.log('📱 PWA Mode - Adjusted height:', adjustedHeight, 'Original:', rect.height);
+        }
+        
+        setContainerSize({ width: rect.width, height: adjustedHeight });
       }
     };
-    
+
     updateSize();
     window.addEventListener('resize', updateSize);
+    
+    // Listen for visual viewport changes (PWA specific)
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', updateSize);
+      return () => {
+        window.removeEventListener('resize', updateSize);
+        window.visualViewport?.removeEventListener('resize', updateSize);
+      };
+    }
     
     return () => window.removeEventListener('resize', updateSize);
   }, []);
@@ -176,9 +214,32 @@ function App() {
   const handleCanvasPointerDown = useCallback((e: any) => {
     if (drawingMode === 'move') return; // Don't handle canvas events in move mode
     
+    // In erase mode, erase at the touched point
+    if (mode === 'erase') {
+      if (!canvasRef.current) return;
+      
+      const rect = canvasRef.current.getBoundingClientRect();
+      let clientX, clientY;
+      
+      if (e.touches && e.touches[0]) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      }
+      
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+      
+      console.log('🗑️ Canvas erase at:', x, y);
+      eraseAtPoint(x, y);
+      return;
+    }
+    
     console.log('🎨 Canvas tap - starting drawing');
     startDrawing(e);
-  }, [startDrawing, drawingMode]);
+  }, [startDrawing, drawingMode, mode, eraseAtPoint, canvasRef]);
   
   // Calculate transform for zoom and pan
   const transform = `translate(${pan.x}, ${pan.y}) scale(${zoom})`;
@@ -186,10 +247,18 @@ function App() {
   return (
     <div 
       ref={containerRef}
-      className="bg-gray-800 text-white overflow-hidden h-screen flex flex-col"
+      className="bg-gray-800 text-white overflow-hidden"
+      style={{ 
+        height: '100dvh',
+        minHeight: '100dvh',
+        display: 'grid',
+        gridTemplateRows: 'auto 1fr',
+        gridTemplateAreas: '"toolbar" "content"'
+      }}
     >
       {/* Toolbar */}
-      <Toolbar
+      <div style={{ gridArea: 'toolbar', flexShrink: 0 }}>
+        <Toolbar
         svgRef={svgRef}
         onAddToken={handleAddToken}
         onAddObject={handleAddObject}
@@ -204,11 +273,30 @@ function App() {
         onUndoDraw={undoDraw}
         onRedoDraw={redoDraw}
         onClearCanvas={clearCanvas}
-      />
+        />
+      </div>
       
       {/* Main Content: Pitch */}
-      <main className="flex-1 flex items-center justify-center p-2">
-        <div id="board" className="w-full h-full aspect-[105/68] max-w-full max-h-full mx-auto shadow-2xl rounded-lg relative bg-gray-900 p-1" style={{ touchAction: 'none' }}>
+      <main 
+        className="flex items-center justify-center p-2"
+        style={{ 
+          gridArea: 'content',
+          minHeight: 0,
+          height: '100%',
+          paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))'
+        }}
+      >
+        <div id="board" className={clsx("shadow-2xl rounded-lg relative bg-gray-900 p-1", {
+          'erase-mode': mode === 'erase'
+        })} style={{ 
+          touchAction: 'none',
+          aspectRatio: '105/68',
+          width: '100%',
+          height: '100%',
+          maxWidth: '100%',
+          maxHeight: '100%',
+          objectFit: 'contain'
+        }}>
           <div id="pitch" className="pitch w-full h-full rounded-md relative">
             <svg
               ref={svgRef}
@@ -288,17 +376,18 @@ function App() {
                 touchAction: 'none',
                 zIndex: drawingMode === 'move' ? 1 : 10,
                 pointerEvents: drawingMode === 'move' ? 'none' : 'auto',
-                backgroundColor: 'transparent'
+                backgroundColor: 'transparent',
+                cursor: mode === 'erase' ? 'crosshair' : 'default'
               }}
               onMouseDown={(e) => {
                 console.log('🖱️ Mouse down on canvas');
                 handleCanvasPointerDown(e);
               }}
               onMouseMove={(e) => {
-                draw(e);
+                if (mode !== 'erase') draw(e);
               }}
               onMouseUp={() => {
-                endDrawing();
+                if (mode !== 'erase') endDrawing();
               }}
               onTouchStart={(e) => {
                 console.log('👆 Touch start on canvas');
@@ -307,11 +396,11 @@ function App() {
               }}
               onTouchMove={(e) => {
                 e.preventDefault();
-                draw(e);
+                if (mode !== 'erase') draw(e);
               }}
               onTouchEnd={(e) => {
                 e.preventDefault();
-                endDrawing();
+                if (mode !== 'erase') endDrawing();
               }}
             />
             
