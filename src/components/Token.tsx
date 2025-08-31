@@ -56,13 +56,12 @@ export const Token: React.FC<TokenProps> = ({
       return;
     }
     
-    // Set timeout to reset tap count and proceed with normal interaction
+    // Immediately start drag interaction for responsive touch
+    selectToken(token.id);
+    onPointerDown(e, token);
+    
+    // Set timeout to reset tap count only
     tapTimeoutRef.current = setTimeout(() => {
-      if (tapCountRef.current === 1) {
-        // Single tap - proceed with normal interaction
-        selectToken(token.id);
-        onPointerDown(e, token);
-      }
       tapCountRef.current = 0;
       tapTimeoutRef.current = null;
     }, 300);
