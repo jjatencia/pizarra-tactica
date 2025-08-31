@@ -148,9 +148,9 @@ function App() {
               touchAction: isDragging || isDrawingTrajectory ? 'none' : 'pan-x pan-y pinch-zoom',
               cursor: mode === 'trajectory' ? 'crosshair' : 'default',
               userSelect: 'none',
-              webkitUserSelect: 'none',
-              webkitTouchCallout: 'none',
-              webkitTapHighlightColor: 'transparent'
+              WebkitUserSelect: 'none',
+              WebkitTouchCallout: 'none',
+              WebkitTapHighlightColor: 'transparent'
             }}
             onPointerDown={handleSVGPointerDown}
             onPointerMove={handlePointerMove}

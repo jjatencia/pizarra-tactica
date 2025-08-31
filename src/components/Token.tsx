@@ -63,9 +63,9 @@ export const Token: React.FC<TokenProps> = ({
           cursor: isDragging ? 'grabbing' : 'grab',
           touchAction: 'none', // Prevent default touch behaviors for smoother dragging
           userSelect: 'none',
-          webkitUserSelect: 'none',
-          webkitTouchCallout: 'none', // Disable iOS callout menu
-          webkitTapHighlightColor: 'transparent' // Remove tap highlight on mobile
+          WebkitUserSelect: 'none',
+          WebkitTouchCallout: 'none', // Disable iOS callout menu
+          WebkitTapHighlightColor: 'transparent' // Remove tap highlight on mobile
         }}
         onPointerDown={handlePointerDown}
         onDoubleClick={handleDoubleClick}

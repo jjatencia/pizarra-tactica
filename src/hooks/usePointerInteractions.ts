@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { useBoardStore } from './useBoardStore';
 import { Token, Point } from '../types';
-import { clampToField, snapToGrid, screenToSVG } from '../lib/geometry';
+import { snapToGrid, screenToSVG } from '../lib/geometry';
 
 interface DragState {
   isDragging: boolean;
@@ -219,12 +219,13 @@ export const usePointerInteractions = (
       isDragging: false,
       dragStartPoint: null,
       dragToken: null,
+      dragTokenOriginalPosition: null,
       arrowStart: null,
       trajectoryPoints: [],
       isDrawingTrajectory: false,
     });
     
-    // Restore normal cursor and text selection
+    // Restore normal text selection
     document.body.style.userSelect = '';
     document.body.style.webkitUserSelect = '';
     
