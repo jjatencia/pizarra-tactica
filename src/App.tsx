@@ -20,9 +20,7 @@ function App() {
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [showPresets, setShowPresets] = useState(false);
   const [showFormations, setShowFormations] = useState(false);
-  const lastCanvasTapRef = useRef<number>(0);
-  const canvasTapCountRef = useRef<number>(0);
-  const canvasTapTimeoutRef = useRef<number | null>(null);
+  // Removed canvas tap refs as double tap is not used for lines anymore
   
   const {
     tokens,
@@ -174,48 +172,13 @@ function App() {
     addObject(type, position.x, position.y);
   }, [addObject, showFullField, fieldWidth, fieldHeight, viewBoxWidth, gridSnap]);
 
-  // Handle canvas double tap for clearing last drawing
+  // Handle canvas pointer down - no double tap for lines
   const handleCanvasPointerDown = useCallback((e: any) => {
     if (drawingMode === 'move') return; // Don't handle canvas events in move mode
     
-    const now = Date.now();
-    const timeDiff = now - lastCanvasTapRef.current;
-    
-    console.log('🎨 Canvas tap, Time diff:', timeDiff, 'Tap count:', canvasTapCountRef.current);
-    
-    // Reset tap count if too much time has passed
-    if (timeDiff > 300) {
-      canvasTapCountRef.current = 0;
-    }
-    
-    canvasTapCountRef.current++;
-    lastCanvasTapRef.current = now;
-    
-    // Clear any existing timeout
-    if (canvasTapTimeoutRef.current) {
-      clearTimeout(canvasTapTimeoutRef.current);
-      canvasTapTimeoutRef.current = null;
-    }
-    
-    if (canvasTapCountRef.current === 2 && timeDiff < 300) {
-      // Fast double tap detected - undo last drawing
-      console.log('🗑️ Fast double tap undo drawing');
-      undoDraw();
-      canvasTapCountRef.current = 0;
-      return;
-    }
-    
-    // Set timeout to proceed with drawing if no second tap
-    canvasTapTimeoutRef.current = setTimeout(() => {
-      if (canvasTapCountRef.current === 1) {
-        // Single tap - start drawing
-        startDrawing(e);
-      }
-      canvasTapCountRef.current = 0;
-      canvasTapTimeoutRef.current = null;
-    }, 300);
-    
-  }, [undoDraw, startDrawing, drawingMode]);
+    console.log('🎨 Canvas tap - starting drawing');
+    startDrawing(e);
+  }, [startDrawing, drawingMode]);
   
   // Calculate transform for zoom and pan
   const transform = `translate(${pan.x}, ${pan.y}) scale(${zoom})`;

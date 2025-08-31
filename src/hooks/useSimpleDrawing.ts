@@ -97,11 +97,13 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     }));
     lastPointRef.current = coords;
 
-    // Draw starting point
-    ctx.fillStyle = state.color;
-    ctx.beginPath();
-    ctx.arc(coords.x, coords.y, 4, 0, 2 * Math.PI);
-    ctx.fill();
+    // Draw starting point (only for non-eraser)
+    if (state.color !== 'transparent') {
+      ctx.fillStyle = state.color;
+      ctx.beginPath();
+      ctx.arc(coords.x, coords.y, 4, 0, 2 * Math.PI);
+      ctx.fill();
+    }
     
     console.log('✅ Drew starting point');
   }, [canvasRef, getCoords, state.color, state.lineStyle, state.drawingMode]);
@@ -125,12 +127,22 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
 
     if (state.drawingMode === 'pass') {
       // For solid lines, draw immediately
-      ctx.lineWidth = 8;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.strokeStyle = state.color;
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.setLineDash([]);
+      if (state.color === 'transparent') {
+        // Eraser mode
+        ctx.lineWidth = 20;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.setLineDash([]);
+      } else {
+        // Normal drawing
+        ctx.lineWidth = 8;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = state.color;
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.setLineDash([]);
+      }
 
       ctx.beginPath();
       ctx.moveTo(lastPointRef.current.x, lastPointRef.current.y);
@@ -147,12 +159,22 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
             ctx.drawImage(img, 0, 0);
             
             // Now draw the current dashed preview
-            ctx.lineWidth = 8;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.strokeStyle = state.color;
-            ctx.globalCompositeOperation = 'source-over';
-            ctx.setLineDash([25, 15]);
+            if (state.color === 'transparent') {
+              // Eraser mode
+              ctx.lineWidth = 20;
+              ctx.lineCap = 'round';
+              ctx.lineJoin = 'round';
+              ctx.globalCompositeOperation = 'destination-out';
+              ctx.setLineDash([25, 15]); // Dashed eraser
+            } else {
+              // Normal dashed drawing
+              ctx.lineWidth = 8;
+              ctx.lineCap = 'round';
+              ctx.lineJoin = 'round';
+              ctx.strokeStyle = state.color;
+              ctx.globalCompositeOperation = 'source-over';
+              ctx.setLineDash([25, 15]);
+            }
             
             ctx.beginPath();
             ctx.moveTo(newPath[0].x, newPath[0].y);
@@ -166,12 +188,22 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
           // No history, just draw the preview
           ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
           
-          ctx.lineWidth = 8;
-          ctx.lineCap = 'round';
-          ctx.lineJoin = 'round';
-          ctx.strokeStyle = state.color;
-          ctx.globalCompositeOperation = 'source-over';
-          ctx.setLineDash([25, 15]);
+          if (state.color === 'transparent') {
+            // Eraser mode
+            ctx.lineWidth = 20;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.setLineDash([25, 15]); // Dashed eraser
+          } else {
+            // Normal dashed drawing
+            ctx.lineWidth = 8;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = state.color;
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.setLineDash([25, 15]);
+          }
           
           ctx.beginPath();
           ctx.moveTo(newPath[0].x, newPath[0].y);
