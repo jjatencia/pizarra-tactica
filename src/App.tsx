@@ -90,6 +90,7 @@ function App() {
     redo: redoDraw,
     setColor: setDrawColor,
     setLineStyle: setDrawLineStyle,
+    clearCanvas,
   } = useSimpleDrawing(canvasRef);
   
   // Handle container resize
@@ -207,6 +208,7 @@ function App() {
         onSetDrawLineStyle={setDrawLineStyle}
         onUndoDraw={undoDraw}
         onRedoDraw={redoDraw}
+        onClearCanvas={clearCanvas}
       />
       
       {/* Main Content: Pitch */}

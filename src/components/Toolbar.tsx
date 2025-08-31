@@ -18,6 +18,7 @@ interface ToolbarProps {
   onSetDrawLineStyle: (style: 'solid' | 'dashed') => void;
   onUndoDraw: () => void;
   onRedoDraw: () => void;
+  onClearCanvas: () => void;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({ 
@@ -33,7 +34,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onSetDrawColor,
   onSetDrawLineStyle,
   onUndoDraw,
-  onRedoDraw
+  onRedoDraw,
+  onClearCanvas
 }) => {
   
   const {
@@ -270,7 +272,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         </button>
         <button 
           className="bg-red-700 hover:bg-red-600 text-white font-bold py-2 px-3 rounded transition-colors text-sm flex items-center justify-center"
-          onClick={reset}
+          onClick={() => {
+            reset(); // Clear tokens and trajectories
+            onClearCanvas(); // Clear canvas drawings
+          }}
         >
           Limpiar
         </button>
