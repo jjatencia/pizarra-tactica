@@ -119,26 +119,21 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
       currentPath: [...prev.currentPath, coords]
     }));
 
-    // Setup drawing context
-    ctx.lineWidth = 8;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.strokeStyle = state.color;
-    ctx.globalCompositeOperation = 'source-over';
-
-    if (state.lineStyle === 'dashed') {
-      // For dashed lines, use a more visible pattern
-      ctx.setLineDash([20, 15]); // Longer dashes and gaps
-      ctx.lineDashOffset = 0;
-    } else {
+    if (state.lineStyle === 'solid') {
+      // For solid lines, draw immediately
+      ctx.lineWidth = 8;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = state.color;
+      ctx.globalCompositeOperation = 'source-over';
       ctx.setLineDash([]);
-    }
 
-    // Draw line segment
-    ctx.beginPath();
-    ctx.moveTo(lastPointRef.current.x, lastPointRef.current.y);
-    ctx.lineTo(coords.x, coords.y);
-    ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(lastPointRef.current.x, lastPointRef.current.y);
+      ctx.lineTo(coords.x, coords.y);
+      ctx.stroke();
+    }
+    // For dashed lines, we'll draw the complete path at the end
     
     lastPointRef.current = coords;
   }, [canvasRef, getCoords, state.isDrawing, state.color, state.lineStyle]);
@@ -146,7 +141,34 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
   const endDrawing = useCallback(() => {
     if (!state.isDrawing || !canvasRef.current) return;
     
-    console.log('🏁 Ending drawing');
+    console.log('🏁 Ending drawing, Path length:', state.currentPath.length);
+    
+    const ctx = canvasRef.current.getContext('2d');
+    if (!ctx) return;
+
+    // If it's a dashed line, draw the complete path now
+    if (state.lineStyle === 'dashed' && state.currentPath.length > 1) {
+      console.log('🖊️ Drawing dashed line with', state.currentPath.length, 'points');
+      
+      // Setup context for dashed drawing
+      ctx.lineWidth = 8;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = state.color;
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.setLineDash([25, 15]); // Larger pattern for better visibility
+      
+      // Create path from all points
+      ctx.beginPath();
+      ctx.moveTo(state.currentPath[0].x, state.currentPath[0].y);
+      
+      for (let i = 1; i < state.currentPath.length; i++) {
+        ctx.lineTo(state.currentPath[i].x, state.currentPath[i].y);
+      }
+      
+      ctx.stroke();
+      console.log('✅ Dashed line drawn');
+    }
     
     setState(prev => ({ 
       ...prev, 
@@ -156,20 +178,17 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     lastPointRef.current = null;
     
     // Save to history
-    const ctx = canvasRef.current.getContext('2d');
-    if (ctx) {
-      const imageData = ctx.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height);
-      setState(prev => {
-        const newHistory = prev.history.slice(0, prev.historyStep + 1);
-        newHistory.push(imageData);
-        return {
-          ...prev,
-          history: newHistory,
-          historyStep: newHistory.length - 1
-        };
-      });
-    }
-  }, [canvasRef, state.isDrawing]);
+    const imageData = ctx.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height);
+    setState(prev => {
+      const newHistory = prev.history.slice(0, prev.historyStep + 1);
+      newHistory.push(imageData);
+      return {
+        ...prev,
+        history: newHistory,
+        historyStep: newHistory.length - 1
+      };
+    });
+  }, [canvasRef, state.isDrawing, state.currentPath, state.lineStyle, state.color]);
 
   const undo = useCallback(() => {
     if (!canvasRef.current || state.historyStep <= 0) return;
