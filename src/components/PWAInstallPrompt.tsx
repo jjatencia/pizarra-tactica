@@ -45,8 +45,8 @@ export const PWAInstallPrompt: React.FC = () => {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // For iOS, show install prompt if not standalone, not dismissed, not in development, and on HTTPS
-    if (ios && !standalone && !localStorage.getItem('pwa-install-dismissed') && !isDevelopment && isHTTPS) {
+    // Show install prompt for any device if not standalone, not dismissed, not in development, and on HTTPS
+    if (!standalone && !localStorage.getItem('pwa-install-dismissed') && !isDevelopment && isHTTPS) {
       setShowInstallPrompt(true);
     }
 
@@ -104,8 +104,13 @@ export const PWAInstallPrompt: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="text-sm text-slate-300">
-              <p>Instala la app para una mejor experiencia offline.</p>
+            <div className="text-sm text-slate-300 space-y-2">
+              <p>Para instalar esta app:</p>
+              <div className="text-xs space-y-1">
+                <p><strong>Chrome/Edge:</strong> Busca el ícono de instalación ⬇️ en la barra de direcciones</p>
+                <p><strong>Firefox:</strong> Menú → "Instalar aplicación"</p>
+                <p><strong>Safari (Mac):</strong> No soportado nativamente</p>
+              </div>
             </div>
           )}
         </div>
