@@ -64,13 +64,8 @@ export const useZoomPan = (svgRef: React.RefObject<SVGSVGElement>) => {
     const touches = Array.from(touchEvent.touches);
     
     if (touches.length === 1) {
-      // Single touch - check for double tap
+      // Single touch - just update touch state
       const now = Date.now();
-      if (now - touchState.lastTapTime < 300) {
-        // Double tap - reset zoom
-        setZoom(1);
-        setPan({ x: 0, y: 0 });
-      }
       
       setTouchState(prev => ({
         ...prev,
