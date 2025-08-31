@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { Token as TokenType } from '../types';
+import { Token as TokenType, ObjectType } from '../types';
 import { useBoardStore } from '../hooks/useBoardStore';
 
 
@@ -18,7 +18,8 @@ export const Token: React.FC<TokenProps> = ({
   const { selectedTokenId, selectToken } = useBoardStore();
   
   const isSelected = selectedTokenId === token.id;
-  const radius = 3;
+  const objectType: ObjectType = token.type || 'player';
+  const radius = objectType === 'player' ? 3 : objectType === 'ball' ? 2 : 3;
   const hitRadius = 8; // Larger hit area for better touch response on iPad
   
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
@@ -49,6 +50,104 @@ export const Token: React.FC<TokenProps> = ({
     blue: '#3B82F6',
   };
   
+  const renderObject = () => {
+    switch (objectType) {
+      case 'ball':
+        return (
+          <g>
+            <circle
+              cx={token.x}
+              cy={token.y}
+              r={radius}
+              fill="white"
+              stroke="black"
+              strokeWidth="0.2"
+              style={{ pointerEvents: 'none' }}
+            />
+            {/* Ball pattern */}
+            <path
+              d={`M${token.x},${token.y - radius} A${radius},${radius} 0 0,1 ${token.x},${token.y + radius} M${token.x},${token.y - radius} A${radius},${radius} 0 0,0 ${token.x},${token.y + radius} M${token.x - radius},${token.y} A${radius},${radius} 0 0,1 ${token.x + radius},${token.y} M${token.x - radius},${token.y} A${radius},${radius} 0 0,0 ${token.x + radius},${token.y}`}
+              fill="none"
+              stroke="black"
+              strokeWidth="0.1"
+              style={{ pointerEvents: 'none' }}
+            />
+          </g>
+        );
+      
+      case 'cone':
+        return (
+          <g>
+            <polygon
+              points={`${token.x},${token.y - radius} ${token.x - radius * 0.8},${token.y + radius} ${token.x + radius * 0.8},${token.y + radius}`}
+              fill="#FF7F50"
+              style={{ pointerEvents: 'none' }}
+            />
+            <rect
+              x={token.x - radius}
+              y={token.y + radius}
+              width={radius * 2}
+              height={radius * 0.3}
+              fill="#E65100"
+              style={{ pointerEvents: 'none' }}
+            />
+          </g>
+        );
+      
+      case 'minigoal':
+        return (
+          <g>
+            <rect
+              x={token.x - radius * 1.2}
+              y={token.y - radius * 0.8}
+              width={radius * 2.4}
+              height={radius * 1.6}
+              stroke="white"
+              strokeWidth="0.3"
+              fill="none"
+              style={{ pointerEvents: 'none' }}
+            />
+            <line
+              x1={token.x - radius * 1.2}
+              y1={token.y + radius * 0.8}
+              x2={token.x + radius * 1.2}
+              y2={token.y + radius * 0.8}
+              stroke="white"
+              strokeWidth="0.3"
+              style={{ pointerEvents: 'none' }}
+            />
+          </g>
+        );
+      
+      default: // player
+        return (
+          <g>
+            <circle
+              cx={token.x}
+              cy={token.y}
+              r={radius}
+              fill={teamColors[token.team]}
+              stroke={isSelected ? '#FBBF24' : 'white'}
+              strokeWidth={isSelected ? 0.4 : 0.2}
+              style={{ pointerEvents: 'none' }}
+            />
+            <text
+              x={token.x}
+              y={token.y}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fill="white"
+              fontSize="2.5"
+              fontWeight="bold"
+              style={{ pointerEvents: 'none', userSelect: 'none' }}
+            >
+              {token.number}
+            </text>
+          </g>
+        );
+    }
+  };
+
   return (
     <g className="token-group">
       {/* Hit area (invisible, larger for touch) */}
@@ -66,30 +165,8 @@ export const Token: React.FC<TokenProps> = ({
         onContextMenu={handleContextMenu}
       />
       
-      {/* Token background */}
-      <circle
-        cx={token.x}
-        cy={token.y}
-        r={radius}
-        fill={teamColors[token.team]}
-        stroke={isSelected ? '#FBBF24' : 'white'}
-        strokeWidth={isSelected ? 0.4 : 0.2}
-        style={{ pointerEvents: 'none' }}
-      />
-      
-      {/* Token number */}
-      <text
-        x={token.x}
-        y={token.y + 0.5}
-        textAnchor="middle"
-        dominantBaseline="central"
-        fill="white"
-        fontSize="2.5"
-        fontWeight="bold"
-        style={{ pointerEvents: 'none', userSelect: 'none' }}
-      >
-        {token.number}
-      </text>
+      {/* Render the appropriate object */}
+      {renderObject()}
       
       {/* Selection ring */}
       {isSelected && (

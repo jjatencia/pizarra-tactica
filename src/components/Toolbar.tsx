@@ -1,12 +1,13 @@
 import React from 'react';
 import { useBoardStore } from '../hooks/useBoardStore';
 import { exportSVGToPNG, downloadJSON } from '../lib/exportPng';
-import { Team } from '../types';
+import { Team, ObjectType } from '../types';
 import clsx from 'clsx';
 
 interface ToolbarProps {
   svgRef: React.RefObject<SVGSVGElement>;
   onAddToken: (team: Team) => void;
+  onAddObject: (type: ObjectType) => void;
   onShowPresets: () => void;
   onShowFormations: () => void;
   drawColor: string;
@@ -21,10 +22,11 @@ interface ToolbarProps {
 
 export const Toolbar: React.FC<ToolbarProps> = ({ 
   svgRef, 
-  onAddToken, 
-  // onShowPresets, // Will be used later 
+  onAddToken,
+  onAddObject,
+  // onShowPresets, // Will be used later
   onShowFormations,
-  // drawColor, // Available via props
+  drawColor,
   drawLineStyle,
   canUndoDraw,
   canRedoDraw,
@@ -145,21 +147,21 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         <button 
           className="control-btn"
           title="Añadir Balón"
-          onClick={() => {/* TODO: Add ball functionality */}}
+          onClick={() => onAddObject('ball')}
         >
           <BallIcon />
         </button>
         <button 
           className="control-btn"
           title="Añadir Cono"
-          onClick={() => {/* TODO: Add cone functionality */}}
+          onClick={() => onAddObject('cone')}
         >
           <ConeIcon />
         </button>
         <button 
           className="control-btn"
           title="Añadir Mini Portería"
-          onClick={() => {/* TODO: Add mini goal functionality */}}
+          onClick={() => onAddObject('minigoal')}
         >
           <MiniGoalIcon />
         </button>
@@ -187,7 +189,12 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           {colorOptions.map((option) => (
             <button
               key={option.color}
-              className={`color-picker h-8 w-8 rounded-md ${option.className}`}
+              className={clsx(
+                `color-picker h-8 w-8 rounded-md ${option.className}`,
+                {
+                  'ring-2 ring-blue-400': drawColor === option.color
+                }
+              )}
               onClick={() => onSetDrawColor(option.color)}
               title={option.title}
             />

@@ -77,7 +77,7 @@ export const useCanvasDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     ctx.lineCap = 'round';
     
     if (drawingState.lineStyle === 'dashed') {
-      ctx.setLineDash([25, 20]);
+      ctx.setLineDash([8, 6]); // Smaller dashes for better turn visibility
     } else {
       ctx.setLineDash([]);
     }

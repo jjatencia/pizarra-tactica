@@ -59,7 +59,6 @@
   
   .draggable:active { 
     cursor: grabbing; 
-    transform: scale(1.1); 
     z-index: 100; 
   }
 

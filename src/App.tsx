@@ -10,7 +10,7 @@ import { TrajectoriesLayer } from './components/TrajectoriesLayer';
 import { Toolbar } from './components/Toolbar';
 import { PresetsPanel } from './components/PresetsPanel';
 import { FormationsModal } from './components/FormationsModal';
-import { Team } from './types';
+import { Team, ObjectType } from './types';
 import { clampToField, snapToGrid } from './lib/geometry';
 
 function App() {
@@ -32,6 +32,7 @@ function App() {
     gridSnap,
 
     addToken,
+    addObject,
     selectArrow,
     updateArrow,
     selectTrajectory,
@@ -155,6 +156,23 @@ function App() {
     // For now, we'll just close the modal
     console.log(`Applying formation ${formation} to team ${team}`);
   }, []);
+
+  // Handle adding objects
+  const handleAddObject = useCallback((type: ObjectType) => {
+    // Add object at center of visible area
+    const centerX = showFullField ? fieldWidth / 2 : viewBoxWidth / 2;
+    const centerY = fieldHeight / 2;
+    
+    let position = { x: centerX, y: centerY };
+    
+    if (gridSnap) {
+      position = snapToGrid(position);
+    }
+    
+    position = clampToField(position, viewBoxWidth, fieldHeight);
+    
+    addObject(type, position.x, position.y);
+  }, [addObject, showFullField, fieldWidth, fieldHeight, viewBoxWidth, gridSnap]);
   
   // Calculate transform for zoom and pan
   const transform = `translate(${pan.x}, ${pan.y}) scale(${zoom})`;
@@ -168,6 +186,7 @@ function App() {
       <Toolbar
         svgRef={svgRef}
         onAddToken={handleAddToken}
+        onAddObject={handleAddObject}
         onShowPresets={() => setShowPresets(true)}
         onShowFormations={() => setShowFormations(true)}
         drawColor={drawColor}

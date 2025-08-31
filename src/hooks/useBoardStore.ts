@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { BoardState, Token, Arrow, Trajectory, Team, Formation, HistoryState } from '../types';
+import { BoardState, Token, Arrow, Trajectory, Team, Formation, HistoryState, ObjectType } from '../types';
 import { loadFromStorage, saveToStorage } from '../lib/localStorage';
 
 interface BoardStore extends BoardState {
@@ -7,7 +7,8 @@ interface BoardStore extends BoardState {
   history: HistoryState;
   
   // Token actions
-  addToken: (team: Team, x: number, y: number) => void;
+  addToken: (team: Team, x: number, y: number, type?: ObjectType) => void;
+  addObject: (type: ObjectType, x: number, y: number) => void;
   updateToken: (id: string, updates: Partial<Token>) => void;
   removeToken: (id: string) => void;
   selectToken: (id: string | null) => void;
@@ -108,23 +109,51 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     ...initialState,
     history: initialHistory,
     
-    addToken: (team: Team, x: number, y: number) => {
+    addToken: (team: Team, x: number, y: number, type: ObjectType = 'player') => {
       const state = get();
-      const teamTokens = state.tokens.filter(t => t.team === team);
       
-      if (teamTokens.length >= 11) {
-        // TODO: Show toast notification
-        console.warn(`Máximo 11 fichas ${team} alcanzado`);
-        return;
+      if (type === 'player') {
+        const teamTokens = state.tokens.filter(t => t.team === team && (t.type === 'player' || !t.type));
+        
+        if (teamTokens.length >= 11) {
+          // TODO: Show toast notification
+          console.warn(`Máximo 11 fichas ${team} alcanzado`);
+          return;
+        }
       }
       
-      const number = getNextAvailableNumber(state.tokens, team);
+      const number = type === 'player' ? getNextAvailableNumber(state.tokens, team) : 0;
       const newToken: Token = {
         id: generateId(),
         team,
         number,
         x,
         y,
+        type,
+      };
+      
+      const newState = {
+        ...state,
+        tokens: [...state.tokens, newToken],
+        selectedTokenId: newToken.id,
+      };
+      
+      set({
+        ...newState,
+        history: addToHistory(newState, state.history),
+      });
+    },
+
+    addObject: (type: ObjectType, x: number, y: number) => {
+      const state = get();
+      
+      const newToken: Token = {
+        id: generateId(),
+        team: 'red', // Default team for objects (won't be used for non-player objects)
+        number: 0, // No number for objects
+        x,
+        y,
+        type,
       };
       
       const newState = {
