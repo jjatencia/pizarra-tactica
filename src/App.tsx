@@ -185,12 +185,18 @@ function App() {
     position = clampToField(position, viewBoxWidth, fieldHeight);
     
     addToken(team, position.x, position.y);
-  }, [addToken, showFullField, fieldWidth, fieldHeight, viewBoxWidth, gridSnap]);
+    
+    // Automatically switch to move mode after adding a token
+    setDrawingMode('move');
+  }, [addToken, showFullField, fieldWidth, fieldHeight, viewBoxWidth, gridSnap, setDrawingMode]);
 
   // Handle formation application
   const handleApplyFormation = useCallback((team: Team, formation: string) => {
     applyFormationByName(formation, team);
-  }, [applyFormationByName]);
+    
+    // Automatically switch to move mode after applying formation
+    setDrawingMode('move');
+  }, [applyFormationByName, setDrawingMode]);
 
   // Handle adding objects
   const handleAddObject = useCallback((type: ObjectType) => {
@@ -207,7 +213,10 @@ function App() {
     position = clampToField(position, viewBoxWidth, fieldHeight);
     
     addObject(type, position.x, position.y);
-  }, [addObject, showFullField, fieldWidth, fieldHeight, viewBoxWidth, gridSnap]);
+    
+    // Automatically switch to move mode after adding an object
+    setDrawingMode('move');
+  }, [addObject, showFullField, fieldWidth, fieldHeight, viewBoxWidth, gridSnap, setDrawingMode]);
 
   // Handle canvas pointer down - no double tap for lines
   const handleCanvasPointerDown = useCallback((e: any) => {
