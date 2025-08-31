@@ -22,6 +22,7 @@ function App() {
     arrows,
     trajectories,
     mode,
+    trajectoryType,
     zoom,
     pan,
     showFullField,
@@ -188,9 +189,9 @@ function App() {
                     if (index === 0) return `M ${point.x} ${point.y}`;
                     return `${path} L ${point.x} ${point.y}`;
                   }, '')}
-                  stroke="white"
+                  stroke={trajectoryType === 'pass' ? '#8B5CF6' : '#F59E0B'}
                   strokeWidth="1.2"
-                  strokeDasharray="3,2"
+                  strokeDasharray={trajectoryType === 'movement' ? '3,2' : undefined}
                   fill="none"
                   opacity="0.7"
                   style={{ pointerEvents: 'none' }}
@@ -206,6 +207,7 @@ function App() {
                   fieldHeight={fieldHeight}
                   onPointerDown={handleTokenPointerDown}
                   isDragging={isDragging && token.id === selectedTokenId}
+                  isInteractionDisabled={mode === 'trajectory'}
                 />
               ))}
             </g>
@@ -229,6 +231,7 @@ function App() {
       {/* Status Bar */}
       <div className="bg-slate-800 border-t border-slate-700 px-4 py-2 text-sm text-slate-400 flex justify-between items-center">
         <div className="flex gap-4">
+          <span>Modo: {mode === 'select' ? 'Mover Fichas' : `Trayectoria (${trajectoryType === 'pass' ? 'Pase' : 'Movimiento'})`}</span>
           <span>Fichas: {tokens.filter(t => t.team === 'red').length}R / {tokens.filter(t => t.team === 'blue').length}A</span>
           <span>Flechas: {arrows.length}</span>
           <span>Trayectorias: {trajectories.length}</span>

@@ -12,10 +12,12 @@ interface ToolbarProps {
 
 export const Toolbar: React.FC<ToolbarProps> = ({ svgRef, onAddToken, onShowPresets }) => {
   const {
+    mode,
     trajectoryType,
     gridSnap,
     showFullField,
     tokens,
+    setMode,
     setTrajectoryType,
     toggleGridSnap,
     toggleFullField,
@@ -58,6 +60,43 @@ export const Toolbar: React.FC<ToolbarProps> = ({ svgRef, onAddToken, onShowPres
   
   return (
     <div className="toolbar">
+      {/* Mode Selection */}
+      <div className="flex gap-1">
+        <button
+          className={clsx('btn btn-secondary text-sm', {
+            'btn-active': mode === 'select'
+          })}
+          onClick={() => setMode('select')}
+        >
+          ✋ Mover Fichas
+        </button>
+        <button
+          className={clsx('btn btn-secondary text-sm', {
+            'btn-active': mode === 'trajectory' && trajectoryType === 'pass'
+          })}
+          onClick={() => {
+            setMode('trajectory');
+            setTrajectoryType('pass');
+          }}
+        >
+          ┅ Pase
+        </button>
+        <button
+          className={clsx('btn btn-secondary text-sm', {
+            'btn-active': mode === 'trajectory' && trajectoryType === 'movement'
+          })}
+          onClick={() => {
+            setMode('trajectory');
+            setTrajectoryType('movement');
+          }}
+        >
+          ━ Movimiento
+        </button>
+      </div>
+      
+      {/* Divider */}
+      <div className="w-px h-6 bg-slate-600" />
+      
       {/* Add Tokens */}
       <div className="flex gap-1">
         <button
@@ -79,29 +118,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({ svgRef, onAddToken, onShowPres
           title={`Azules: ${blueTokens.length}/11`}
         >
           🔵 ({blueTokens.length}/11)
-        </button>
-      </div>
-      
-      {/* Divider */}
-      <div className="w-px h-6 bg-slate-600" />
-      
-      {/* Trajectory Type - Always visible */}
-      <div className="flex gap-1">
-        <button
-          className={clsx('btn btn-secondary text-sm', {
-            'btn-active': trajectoryType === 'pass'
-          })}
-          onClick={() => setTrajectoryType('pass')}
-        >
-          ┅ Pase
-        </button>
-        <button
-          className={clsx('btn btn-secondary text-sm', {
-            'btn-active': trajectoryType === 'movement'
-          })}
-          onClick={() => setTrajectoryType('movement')}
-        >
-          ━ Movimiento
         </button>
       </div>
       

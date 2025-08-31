@@ -61,7 +61,7 @@ export const TrajectoriesLayer: React.FC<TrajectoriesLayerProps> = ({
         if (!pathData) return null;
 
         const strokeColor = trajectory.type === 'pass' ? '#8B5CF6' : '#F59E0B'; // Changed from green to purple for better visibility
-        const strokeDasharray = trajectory.style === 'dashed' ? '6,3' : undefined;
+        const strokeDasharray = trajectory.style === 'dashed' ? '3,2' : undefined;
 
         return (
           <g key={trajectory.id}>

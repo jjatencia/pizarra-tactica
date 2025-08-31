@@ -57,7 +57,7 @@ const initialState: BoardState = {
   tokens: [],
   arrows: [],
   trajectories: [],
-  mode: 'trajectory',
+  mode: 'select',
   arrowStyle: 'solid',
   trajectoryType: 'pass',
   gridSnap: false,

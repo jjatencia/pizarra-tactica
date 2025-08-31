@@ -58,7 +58,7 @@ export const usePointerInteractions = (
   }, [svgRef, zoom, pan]);
   
   const handleTokenPointerDown = useCallback((e: React.PointerEvent, token: Token) => {
-    // Allow token dragging in any mode
+    if (mode !== 'select') return;
     
     e.preventDefault();
     e.stopPropagation();

@@ -9,12 +9,14 @@ interface TokenProps {
   fieldHeight: number;
   onPointerDown: (e: React.PointerEvent, token: TokenType) => void;
   isDragging?: boolean;
+  isInteractionDisabled?: boolean;
 }
 
 export const Token: React.FC<TokenProps> = ({ 
   token, 
   onPointerDown,
-  isDragging = false
+  isDragging = false,
+  isInteractionDisabled = false
 }) => {
   const { selectedTokenId, selectToken } = useBoardStore();
   
@@ -23,6 +25,8 @@ export const Token: React.FC<TokenProps> = ({
   const hitRadius = 8; // Larger hit area for better touch response on iPad
   
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    if (isInteractionDisabled) return;
+    
     e.stopPropagation();
     e.preventDefault();
     
@@ -30,7 +34,7 @@ export const Token: React.FC<TokenProps> = ({
     selectToken(token.id);
     
     onPointerDown(e, token);
-  }, [token, onPointerDown, selectToken]);
+  }, [token, onPointerDown, selectToken, isInteractionDisabled]);
   
   const handleDoubleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -60,16 +64,16 @@ export const Token: React.FC<TokenProps> = ({
         r={hitRadius}
         fill="transparent"
         style={{ 
-          cursor: isDragging ? 'grabbing' : 'grab',
+          cursor: isInteractionDisabled ? 'default' : (isDragging ? 'grabbing' : 'grab'),
           touchAction: 'none', // Prevent default touch behaviors for smoother dragging
           userSelect: 'none',
           WebkitUserSelect: 'none',
           WebkitTouchCallout: 'none', // Disable iOS callout menu
           WebkitTapHighlightColor: 'transparent' // Remove tap highlight on mobile
         }}
-        onPointerDown={handlePointerDown}
-        onDoubleClick={handleDoubleClick}
-        onContextMenu={handleContextMenu}
+        onPointerDown={isInteractionDisabled ? undefined : handlePointerDown}
+        onDoubleClick={isInteractionDisabled ? undefined : handleDoubleClick}
+        onContextMenu={isInteractionDisabled ? undefined : handleContextMenu}
       />
       
       {/* Token background */}
