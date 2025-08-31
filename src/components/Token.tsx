@@ -31,8 +31,9 @@ export const Token: React.FC<TokenProps> = ({
     const now = Date.now();
     const timeDiff = now - lastTapRef.current;
     
-    if (timeDiff < 300) {
+    if (timeDiff < 400) { // Increased time window for better detection
       // Double tap detected - delete the token
+      console.log('🗑️ Double tap delete token:', token.id);
       removeToken(token.id);
       return;
     }
@@ -46,9 +47,10 @@ export const Token: React.FC<TokenProps> = ({
   
   const handleDoubleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    // TODO: Show number/color edit dialog
-    console.log('Double click on token', token.id);
-  }, [token.id]);
+    e.preventDefault();
+    console.log('🗑️ Double click delete token:', token.id);
+    removeToken(token.id);
+  }, [token.id, removeToken]);
   
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();

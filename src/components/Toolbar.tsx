@@ -1,7 +1,7 @@
 import React from 'react';
 import { useBoardStore } from '../hooks/useBoardStore';
 import { exportSVGToPNG, downloadJSON } from '../lib/exportPng';
-import { Team, ObjectType } from '../types';
+import { Team, ObjectType, DrawingMode } from '../types';
 import clsx from 'clsx';
 
 interface ToolbarProps {
@@ -11,11 +11,11 @@ interface ToolbarProps {
   onShowPresets: () => void;
   onShowFormations: () => void;
   drawColor: string;
-  drawLineStyle: 'solid' | 'dashed';
+  drawingMode: DrawingMode;
   canUndoDraw: boolean;
   canRedoDraw: boolean;
   onSetDrawColor: (color: string) => void;
-  onSetDrawLineStyle: (style: 'solid' | 'dashed') => void;
+  onSetDrawingMode: (mode: DrawingMode) => void;
   onUndoDraw: () => void;
   onRedoDraw: () => void;
   onClearCanvas: () => void;
@@ -28,11 +28,13 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   // onShowPresets, // Will be used later
   onShowFormations,
   drawColor,
-  drawLineStyle,
+  // drawLineStyle, // Not used with new mode system
+  drawingMode,
   canUndoDraw,
   canRedoDraw,
   onSetDrawColor,
-  onSetDrawLineStyle,
+  // onSetDrawLineStyle, // Not used with new mode system
+  onSetDrawingMode,
   onUndoDraw,
   onRedoDraw,
   onClearCanvas
@@ -173,19 +175,27 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       <div className="flex items-center gap-2">
         <button 
           className={clsx('control-btn draw-style-btn', {
-            'active': drawLineStyle === 'solid'
+            'active': drawingMode === 'move'
           })}
-          onClick={() => onSetDrawLineStyle('solid')}
+          onClick={() => onSetDrawingMode('move')}
+        >
+          Mover
+        </button>
+        <button 
+          className={clsx('control-btn draw-style-btn', {
+            'active': drawingMode === 'pass'
+          })}
+          onClick={() => onSetDrawingMode('pass')}
         >
           Pase
         </button>
         <button 
           className={clsx('control-btn draw-style-btn', {
-            'active': drawLineStyle === 'dashed'
+            'active': drawingMode === 'displacement'
           })}
-          onClick={() => onSetDrawLineStyle('dashed')}
+          onClick={() => onSetDrawingMode('displacement')}
         >
-          Movimiento
+          Desplazamiento
         </button>
         <div className="flex items-center gap-1">
           {colorOptions.map((option) => (

@@ -20,6 +20,7 @@ export interface Arrow {
 }
 
 export type Mode = 'select' | 'arrow' | 'trajectory';
+export type DrawingMode = 'move' | 'pass' | 'displacement';
 
 export interface BoardState {
   tokens: Token[];

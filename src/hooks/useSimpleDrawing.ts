@@ -1,4 +1,5 @@
 import { useCallback, useState, useRef, useEffect } from 'react';
+import { DrawingMode } from '../types';
 
 interface DrawingState {
   isDrawing: boolean;
@@ -7,6 +8,7 @@ interface DrawingState {
   color: string;
   lineStyle: 'solid' | 'dashed';
   currentPath: { x: number; y: number }[];
+  drawingMode: DrawingMode;
 }
 
 export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) => {
@@ -17,6 +19,7 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     color: 'white',
     lineStyle: 'solid',
     currentPath: [],
+    drawingMode: 'move',
   });
 
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
@@ -76,7 +79,7 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
   }, [canvasRef]);
 
   const startDrawing = useCallback((e: any) => {
-    if (!canvasRef.current) return;
+    if (!canvasRef.current || state.drawingMode === 'move') return;
     
     e.preventDefault();
     e.stopPropagation();
@@ -85,7 +88,7 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
 
-    console.log('🎨 Starting drawing at:', coords, 'Color:', state.color, 'Style:', state.lineStyle);
+    console.log('🎨 Starting drawing at:', coords, 'Color:', state.color, 'Mode:', state.drawingMode);
 
     setState(prev => ({ 
       ...prev, 
@@ -101,7 +104,7 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     ctx.fill();
     
     console.log('✅ Drew starting point');
-  }, [canvasRef, getCoords, state.color, state.lineStyle]);
+  }, [canvasRef, getCoords, state.color, state.lineStyle, state.drawingMode]);
 
   const draw = useCallback((e: any) => {
     if (!state.isDrawing || !canvasRef.current || !lastPointRef.current) return;
@@ -120,7 +123,7 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
       currentPath: newPath
     }));
 
-    if (state.lineStyle === 'solid') {
+    if (state.drawingMode === 'pass') {
       // For solid lines, draw immediately
       ctx.lineWidth = 8;
       ctx.lineCap = 'round';
@@ -133,7 +136,7 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
       ctx.moveTo(lastPointRef.current.x, lastPointRef.current.y);
       ctx.lineTo(coords.x, coords.y);
       ctx.stroke();
-    } else {
+    } else if (state.drawingMode === 'displacement') {
       // For dashed lines, redraw the entire path with preview
       if (newPath.length > 1) {
         // Clear and redraw from history first
@@ -259,6 +262,11 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     setState(prev => ({ ...prev, lineStyle }));
   }, []);
 
+  const setDrawingMode = useCallback((drawingMode: DrawingMode) => {
+    console.log('🎯 Setting drawing mode to:', drawingMode);
+    setState(prev => ({ ...prev, drawingMode }));
+  }, []);
+
   const clearCanvas = useCallback(() => {
     if (!canvasRef.current) return;
     
@@ -293,6 +301,7 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     isDrawing: state.isDrawing,
     color: state.color,
     lineStyle: state.lineStyle,
+    drawingMode: state.drawingMode,
     canUndo: state.historyStep > 0,
     canRedo: state.historyStep < state.history.length - 1,
     startDrawing,
@@ -302,6 +311,7 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     redo,
     setColor,
     setLineStyle,
+    setDrawingMode,
     clearCanvas,
   };
 };

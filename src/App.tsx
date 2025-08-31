@@ -80,7 +80,8 @@ function App() {
   const {
     // isDrawing, // Not used in current implementation
     color: drawColor,
-    lineStyle: drawLineStyle,
+    // lineStyle: drawLineStyle, // Not used with new mode system
+    drawingMode,
     canUndo: canUndoDraw,
     canRedo: canRedoDraw,
     startDrawing,
@@ -89,7 +90,8 @@ function App() {
     undo: undoDraw,
     redo: redoDraw,
     setColor: setDrawColor,
-    setLineStyle: setDrawLineStyle,
+    // setLineStyle: setDrawLineStyle, // Not used with new mode system
+    setDrawingMode,
     clearCanvas,
   } = useSimpleDrawing(canvasRef);
   
@@ -172,18 +174,21 @@ function App() {
 
   // Handle canvas double tap for clearing last drawing
   const handleCanvasPointerDown = useCallback((e: any) => {
+    if (drawingMode === 'move') return; // Don't handle canvas events in move mode
+    
     const now = Date.now();
     const timeDiff = now - lastCanvasTapRef.current;
     
-    if (timeDiff < 300) {
+    if (timeDiff < 400) { // Increased time window
       // Double tap detected - undo last drawing
+      console.log('🗑️ Double tap undo drawing');
       undoDraw();
       return;
     }
     
     lastCanvasTapRef.current = now;
     startDrawing(e);
-  }, [undoDraw, startDrawing]);
+  }, [undoDraw, startDrawing, drawingMode]);
   
   // Calculate transform for zoom and pan
   const transform = `translate(${pan.x}, ${pan.y}) scale(${zoom})`;
@@ -201,11 +206,11 @@ function App() {
         onShowPresets={() => setShowPresets(true)}
         onShowFormations={() => setShowFormations(true)}
         drawColor={drawColor}
-        drawLineStyle={drawLineStyle}
+        drawingMode={drawingMode}
         canUndoDraw={canUndoDraw}
         canRedoDraw={canRedoDraw}
         onSetDrawColor={setDrawColor}
-        onSetDrawLineStyle={setDrawLineStyle}
+        onSetDrawingMode={setDrawingMode}
         onUndoDraw={undoDraw}
         onRedoDraw={redoDraw}
         onClearCanvas={clearCanvas}
@@ -291,8 +296,8 @@ function App() {
               className="absolute top-0 left-0 w-full h-full"
               style={{ 
                 touchAction: 'none',
-                zIndex: 10,
-                pointerEvents: 'auto',
+                zIndex: drawingMode === 'move' ? 1 : 10,
+                pointerEvents: drawingMode === 'move' ? 'none' : 'auto',
                 backgroundColor: 'transparent'
               }}
               onMouseDown={(e) => {
