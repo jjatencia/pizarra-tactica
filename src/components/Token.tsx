@@ -17,6 +17,8 @@ export const Token: React.FC<TokenProps> = ({
 }) => {
   const { selectedTokenId, selectToken, removeToken } = useBoardStore();
   const lastTapRef = useRef<number>(0);
+  const tapCountRef = useRef<number>(0);
+  const tapTimeoutRef = useRef<number | null>(null);
   
   const isSelected = selectedTokenId === token.id;
   const objectType: ObjectType = token.type || 'player';
@@ -27,24 +29,44 @@ export const Token: React.FC<TokenProps> = ({
     e.stopPropagation();
     e.preventDefault();
     
-    // Double tap detection
     const now = Date.now();
     const timeDiff = now - lastTapRef.current;
     
-    console.log('👆 Token tap:', token.id, 'Time diff:', timeDiff);
+    console.log('👆 Token tap:', token.id, 'Time diff:', timeDiff, 'Tap count:', tapCountRef.current);
     
-    if (timeDiff < 400 && timeDiff > 10) {
-      // Double tap detected - delete the token
-      console.log('🗑️ Double tap delete token:', token.id);
+    // Reset tap count if too much time has passed
+    if (timeDiff > 300) {
+      tapCountRef.current = 0;
+    }
+    
+    tapCountRef.current++;
+    lastTapRef.current = now;
+    
+    // Clear any existing timeout
+    if (tapTimeoutRef.current) {
+      clearTimeout(tapTimeoutRef.current);
+      tapTimeoutRef.current = null;
+    }
+    
+    if (tapCountRef.current === 2 && timeDiff < 300) {
+      // Double tap detected - delete immediately
+      console.log('🗑️ Fast double tap delete token:', token.id);
       removeToken(token.id);
+      tapCountRef.current = 0;
       return;
     }
     
-    lastTapRef.current = now;
+    // Set timeout to reset tap count and proceed with normal interaction
+    tapTimeoutRef.current = setTimeout(() => {
+      if (tapCountRef.current === 1) {
+        // Single tap - proceed with normal interaction
+        selectToken(token.id);
+        onPointerDown(e, token);
+      }
+      tapCountRef.current = 0;
+      tapTimeoutRef.current = null;
+    }, 300);
     
-    // Proceed with normal interaction immediately
-    selectToken(token.id);
-    onPointerDown(e, token);
   }, [token, onPointerDown, selectToken, removeToken]);
   
   const handleDoubleClick = useCallback((e: React.MouseEvent) => {
@@ -180,20 +202,6 @@ export const Token: React.FC<TokenProps> = ({
         onPointerDown={handlePointerDown}
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
-        onTouchEnd={(e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          
-          const now = Date.now();
-          const timeDiff = now - lastTapRef.current;
-          
-          console.log('👆 Touch end on token:', token.id, 'Time diff:', timeDiff);
-          
-          if (timeDiff < 400 && timeDiff > 10) {
-            console.log('🗑️ Touch double tap delete token:', token.id);
-            removeToken(token.id);
-          }
-        }}
       />
       
       {/* Render the appropriate object */}

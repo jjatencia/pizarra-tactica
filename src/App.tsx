@@ -21,6 +21,8 @@ function App() {
   const [showPresets, setShowPresets] = useState(false);
   const [showFormations, setShowFormations] = useState(false);
   const lastCanvasTapRef = useRef<number>(0);
+  const canvasTapCountRef = useRef<number>(0);
+  const canvasTapTimeoutRef = useRef<number | null>(null);
   
   const {
     tokens,
@@ -179,17 +181,40 @@ function App() {
     const now = Date.now();
     const timeDiff = now - lastCanvasTapRef.current;
     
-    console.log('🎨 Canvas tap, Time diff:', timeDiff);
+    console.log('🎨 Canvas tap, Time diff:', timeDiff, 'Tap count:', canvasTapCountRef.current);
     
-    if (timeDiff < 400 && timeDiff > 10) {
-      // Double tap detected - undo last drawing
-      console.log('🗑️ Double tap undo drawing');
+    // Reset tap count if too much time has passed
+    if (timeDiff > 300) {
+      canvasTapCountRef.current = 0;
+    }
+    
+    canvasTapCountRef.current++;
+    lastCanvasTapRef.current = now;
+    
+    // Clear any existing timeout
+    if (canvasTapTimeoutRef.current) {
+      clearTimeout(canvasTapTimeoutRef.current);
+      canvasTapTimeoutRef.current = null;
+    }
+    
+    if (canvasTapCountRef.current === 2 && timeDiff < 300) {
+      // Fast double tap detected - undo last drawing
+      console.log('🗑️ Fast double tap undo drawing');
       undoDraw();
+      canvasTapCountRef.current = 0;
       return;
     }
     
-    lastCanvasTapRef.current = now;
-    startDrawing(e);
+    // Set timeout to proceed with drawing if no second tap
+    canvasTapTimeoutRef.current = setTimeout(() => {
+      if (canvasTapCountRef.current === 1) {
+        // Single tap - start drawing
+        startDrawing(e);
+      }
+      canvasTapCountRef.current = 0;
+      canvasTapTimeoutRef.current = null;
+    }, 300);
+    
   }, [undoDraw, startDrawing, drawingMode]);
   
   // Calculate transform for zoom and pan
@@ -323,19 +348,6 @@ function App() {
               }}
               onTouchEnd={(e) => {
                 e.preventDefault();
-                
-                // Check for double tap on canvas
-                const now = Date.now();
-                const timeDiff = now - lastCanvasTapRef.current;
-                
-                console.log('👆 Canvas touch end, Time diff:', timeDiff);
-                
-                if (timeDiff < 400 && timeDiff > 10 && drawingMode !== 'move') {
-                  console.log('🗑️ Canvas double tap undo');
-                  undoDraw();
-                  return;
-                }
-                
                 endDrawing();
               }}
             />
