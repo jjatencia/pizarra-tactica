@@ -29,6 +29,7 @@ export interface BoardState {
   mode: Mode;
   arrowStyle: 'solid' | 'dashed';
   trajectoryType: 'pass' | 'movement';
+  drawingMode: DrawingMode;
   gridSnap: boolean;
   zoom: number;
   pan: { x: number; y: number };

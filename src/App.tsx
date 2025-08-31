@@ -32,6 +32,7 @@ function App() {
     pan,
     showFullField,
     gridSnap,
+    drawingMode,
 
     addToken,
     addObject,
@@ -40,6 +41,7 @@ function App() {
     updateArrow,
     selectTrajectory,
     updateTrajectory,
+    setDrawingMode,
     load,
   } = useBoardStore();
   
@@ -88,7 +90,6 @@ function App() {
     // isDrawing, // Not used in current implementation
     color: drawColor,
     // lineStyle: drawLineStyle, // Not used with new mode system
-    drawingMode,
     canUndo: canUndoDraw,
     canRedo: canRedoDraw,
     startDrawing,
@@ -98,9 +99,8 @@ function App() {
     redo: redoDraw,
     setColor: setDrawColor,
     // setLineStyle: setDrawLineStyle, // Not used with new mode system
-    setDrawingMode,
     clearCanvas,
-  } = useSimpleDrawing(canvasRef);
+  } = useSimpleDrawing(canvasRef, drawingMode);
   
     // Handle container resize with PWA detection
   useEffect(() => {
@@ -185,18 +185,12 @@ function App() {
     position = clampToField(position, viewBoxWidth, fieldHeight);
     
     addToken(team, position.x, position.y);
-    
-    // Automatically switch to move mode after adding a token
-    setDrawingMode('move');
-  }, [addToken, showFullField, fieldWidth, fieldHeight, viewBoxWidth, gridSnap, setDrawingMode]);
+  }, [addToken, showFullField, fieldWidth, fieldHeight, viewBoxWidth, gridSnap]);
 
   // Handle formation application
   const handleApplyFormation = useCallback((team: Team, formation: string) => {
     applyFormationByName(formation, team);
-    
-    // Automatically switch to move mode after applying formation
-    setDrawingMode('move');
-  }, [applyFormationByName, setDrawingMode]);
+  }, [applyFormationByName]);
 
   // Handle adding objects
   const handleAddObject = useCallback((type: ObjectType) => {
@@ -213,10 +207,7 @@ function App() {
     position = clampToField(position, viewBoxWidth, fieldHeight);
     
     addObject(type, position.x, position.y);
-    
-    // Automatically switch to move mode after adding an object
-    setDrawingMode('move');
-  }, [addObject, showFullField, fieldWidth, fieldHeight, viewBoxWidth, gridSnap, setDrawingMode]);
+  }, [addObject, showFullField, fieldWidth, fieldHeight, viewBoxWidth, gridSnap]);
 
   // Handle canvas pointer down - no double tap for lines
   const handleCanvasPointerDown = useCallback((e: any) => {

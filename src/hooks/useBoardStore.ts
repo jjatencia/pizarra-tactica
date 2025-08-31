@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { BoardState, Token, Arrow, Trajectory, Team, Formation, HistoryState, ObjectType } from '../types';
+import { BoardState, Token, Arrow, Trajectory, Team, Formation, HistoryState, ObjectType, DrawingMode } from '../types';
 import { loadFromStorage, saveToStorage } from '../lib/localStorage';
 
 interface BoardStore extends BoardState {
@@ -29,6 +29,7 @@ interface BoardStore extends BoardState {
   setMode: (mode: BoardState['mode']) => void;
   setArrowStyle: (style: 'solid' | 'dashed') => void;
   setTrajectoryType: (type: 'pass' | 'movement') => void;
+  setDrawingMode: (mode: DrawingMode) => void;
   
   // View actions
   setZoom: (zoom: number) => void;
@@ -62,6 +63,7 @@ const initialState: BoardState = {
   mode: 'select',
   arrowStyle: 'solid',
   trajectoryType: 'pass',
+  drawingMode: 'move',
   gridSnap: false,
   zoom: 1,
   pan: { x: 0, y: 0 },
@@ -137,6 +139,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         ...state,
         tokens: [...state.tokens, newToken],
         selectedTokenId: newToken.id,
+        drawingMode: 'move' as DrawingMode,
       };
       
       set({
@@ -161,6 +164,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         ...state,
         tokens: [...state.tokens, newToken],
         selectedTokenId: newToken.id,
+        drawingMode: 'move' as DrawingMode,
       };
       
       set({
@@ -328,6 +332,10 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     setTrajectoryType: (trajectoryType: 'pass' | 'movement') => {
       set({ trajectoryType });
     },
+
+    setDrawingMode: (drawingMode: DrawingMode) => {
+      set({ drawingMode });
+    },
     
     setZoom: (zoom: number) => {
       set({ zoom: Math.max(0.5, Math.min(3, zoom)) });
@@ -459,6 +467,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         ...state,
         tokens: [...otherTokens, ...formationTokens],
         selectedTokenId: null,
+        drawingMode: 'move' as DrawingMode,
       };
       
       set({
@@ -518,6 +527,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         mode: state.mode,
         arrowStyle: state.arrowStyle,
         trajectoryType: state.trajectoryType,
+        drawingMode: state.drawingMode,
         gridSnap: state.gridSnap,
         zoom: state.zoom,
         pan: state.pan,
@@ -594,6 +604,7 @@ useBoardStore.subscribe((state) => {
     mode: state.mode,
     arrowStyle: state.arrowStyle,
     trajectoryType: state.trajectoryType,
+    drawingMode: state.drawingMode,
     gridSnap: state.gridSnap,
     zoom: state.zoom,
     pan: state.pan,

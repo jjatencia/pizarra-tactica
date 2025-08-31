@@ -8,10 +8,9 @@ interface DrawingState {
   color: string;
   lineStyle: 'solid' | 'dashed';
   currentPath: { x: number; y: number }[];
-  drawingMode: DrawingMode;
 }
 
-export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) => {
+export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>, drawingMode: DrawingMode) => {
   const [state, setState] = useState<DrawingState>({
     isDrawing: false,
     history: [],
@@ -19,7 +18,6 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     color: 'white',
     lineStyle: 'solid',
     currentPath: [],
-    drawingMode: 'move',
   });
 
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
@@ -79,7 +77,7 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
   }, [canvasRef]);
 
   const startDrawing = useCallback((e: any) => {
-    if (!canvasRef.current || state.drawingMode === 'move') return;
+    if (!canvasRef.current || drawingMode === 'move') return;
     
     e.preventDefault();
     e.stopPropagation();
@@ -88,7 +86,7 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
 
-    console.log('🎨 Starting drawing at:', coords, 'Color:', state.color, 'Mode:', state.drawingMode);
+    console.log('🎨 Starting drawing at:', coords, 'Color:', state.color, 'Mode:', drawingMode);
 
     setState(prev => ({ 
       ...prev, 
@@ -106,7 +104,7 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     }
     
     console.log('✅ Drew starting point');
-  }, [canvasRef, getCoords, state.color, state.lineStyle, state.drawingMode]);
+  }, [canvasRef, getCoords, state.color, state.lineStyle, drawingMode]);
 
   const draw = useCallback((e: any) => {
     if (!state.isDrawing || !canvasRef.current || !lastPointRef.current) return;
@@ -125,7 +123,7 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
       currentPath: newPath
     }));
 
-    if (state.drawingMode === 'pass') {
+    if (drawingMode === 'pass') {
       // For solid lines, draw immediately
       if (state.color === 'transparent') {
         // Eraser mode
@@ -148,7 +146,7 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
       ctx.moveTo(lastPointRef.current.x, lastPointRef.current.y);
       ctx.lineTo(coords.x, coords.y);
       ctx.stroke();
-    } else if (state.drawingMode === 'displacement') {
+    } else if (drawingMode === 'displacement') {
       // For transparent color (eraser), treat it like solid lines to avoid clearing canvas
       if (state.color === 'transparent') {
         // Eraser mode - draw like solid lines but with eraser effect
@@ -211,7 +209,7 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     }
     
     lastPointRef.current = coords;
-  }, [canvasRef, getCoords, state.isDrawing, state.color, state.lineStyle, state.currentPath, state.history, state.historyStep]);
+  }, [canvasRef, getCoords, state.isDrawing, state.color, state.lineStyle, state.currentPath, state.history, state.historyStep, drawingMode]);
 
   const endDrawing = useCallback(() => {
     if (!state.isDrawing || !canvasRef.current) return;
@@ -289,10 +287,7 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     setState(prev => ({ ...prev, lineStyle }));
   }, []);
 
-  const setDrawingMode = useCallback((drawingMode: DrawingMode) => {
-    console.log('🎯 Setting drawing mode to:', drawingMode);
-    setState(prev => ({ ...prev, drawingMode }));
-  }, []);
+
 
   const eraseAtPoint = useCallback((x: number, y: number) => {
     if (!canvasRef.current) return;
@@ -357,7 +352,6 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     isDrawing: state.isDrawing,
     color: state.color,
     lineStyle: state.lineStyle,
-    drawingMode: state.drawingMode,
     canUndo: state.historyStep > 0,
     canRedo: state.historyStep < state.history.length - 1,
     startDrawing,
@@ -367,7 +361,6 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     redo,
     setColor,
     setLineStyle,
-    setDrawingMode,
     eraseAtPoint,
     clearCanvas,
   };
