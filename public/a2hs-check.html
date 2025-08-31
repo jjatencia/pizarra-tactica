@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PWA Check</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <h1>PWA Sanity Check</h1>
+    <div id="results"></div>
+    <script>
+        const files = [
+            '/apple-touch-icon.png',
+            '/manifest.webmanifest',
+            '/icon-192.png',
+            '/icon-512.png',
+            '/sw.js'
+        ];
+        
+        const results = document.getElementById('results');
+        
+        files.forEach(async (file) => {
+            try {
+                const response = await fetch(file);
+                const status = response.ok ? '✅' : '❌';
+                results.innerHTML += `<p>${status} ${file} (${response.status})</p>`;
+            } catch (error) {
+                results.innerHTML += `<p>❌ ${file} (Error)</p>`;
+            }
+        });
+        
+        // Check manifest content
+        fetch('/manifest.webmanifest')
+            .then(r => r.json())
+            .then(manifest => {
+                results.innerHTML += '<h2>Manifest Content:</h2>';
+                results.innerHTML += `<pre>${JSON.stringify(manifest, null, 2)}</pre>`;
+            });
+    </script>
+</body>
+</html>
