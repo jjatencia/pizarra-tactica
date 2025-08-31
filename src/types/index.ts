@@ -1,4 +1,5 @@
 export type Team = 'red' | 'blue';
+export type ObjectType = 'player' | 'ball' | 'cone' | 'minigoal';
 
 export interface Token {
   id: string;
@@ -6,6 +7,7 @@ export interface Token {
   number: number;
   x: number;
   y: number;
+  type?: ObjectType; // Optional for backward compatibility
 }
 
 export interface Arrow {
@@ -18,6 +20,7 @@ export interface Arrow {
 }
 
 export type Mode = 'select' | 'arrow' | 'trajectory';
+export type DrawingMode = 'move' | 'pass' | 'displacement';
 
 export interface BoardState {
   tokens: Token[];

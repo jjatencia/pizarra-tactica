@@ -7,6 +7,10 @@
 @layer base {
   html {
     font-family: 'Inter', system-ui, sans-serif;
+    touch-action: none; /* Disable all touch gestures */
+    -ms-touch-action: none;
+    -webkit-user-scalable: no;
+    user-scalable: no;
   }
   
   body {
@@ -17,14 +21,123 @@
     -webkit-user-select: none;
     -webkit-touch-callout: none;
     -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+    touch-action: none; /* Disable all touch gestures including pinch-zoom */
+    -ms-touch-action: none;
+    -webkit-user-scalable: no;
+    user-scalable: no;
+    zoom: 1;
+    -webkit-text-size-adjust: 100%;
   }
   
   * {
     box-sizing: border-box;
+    touch-action: none; /* Apply to all elements */
+    -ms-touch-action: none;
   }
 }
 
 @layer components {
+  /* Full pitch styles - NEW SVG BACKGROUND */
+  .pitch {
+    background-color: #2E7D32;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1050 680'%3E%3C!-- Pitch Background Stripes --%3E%3Crect x='0' y='0' width='1050' height='680' fill='%232E7D32'/%3E%3Cg fill='%23388E3C' fill-opacity='0.4'%3E%3Crect x='0' y='0' width='1050' height='68'/%3E%3Crect x='0' y='136' width='1050' height='68'/%3E%3Crect x='0' y='272' width='1050' height='68'/%3E%3Crect x='0' y='408' width='1050' height='68'/%3E%3Crect x='0' y='544' width='1050' height='68'/%3E%3C/g%3E%3C!-- Pitch Lines --%3E%3Cg stroke='rgba(255,255,255,0.8)' stroke-width='3' fill='none'%3E%3C!-- Outlines --%3E%3Cpath d='M5,5 H1045 V675 H5 Z'/%3E%3C!-- Center Line --%3E%3Cpath d='M525,5 V675'/%3E%3C!-- Center Circle --%3E%3Ccircle cx='525' cy='340' r='91.5'/%3E%3C!-- Left Penalty Area --%3E%3Cpath d='M5,138.75 H165 V541.25 H5'/%3E%3C!-- Left Goal Area --%3E%3Cpath d='M5,248.75 H55 V431.25 H5'/%3E%3C!-- Right Penalty Area --%3E%3Cpath d='M1045,138.75 H885 V541.25 H1045'/%3E%3C!-- Right Goal Area --%3E%3Cpath d='M1045,248.75 H995 V431.25 H1045'/%3E%3C!-- Corner Arcs --%3E%3Cpath d='M5,15 A10,10 0 0,1 15,5'/%3E%3Cpath d='M5,665 A10,10 0 0,0 15,675'/%3E%3Cpath d='M1045,15 A10,10 0 0,0 1035,5'/%3E%3Cpath d='M1045,665 A10,10 0 0,1 1035,675'/%3E%3C/g%3E%3C!-- Dots --%3E%3Cg fill='rgba(255,255,255,0.8)'%3E%3Ccircle cx='525' cy='340' r='4'/%3E%3Ccircle cx='115' cy='340' r='4'/%3E%3Ccircle cx='935' cy='340' r='4'/%3E%3Ccircle cx='935' cy='340' r='4'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    position: relative;
+    overflow: hidden;
+    touch-action: none;
+    transform: scale(1); /* Fixed scale to prevent resizing */
+    transform-origin: center;
+  }
+  
+  /* Draggable items styles */
+  .draggable {
+    position: absolute;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    transition: transform 0.1s ease-in-out;
+  }
+  
+  .player {
+    border-radius: 50%; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    font-weight: bold; 
+    color: white;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3), inset 0 2px 3px rgba(255,255,255,0.2);
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+  }
+  
+  .draggable:active { 
+    cursor: grabbing; 
+    z-index: 100; 
+  }
+
+  /* Canvas */
+  .drawing-canvas { 
+    position: absolute; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    cursor: crosshair; 
+  }
+  
+  /* Modal */
+  .modal { 
+    transition: opacity 0.25s ease; 
+  }
+  
+  .modal-active { 
+    opacity: 1; 
+    pointer-events: auto; 
+  }
+  
+  .modal-inactive { 
+    opacity: 0; 
+    pointer-events: none; 
+  }
+  
+  .modal-content { 
+    transition: transform 0.25s ease; 
+  }
+  
+  .modal-active .modal-content { 
+    transform: translateY(0); 
+  }
+  
+  .modal-inactive .modal-content { 
+    transform: translateY(-20px); 
+  }
+
+  /* Top bar button styles - NEW ACTIVE STATE */
+  .control-btn {
+    background-color: #374151; /* gray-700 */
+    color: white;
+    font-weight: bold;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.25rem;
+    transition: all 0.15s ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  
+  .control-btn:hover {
+    background-color: #4B5563; /* gray-600 */
+  }
+  
+  .draw-style-btn.active {
+    background-color: #22C55E; /* green-500 */
+    transform: scale(1.1);
+    box-shadow: 0 0 0 2px #111827, 0 0 0 4px #4ADE80; /* Manual ring effect */
+  }
+
+  /* Legacy button styles for compatibility */
   .btn {
     @apply px-3 py-2 rounded-lg font-medium transition-colors duration-200 touch-manipulation;
   }
