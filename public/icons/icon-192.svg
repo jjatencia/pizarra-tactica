@@ -1,0 +1,19 @@
+<svg width="192" height="192" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
+  <rect width="192" height="192" rx="24" fill="#0b1220"/>
+  <rect x="19.200000000000003" y="38.400000000000006" width="153.60000000000002" height="96" rx="7.68" fill="#1B5E20" stroke="white" stroke-width="1.92"/>
+  <!-- Field markings -->
+  <line x1="96" y1="38.400000000000006" x2="96" y2="134.39999999999998" stroke="white" stroke-width="0.96"/>
+  <circle cx="96" cy="86.4" r="15.36" fill="none" stroke="white" stroke-width="0.96"/>
+  <!-- Goal areas -->
+  <rect x="19.200000000000003" y="67.19999999999999" width="19.200000000000003" height="38.400000000000006" fill="none" stroke="white" stroke-width="0.96"/>
+  <rect x="153.60000000000002" y="67.19999999999999" width="19.200000000000003" height="38.400000000000006" fill="none" stroke="white" stroke-width="0.96"/>
+  <!-- Soccer ball -->
+  <circle cx="96" cy="86.4" r="3.84" fill="white"/>
+  <!-- Players -->
+  <circle cx="57.599999999999994" cy="86.4" r="5.76" fill="#EF4444" stroke="white" stroke-width="0.96"/>
+  <text x="57.599999999999994" y="88.32000000000001" text-anchor="middle" fill="white" font-size="7.68" font-weight="bold">1</text>
+  <circle cx="134.39999999999998" cy="86.4" r="5.76" fill="#3B82F6" stroke="white" stroke-width="0.96"/>
+  <text x="134.39999999999998" y="88.32000000000001" text-anchor="middle" fill="white" font-size="7.68" font-weight="bold">1</text>
+  <!-- Title -->
+  <text x="96" y="163.2" text-anchor="middle" fill="white" font-size="13.440000000000001" font-weight="bold">⚽</text>
+</svg>

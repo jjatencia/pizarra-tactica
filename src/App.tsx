@@ -8,6 +8,8 @@ import { ArrowsLayer } from './components/ArrowsLayer';
 import { TrajectoriesLayer } from './components/TrajectoriesLayer';
 import { Toolbar } from './components/Toolbar';
 import { PresetsPanel } from './components/PresetsPanel';
+import { PWAInstallPrompt } from './components/PWAInstallPrompt';
+import { PWADebugInfo } from './components/PWADebugInfo';
 import { Team } from './types';
 import { clampToField, snapToGrid } from './lib/geometry';
 
@@ -22,10 +24,12 @@ function App() {
     arrows,
     trajectories,
     mode,
+    trajectoryType,
     zoom,
     pan,
     showFullField,
     gridSnap,
+    selectedTokenId,
 
     addToken,
     selectArrow,
@@ -146,12 +150,18 @@ function App() {
             style={{
               touchAction: isDragging || isDrawingTrajectory ? 'none' : 'pan-x pan-y pinch-zoom',
               cursor: mode === 'trajectory' ? 'crosshair' : 'default',
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
+              WebkitTouchCallout: 'none',
+              WebkitTapHighlightColor: 'transparent'
             }}
             onPointerDown={handleSVGPointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerCancel}
           >
+
+            
             <g transform={transform}>
               {/* Pitch */}
               <Pitch
@@ -183,9 +193,10 @@ function App() {
                     if (index === 0) return `M ${point.x} ${point.y}`;
                     return `${path} L ${point.x} ${point.y}`;
                   }, '')}
-                  stroke="white"
+                  stroke={trajectoryType === 'pass' ? '#8B5CF6' : '#F59E0B'}
                   strokeWidth="1.2"
-                  strokeDasharray="3,2"
+                  strokeDasharray={trajectoryType === 'movement' ? '1.5,1' : undefined}
+
                   fill="none"
                   opacity="0.7"
                   style={{ pointerEvents: 'none' }}
@@ -200,6 +211,8 @@ function App() {
                   fieldWidth={viewBoxWidth}
                   fieldHeight={fieldHeight}
                   onPointerDown={handleTokenPointerDown}
+                  isDragging={isDragging && token.id === selectedTokenId}
+                  isInteractionDisabled={mode === 'trajectory'}
                 />
               ))}
             </g>
@@ -220,10 +233,16 @@ function App() {
         onClose={() => setShowPresets(false)}
       />
       
+      {/* PWA Install Prompt */}
+      <PWAInstallPrompt />
+      
+      {/* PWA Debug Info */}
+      <PWADebugInfo />
+      
       {/* Status Bar */}
       <div className="bg-slate-800 border-t border-slate-700 px-4 py-2 text-sm text-slate-400 flex justify-between items-center">
         <div className="flex gap-4">
-          <span>Modo: {mode === 'select' ? 'Selección' : 'Trayectoria'}</span>
+          <span>Modo: {mode === 'select' ? 'Mover Fichas' : `Trayectoria (${trajectoryType === 'pass' ? 'Pase' : 'Movimiento'})`}</span>
           <span>Fichas: {tokens.filter(t => t.team === 'red').length}R / {tokens.filter(t => t.team === 'blue').length}A</span>
           <span>Flechas: {arrows.length}</span>
           <span>Trayectorias: {trajectories.length}</span>

@@ -8,33 +8,43 @@ interface TokenProps {
   fieldWidth: number;
   fieldHeight: number;
   onPointerDown: (e: React.PointerEvent, token: TokenType) => void;
+  isDragging?: boolean;
+  isInteractionDisabled?: boolean;
 }
 
 export const Token: React.FC<TokenProps> = ({ 
   token, 
-   
-  onPointerDown 
+  onPointerDown,
+  isDragging = false,
+  isInteractionDisabled = false
 }) => {
-  const { selectedTokenId, selectToken } = useBoardStore();
+  const { selectedTokenId, selectToken, removeToken } = useBoardStore();
   
   const isSelected = selectedTokenId === token.id;
   const radius = 3;
   const hitRadius = 8; // Larger hit area for better touch response on iPad
   
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    if (isInteractionDisabled) return;
+    
     e.stopPropagation();
     e.preventDefault();
     
     // Ensure immediate response for touch on iPad
     selectToken(token.id);
+    
     onPointerDown(e, token);
-  }, [token, onPointerDown, selectToken]);
+  }, [token, onPointerDown, selectToken, isInteractionDisabled]);
   
   const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+    if (isInteractionDisabled) return;
+    
     e.stopPropagation();
-    // TODO: Show number/color edit dialog
-    console.log('Double click on token', token.id);
-  }, [token.id]);
+    e.preventDefault();
+    
+    // Delete token on double click/tap
+    removeToken(token.id);
+  }, [token.id, removeToken, isInteractionDisabled]);
   
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -58,12 +68,16 @@ export const Token: React.FC<TokenProps> = ({
         r={hitRadius}
         fill="transparent"
         style={{ 
-          cursor: 'grab',
-          touchAction: 'none' // Prevent default touch behaviors for smoother dragging
+          cursor: isInteractionDisabled ? 'default' : (isDragging ? 'grabbing' : 'grab'),
+          touchAction: 'none', // Prevent default touch behaviors for smoother dragging
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          WebkitTouchCallout: 'none', // Disable iOS callout menu
+          WebkitTapHighlightColor: 'transparent' // Remove tap highlight on mobile
         }}
-        onPointerDown={handlePointerDown}
-        onDoubleClick={handleDoubleClick}
-        onContextMenu={handleContextMenu}
+        onPointerDown={isInteractionDisabled ? undefined : handlePointerDown}
+        onDoubleClick={isInteractionDisabled ? undefined : handleDoubleClick}
+        onContextMenu={isInteractionDisabled ? undefined : handleContextMenu}
       />
       
       {/* Token background */}
@@ -74,13 +88,17 @@ export const Token: React.FC<TokenProps> = ({
         fill={teamColors[token.team]}
         stroke={isSelected ? '#FBBF24' : 'white'}
         strokeWidth={isSelected ? 0.4 : 0.2}
-        style={{ pointerEvents: 'none' }}
+        opacity={isDragging ? 0.8 : 1}
+        style={{ 
+          pointerEvents: 'none',
+          filter: isDragging ? 'drop-shadow(0 0 4px rgba(0,0,0,0.3))' : 'none'
+        }}
       />
       
       {/* Token number */}
       <text
         x={token.x}
-        y={token.y + 0.5}
+        y={token.y}
         textAnchor="middle"
         dominantBaseline="central"
         fill="white"

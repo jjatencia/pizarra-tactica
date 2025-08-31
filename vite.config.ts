@@ -18,6 +18,9 @@ export default defineConfig({
         orientation: 'landscape',
         start_url: '/',
         scope: '/',
+        lang: 'es',
+        categories: ['sports', 'utilities'],
+        prefer_related_applications: false,
         icons: [
           {
             src: 'icons/icon-192.png',
@@ -39,6 +42,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -52,6 +56,9 @@ export default defineConfig({
             }
           }
         ]
+      },
+      devOptions: {
+        enabled: true
       }
     })
   ],

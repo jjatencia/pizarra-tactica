@@ -1,12 +1,13 @@
 import { useCallback, useRef, useState } from 'react';
 import { useBoardStore } from './useBoardStore';
 import { Token, Point } from '../types';
-import { clampToField, snapToGrid, screenToSVG } from '../lib/geometry';
+import { snapToGrid, screenToSVG } from '../lib/geometry';
 
 interface DragState {
   isDragging: boolean;
   dragStartPoint: Point | null;
   dragToken: Token | null;
+  dragTokenOriginalPosition: Point | null;
   arrowStart: Point | null;
   trajectoryPoints: Point[];
   isDrawingTrajectory: boolean;
@@ -23,6 +24,7 @@ export const usePointerInteractions = (
     pan,
     gridSnap,
     trajectoryType,
+    tokens,
 
     updateToken,
     addArrow,
@@ -36,6 +38,7 @@ export const usePointerInteractions = (
     isDragging: false,
     dragStartPoint: null,
     dragToken: null,
+    dragTokenOriginalPosition: null,
     arrowStart: null,
     trajectoryPoints: [],
     isDrawingTrajectory: false,
@@ -66,13 +69,18 @@ export const usePointerInteractions = (
       isDragging: true,
       dragStartPoint: svgPoint,
       dragToken: token,
+      dragTokenOriginalPosition: { x: token.x, y: token.y },
       arrowStart: null,
       trajectoryPoints: [],
       isDrawingTrajectory: false,
     });
     
-    // Capture pointer
+    // Capture pointer for better touch tracking
     (e.target as Element).setPointerCapture(e.pointerId);
+    
+    // Disable text selection and other interactions during drag
+    document.body.style.userSelect = 'none';
+    document.body.style.webkitUserSelect = 'none';
   }, [mode, getSVGPoint]);
   
   const handleSVGPointerDown = useCallback((e: React.PointerEvent) => {
@@ -84,6 +92,7 @@ export const usePointerInteractions = (
         isDragging: false,
         dragStartPoint: null,
         dragToken: null,
+        dragTokenOriginalPosition: null,
         arrowStart: null,
         trajectoryPoints: [svgPoint],
         isDrawingTrajectory: true,
@@ -107,19 +116,18 @@ export const usePointerInteractions = (
       // For iPad touch, update immediately without requestAnimationFrame for maximum responsiveness
       const svgPoint = getSVGPoint(e.clientX, e.clientY);
       
-      // Calculate new position
+      // Calculate offset from the initial drag start point to current position
+      const deltaX = svgPoint.x - dragState.dragStartPoint.x;
+      const deltaY = svgPoint.y - dragState.dragStartPoint.y;
+      
+      // Calculate new position based on token's original position plus the drag offset
       let newPosition = {
-        x: svgPoint.x,
-        y: svgPoint.y,
+        x: dragState.dragTokenOriginalPosition!.x + deltaX,
+        y: dragState.dragTokenOriginalPosition!.y + deltaY,
       };
       
-      // Apply grid snapping
-      if (gridSnap) {
-        newPosition = snapToGrid(newPosition);
-      }
-      
-      // Clamp to field boundaries
-      newPosition = clampToField(newPosition, fieldWidth, fieldHeight);
+      // Don't apply grid snapping during drag for fluid movement
+      // Grid snapping will be applied when drag ends
       
       // Update token position immediately for fluid movement
       updateToken(dragState.dragToken!.id, newPosition);
@@ -137,11 +145,10 @@ export const usePointerInteractions = (
       if (!lastPoint || Math.sqrt(
         Math.pow(svgPoint.x - lastPoint.x, 2) + Math.pow(svgPoint.y - lastPoint.y, 2)
       ) > 3) {
-        const clampedPoint = clampToField(svgPoint, fieldWidth, fieldHeight);
-        
+        // Allow trajectory points anywhere, no field clamping
         setDragState(prev => ({
           ...prev,
-          trajectoryPoints: [...prev.trajectoryPoints, clampedPoint],
+          trajectoryPoints: [...prev.trajectoryPoints, svgPoint],
         }));
       }
     }
@@ -160,8 +167,8 @@ export const usePointerInteractions = (
         if (Math.sqrt(
           Math.pow(svgPoint.x - lastPoint.x, 2) + Math.pow(svgPoint.y - lastPoint.y, 2)
         ) > 3) {
-          const clampedPoint = clampToField(svgPoint, fieldWidth, fieldHeight);
-          finalPoints.push(clampedPoint);
+          // Allow final trajectory point anywhere, no field clamping
+          finalPoints.push(svgPoint);
         }
         
         // Create trajectory
@@ -172,6 +179,7 @@ export const usePointerInteractions = (
         isDragging: false,
         dragStartPoint: null,
         dragToken: null,
+        dragTokenOriginalPosition: null,
         arrowStart: null,
         trajectoryPoints: [],
         isDrawingTrajectory: false,
@@ -182,11 +190,22 @@ export const usePointerInteractions = (
 
     
     // Handle token dragging end
-    if (dragState.isDragging) {
+    if (dragState.isDragging && dragState.dragToken) {
+      // Apply grid snapping at the end of drag for final position
+      if (gridSnap) {
+        const currentToken = tokens.find(t => t.id === dragState.dragToken!.id);
+        if (currentToken) {
+          const currentPosition = { x: currentToken.x, y: currentToken.y };
+          const snappedPosition = snapToGrid(currentPosition);
+          updateToken(dragState.dragToken.id, snappedPosition);
+        }
+      }
+      
       setDragState({
         isDragging: false,
         dragStartPoint: null,
         dragToken: null,
+        dragTokenOriginalPosition: null,
         arrowStart: null,
         trajectoryPoints: [],
         isDrawingTrajectory: false,
@@ -194,18 +213,27 @@ export const usePointerInteractions = (
       
       // Release pointer capture
       (e.target as Element).releasePointerCapture(e.pointerId);
+      
+      // Restore normal text selection
+      document.body.style.userSelect = '';
+      document.body.style.webkitUserSelect = '';
     }
-  }, [mode, dragState, getSVGPoint, gridSnap, fieldWidth, fieldHeight, addArrow, addTrajectory, trajectoryType]);
+  }, [mode, dragState, getSVGPoint, gridSnap, fieldWidth, fieldHeight, addArrow, addTrajectory, trajectoryType, tokens, updateToken]);
   
   const handlePointerCancel = useCallback((_e: React.PointerEvent) => {
     setDragState({
       isDragging: false,
       dragStartPoint: null,
       dragToken: null,
+      dragTokenOriginalPosition: null,
       arrowStart: null,
       trajectoryPoints: [],
       isDrawingTrajectory: false,
     });
+    
+    // Restore normal text selection
+    document.body.style.userSelect = '';
+    document.body.style.webkitUserSelect = '';
     
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
