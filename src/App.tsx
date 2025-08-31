@@ -9,6 +9,7 @@ import { TrajectoriesLayer } from './components/TrajectoriesLayer';
 import { Toolbar } from './components/Toolbar';
 import { PresetsPanel } from './components/PresetsPanel';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
+import { PWADebugInfo } from './components/PWADebugInfo';
 import { Team } from './types';
 import { clampToField, snapToGrid } from './lib/geometry';
 
@@ -160,38 +161,36 @@ function App() {
             onPointerCancel={handlePointerCancel}
           >
             <defs>
-              {/* Arrow markers for trajectory preview */}
+              {/* Arrow markers for trajectory preview - very small and subtle */}
               <marker
                 id="preview-arrowhead-pass"
-                markerWidth="8"
-                markerHeight="8"
-                refX="7"
-                refY="3"
+                markerWidth="3"
+                markerHeight="3"
+                refX="2.5"
+                refY="1"
                 orient="auto"
                 markerUnits="strokeWidth"
               >
                 <path
-                  d="M0,0 L0,6 L7,3 z"
+                  d="M0,0 L0,2 L2.5,1 z"
                   fill="#8B5CF6"
-                  stroke="#8B5CF6"
-                  strokeWidth="0.5"
+                  stroke="none"
                 />
               </marker>
               
               <marker
                 id="preview-arrowhead-movement"
-                markerWidth="8"
-                markerHeight="8"
-                refX="7"
-                refY="3"
+                markerWidth="3"
+                markerHeight="3"
+                refX="2.5"
+                refY="1"
                 orient="auto"
                 markerUnits="strokeWidth"
               >
                 <path
-                  d="M0,0 L0,6 L7,3 z"
+                  d="M0,0 L0,2 L2.5,1 z"
                   fill="#F59E0B"
-                  stroke="#F59E0B"
-                  strokeWidth="0.5"
+                  stroke="none"
                 />
               </marker>
             </defs>
@@ -269,6 +268,9 @@ function App() {
       
       {/* PWA Install Prompt */}
       <PWAInstallPrompt />
+      
+      {/* PWA Debug Info */}
+      <PWADebugInfo />
       
       {/* Status Bar */}
       <div className="bg-slate-800 border-t border-slate-700 px-4 py-2 text-sm text-slate-400 flex justify-between items-center">

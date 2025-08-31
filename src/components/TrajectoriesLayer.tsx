@@ -55,38 +55,36 @@ export const TrajectoriesLayer: React.FC<TrajectoriesLayerProps> = ({
   return (
     <g className="trajectories-layer">
       <defs>
-        {/* Arrow markers for trajectories */}
+        {/* Arrow markers for trajectories - very small and subtle */}
         <marker
           id="trajectory-arrowhead-pass"
-          markerWidth="8"
-          markerHeight="8"
-          refX="7"
-          refY="3"
+          markerWidth="3"
+          markerHeight="3"
+          refX="2.5"
+          refY="1"
           orient="auto"
           markerUnits="strokeWidth"
         >
           <path
-            d="M0,0 L0,6 L7,3 z"
+            d="M0,0 L0,2 L2.5,1 z"
             fill="#8B5CF6"
-            stroke="#8B5CF6"
-            strokeWidth="0.5"
+            stroke="none"
           />
         </marker>
         
         <marker
           id="trajectory-arrowhead-movement"
-          markerWidth="8"
-          markerHeight="8"
-          refX="7"
-          refY="3"
+          markerWidth="3"
+          markerHeight="3"
+          refX="2.5"
+          refY="1"
           orient="auto"
           markerUnits="strokeWidth"
         >
           <path
-            d="M0,0 L0,6 L7,3 z"
+            d="M0,0 L0,2 L2.5,1 z"
             fill="#F59E0B"
-            stroke="#F59E0B"
-            strokeWidth="0.5"
+            stroke="none"
           />
         </marker>
       </defs>

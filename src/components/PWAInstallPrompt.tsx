@@ -31,6 +31,9 @@ export const PWAInstallPrompt: React.FC = () => {
                          window.location.hostname.includes('cursor') ||
                          window.location.port !== '';
     
+    // Check if we're on HTTPS (required for PWA on iOS)
+    const isHTTPS = window.location.protocol === 'https:' || isDevelopment;
+    
     // Handle beforeinstallprompt event (for Android/Chrome)
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
@@ -42,8 +45,8 @@ export const PWAInstallPrompt: React.FC = () => {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // For iOS, show install prompt if not standalone, not dismissed, and not in development
-    if (ios && !standalone && !localStorage.getItem('pwa-install-dismissed') && !isDevelopment) {
+    // For iOS, show install prompt if not standalone, not dismissed, not in development, and on HTTPS
+    if (ios && !standalone && !localStorage.getItem('pwa-install-dismissed') && !isDevelopment && isHTTPS) {
       setShowInstallPrompt(true);
     }
 
@@ -90,7 +93,7 @@ export const PWAInstallPrompt: React.FC = () => {
                 <li>Confirma tocando "Añadir"</li>
               </ol>
               <p className="text-xs text-yellow-400 mt-2">
-                ⚠️ Si no funciona, asegúrate de estar accediendo desde una URL pública (no localhost).
+                ⚠️ Requisitos: Safari + HTTPS + visitar la página al menos 2 veces + interactuar con la página.
               </p>
             </div>
           ) : (
