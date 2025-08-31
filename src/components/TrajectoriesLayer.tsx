@@ -60,13 +60,13 @@ export const TrajectoriesLayer: React.FC<TrajectoriesLayerProps> = ({
           id="trajectory-arrowhead-pass"
           markerWidth="3"
           markerHeight="3"
-          refX="0"
+          refX="2.5"
           refY="1"
           orient="auto"
           markerUnits="strokeWidth"
         >
           <path
-            d="M0,1 L2.5,0 L2.5,2 z"
+            d="M0,0 L0,2 L2.5,1 z"
             fill="#8B5CF6"
             stroke="none"
           />
@@ -76,13 +76,13 @@ export const TrajectoriesLayer: React.FC<TrajectoriesLayerProps> = ({
           id="trajectory-arrowhead-movement"
           markerWidth="3"
           markerHeight="3"
-          refX="0"
+          refX="2.5"
           refY="1"
           orient="auto"
           markerUnits="strokeWidth"
         >
           <path
-            d="M0,1 L2.5,0 L2.5,2 z"
+            d="M0,0 L0,2 L2.5,1 z"
             fill="#F59E0B"
             stroke="none"
           />
