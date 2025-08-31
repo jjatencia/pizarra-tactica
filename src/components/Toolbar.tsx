@@ -12,7 +12,6 @@ interface ToolbarProps {
 
 export const Toolbar: React.FC<ToolbarProps> = ({ svgRef, onAddToken, onShowPresets }) => {
   const {
-    mode,
     trajectoryType,
     gridSnap,
     showFullField,
@@ -60,77 +59,67 @@ export const Toolbar: React.FC<ToolbarProps> = ({ svgRef, onAddToken, onShowPres
   
   return (
     <div className="toolbar">
-      {/* Mode Selection */}
-      <div className="flex gap-1">
+      {/* Title + Add Tokens */}
+      <div className="flex items-center gap-2">
+        <h1 className="text-xl font-bold text-emerald-400 hidden sm:block">Pizarra Táctica</h1>
         <button
-          className={clsx('btn btn-secondary text-sm', {
-            'btn-active': mode === 'select'
-          })}
-          onClick={() => setMode('select')}
+          className={clsx('w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md transition-colors',
+            redTokens.length >= 11 ? 'bg-red-600 opacity-50 cursor-not-allowed' : 'bg-red-600 hover:bg-red-500')}
+          onClick={() => onAddToken('red')}
+          disabled={redTokens.length >= 11}
+          title={`Añadir Roja (${redTokens.length}/11)`}
         >
-          ✋ Seleccionar
+          +
         </button>
         <button
-          className={clsx('btn btn-secondary text-sm', {
-            'btn-active': mode === 'trajectory'
-          })}
-          onClick={() => setMode('trajectory')}
+          className={clsx('w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md transition-colors',
+            blueTokens.length >= 11 ? 'bg-blue-600 opacity-50 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500')}
+          onClick={() => onAddToken('blue')}
+          disabled={blueTokens.length >= 11}
+          title={`Añadir Azul (${blueTokens.length}/11)`}
         >
-          ✏️ Trayectoria
+          +
         </button>
       </div>
       
       {/* Divider */}
       <div className="w-px h-6 bg-slate-600" />
       
-      {/* Add Tokens */}
-      <div className="flex gap-1">
-        <button
-          className={clsx('btn btn-team-red text-sm', {
-            'opacity-50 cursor-not-allowed': redTokens.length >= 11
-          })}
-          onClick={() => onAddToken('red')}
-          disabled={redTokens.length >= 11}
-          title={`Rojas: ${redTokens.length}/11`}
-        >
-          🔴 ({redTokens.length}/11)
-        </button>
-        <button
-          className={clsx('btn btn-team-blue text-sm', {
-            'opacity-50 cursor-not-allowed': blueTokens.length >= 11
-          })}
-          onClick={() => onAddToken('blue')}
-          disabled={blueTokens.length >= 11}
-          title={`Azules: ${blueTokens.length}/11`}
-        >
-          🔵 ({blueTokens.length}/11)
-        </button>
+      {/* Ball/Cone/MiniGoal placeholders (mapped to future features) */}
+      <div className="flex items-center gap-2">
+        <button className="control-btn" title="Añadir Balón">⚽</button>
+        <button className="control-btn" title="Añadir Cono">▲</button>
+        <button className="control-btn" title="Añadir Mini Portería">▭</button>
       </div>
       
-      {/* Trajectory Type (only show in trajectory mode) */}
-      {mode === 'trajectory' && (
-        <>
-          <div className="w-px h-6 bg-slate-600" />
-          <div className="flex gap-1">
-            <button
-              className={clsx('btn btn-secondary text-sm', {
-                'btn-active': trajectoryType === 'pass'
-              })}
-              onClick={() => setTrajectoryType('pass')}
-            >
-              ┅ Pase
-            </button>
-            <button
-              className={clsx('btn btn-secondary text-sm', {
-                'btn-active': trajectoryType === 'movement'
-              })}
-              onClick={() => setTrajectoryType('movement')}
-            >
-              ━ Movimiento
-            </button>
-          </div>
-        </>
-      )}
+      {/* Divider */}
+      <div className="w-px h-6 bg-slate-600" />
+
+      {/* Trajectory Type - always visible, switches to trajectory mode */}
+      <div className="flex items-center gap-1">
+        <button
+          className={clsx('draw-style-btn text-sm', {
+            'active': trajectoryType === 'pass'
+          })}
+          onClick={() => {
+            setMode('trajectory');
+            setTrajectoryType('pass');
+          }}
+        >
+          Pase
+        </button>
+        <button
+          className={clsx('draw-style-btn text-sm', {
+            'active': trajectoryType === 'movement'
+          })}
+          onClick={() => {
+            setMode('trajectory');
+            setTrajectoryType('movement');
+          }}
+        >
+          Movimiento
+        </button>
+      </div>
       
       {/* Divider */}
       <div className="w-px h-6 bg-slate-600" />

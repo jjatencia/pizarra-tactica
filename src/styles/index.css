@@ -50,11 +50,29 @@
   }
   
   .toolbar {
-    @apply flex items-center gap-2 p-3 bg-slate-800 border-b border-slate-700;
+    @apply w-full bg-slate-900 p-2 shadow-lg flex items-center justify-between flex-wrap gap-2 border-b border-slate-800;
+  }
+  
+  .control-btn {
+    @apply bg-slate-700 text-white font-bold px-3 py-2 rounded transition-all duration-150 flex items-center justify-center gap-2 hover:bg-slate-600;
+  }
+
+  .draw-style-btn {
+    @apply control-btn;
+  }
+
+  .draw-style-btn.active {
+    @apply bg-emerald-500 scale-105 ring-2 ring-slate-900;
   }
 }
 
 @layer utilities {
+  .bg-pitch-grass {
+    background-color: #2E7D32;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1050 680'%3E%3Crect x='0' y='0' width='1050' height='680' fill='%232E7D32'/%3E%3Cg fill='%23388E3C' fill-opacity='0.4'%3E%3Crect x='0' y='0' width='1050' height='68'/%3E%3Crect x='0' y='136' width='1050' height='68'/%3E%3Crect x='0' y='272' width='1050' height='68'/%3E%3Crect x='0' y='408' width='1050' height='68'/%3E%3Crect x='0' y='544' width='1050' height='68'/%3E%3C/g%3E%3Cg stroke='rgba(255,255,255,0.8)' stroke-width='3' fill='none'%3E%3Cpath d='M5,5 H1045 V675 H5 Z'/%3E%3Cpath d='M525,5 V675'/%3E%3Ccircle cx='525' cy='340' r='91.5'/%3E%3Cpath d='M5,138.75 H165 V541.25 H5'/%3E%3Cpath d='M5,248.75 H55 V431.25 H5'/%3E%3Cpath d='M1045,138.75 H885 V541.25 H1045'/%3E%3Cpath d='M1045,248.75 H995 V431.25 H1045'/%3E%3Cpath d='M5,15 A10,10 0 0,1 15,5'/%3E%3Cpath d='M5,665 A10,10 0 0,0 15,675'/%3E%3Cpath d='M1045,15 A10,10 0 0,0 1035,5'/%3E%3Cpath d='M1045,665 A10,10 0 0,1 1035,675'/%3E%3C/g%3E%3Cg fill='rgba(255,255,255,0.8)'%3E%3Ccircle cx='525' cy='340' r='4'/%3E%3Ccircle cx='115' cy='340' r='4'/%3E%3Ccircle cx='935' cy='340' r='4'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+  }
   .touch-none {
     touch-action: none;
   }
