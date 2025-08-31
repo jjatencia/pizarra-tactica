@@ -94,6 +94,11 @@ export const PWADebugInfo: React.FC = () => {
             ❌ Se requiere HTTPS para PWA
           </div>
         )}
+        {debugInfo.isHTTPS && debugInfo.hasManifest && debugInfo.hasServiceWorker && !debugInfo.isStandalone && (
+          <div className="text-green-400 pt-2">
+            ✅ PWA lista para instalar. Busca el ícono de instalación en tu navegador.
+          </div>
+        )}
       </div>
     </div>
   );

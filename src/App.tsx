@@ -164,15 +164,15 @@ function App() {
               {/* Arrow markers for trajectory preview - very small and subtle */}
               <marker
                 id="preview-arrowhead-pass"
-                markerWidth="3"
+                markerWidth="4"
                 markerHeight="3"
-                refX="2.5"
-                refY="1"
+                refX="4"
+                refY="1.5"
                 orient="auto"
                 markerUnits="strokeWidth"
               >
                 <path
-                  d="M0,0 L0,2 L2.5,1 z"
+                  d="M0,0 L0,3 L4,1.5 z"
                   fill="#8B5CF6"
                   stroke="none"
                 />
@@ -180,15 +180,15 @@ function App() {
               
               <marker
                 id="preview-arrowhead-movement"
-                markerWidth="3"
+                markerWidth="4"
                 markerHeight="3"
-                refX="2.5"
-                refY="1"
+                refX="4"
+                refY="1.5"
                 orient="auto"
                 markerUnits="strokeWidth"
               >
                 <path
-                  d="M0,0 L0,2 L2.5,1 z"
+                  d="M0,0 L0,3 L4,1.5 z"
                   fill="#F59E0B"
                   stroke="none"
                 />

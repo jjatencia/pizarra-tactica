@@ -105,11 +105,23 @@ export const PWAInstallPrompt: React.FC = () => {
             </div>
           ) : (
             <div className="text-sm text-slate-300 space-y-2">
-              <p>Para instalar esta app:</p>
-              <div className="text-xs space-y-1">
-                <p><strong>Chrome/Edge:</strong> Busca el ícono de instalación ⬇️ en la barra de direcciones</p>
-                <p><strong>Firefox:</strong> Menú → "Instalar aplicación"</p>
-                <p><strong>Safari (Mac):</strong> No soportado nativamente</p>
+              <p>Para instalar esta app en tu navegador:</p>
+              <div className="text-xs space-y-2">
+                <div>
+                  <p><strong>Chrome/Edge:</strong></p>
+                  <ul className="list-disc list-inside ml-2 space-y-1">
+                    <li>Busca el ícono de instalación ⬇️ en la barra de direcciones (lado derecho)</li>
+                    <li>O ve a Menú (⋮) → "Instalar Pizarra Fútbol"</li>
+                    <li>Si no aparece, actualiza la página</li>
+                  </ul>
+                </div>
+                <div>
+                  <p><strong>Firefox:</strong></p>
+                  <ul className="list-disc list-inside ml-2 space-y-1">
+                    <li>Ve a Menú (☰) → "Instalar aplicación"</li>
+                    <li>O busca el ícono ⬇️ en la barra de direcciones</li>
+                  </ul>
+                </div>
               </div>
             </div>
           )}
