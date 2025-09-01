@@ -43,30 +43,27 @@ function App() {
     load,
   } = useBoardStore();
   
-  // Field dimensions
+  // Field dimensions (logical coordinates)
   const fieldWidth = 105;
   const fieldHeight = 68;
   const viewBoxWidth = showFullField ? fieldWidth : fieldWidth / 2;
   
-  // Calculate SVG dimensions to maintain aspect ratio
-  const aspectRatio = viewBoxWidth / fieldHeight;
-  
+  // Calculate SVG dimensions to use full available space
   // More accurate toolbar height calculation for PWA
   const toolbarHeight = 80; // Increased for PWA safe areas
   const safeAreaBottom = 34; // Typical safe area bottom on iPad
   const extraPadding = 20; // Extra padding for comfort
   
   const availableHeight = containerSize.height - toolbarHeight - safeAreaBottom - extraPadding;
-  const availableWidth = containerSize.width - 32; // Account for container padding
+  const availableWidth = containerSize.width; // Use full width
   
+  // Use full available dimensions for SVG container
   let svgWidth = availableWidth;
-  let svgHeight = availableWidth / aspectRatio;
+  let svgHeight = availableHeight;
   
-  // Ensure the field fits in available height with extra margin
-  if (svgHeight > availableHeight) {
-    svgHeight = availableHeight;
-    svgWidth = availableHeight * aspectRatio;
-  }
+  // Calculate scale factors to stretch field to full screen
+  const scaleX = svgWidth / viewBoxWidth;
+  const scaleY = svgHeight / fieldHeight;
   
   // Zoom and pan setup
   const { attachWheelListener, attachTouchListeners } = useZoomPan(svgRef);
@@ -286,6 +283,7 @@ function App() {
               width={svgWidth}
               height={svgHeight}
               viewBox={`0 0 ${viewBoxWidth} ${fieldHeight}`}
+              preserveAspectRatio="none"
               className="w-full h-full select-none absolute top-0 left-0"
               style={{
                 touchAction: 'none',
