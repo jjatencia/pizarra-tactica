@@ -39,7 +39,7 @@ npm run preview
 ├── 
 ├── 📁 public/
 │   ├── 📱 manifest.webmanifest # Configuración PWA
-│   ├── 🎨 vite.svg            # Favicon
+│   ├── 🌟 favicon.ico         # Favicon
 │   └── 📁 icons/              # Iconos PWA (192px, 512px)
 │
 ├── 📁 src/
