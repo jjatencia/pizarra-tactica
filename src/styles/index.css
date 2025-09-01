@@ -315,10 +315,9 @@
   backdrop-filter: blur(6px);
 }
 
-/* Disable overlay when using container rotation */
-/* html.is-portrait #rotate-overlay {
+html.is-portrait #rotate-overlay {
   display: flex;
-} */
+}
 
 .rotate-card {
   padding: 24px 28px;
@@ -358,12 +357,12 @@ html.is-portrait body {
 }
 
 /* Alternative approach: rotate the container in portrait mode */
-/* Container rotation instead of overlay blocking */
+/* Uncomment these styles if you prefer container rotation over overlay */
+/*
 html.is-portrait #root {
   transform: rotate(90deg);
   transform-origin: center center;
   height: 100vw;
   width: 100vh;
-  /* Adjust scaling if content doesn't fit */
-  transform: rotate(90deg) scale(0.9);
 }
+*/
