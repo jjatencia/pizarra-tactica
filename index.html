@@ -7,10 +7,10 @@
     
     <!-- PWA Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-    <meta name="apple-mobile-web-app-title" content="Pizarra Fútbol" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Mi Pizarra" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="application-name" content="Pizarra Fútbol" />
+    <meta name="application-name" content="Mi Pizarra" />
     
     <!-- Apple Touch Icons -->
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -35,6 +35,17 @@
   </head>
   <body class="bg-gray-800 text-white overflow-hidden">
     <div id="root"></div>
+    
+    <!-- Rotation Overlay for Portrait Mode -->
+    <div id="rotate-overlay" aria-live="polite" aria-hidden="true">
+      <div class="rotate-card">
+        <p>Gira el iPad para continuar</p>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2v3m0 14v3M2 12h3m14 0h3M5.6 5.6l2.1 2.1m8.6 8.6l2.1 2.1M5.6 18.4l2.1-2.1m8.6-8.6l2.1-2.1"/>
+        </svg>
+      </div>
+    </div>
+    
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
