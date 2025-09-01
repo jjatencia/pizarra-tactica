@@ -61,10 +61,6 @@ function App() {
   let svgWidth = availableWidth;
   let svgHeight = availableHeight;
   
-  // Calculate scale factors to stretch field to full screen
-  const scaleX = svgWidth / viewBoxWidth;
-  const scaleY = svgHeight / fieldHeight;
-  
   // Zoom and pan setup
   const { attachWheelListener, attachTouchListeners } = useZoomPan(svgRef);
   
