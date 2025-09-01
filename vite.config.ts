@@ -9,36 +9,21 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Pizarra Táctica de Fútbol',
+        name: 'Mi Pizarra',
         short_name: 'Pizarra',
         description: 'Pizarra táctica de fútbol para entrenadores',
-        theme_color: '#0b1220',
-        background_color: '#0b1220',
+        theme_color: '#000000',
+        background_color: '#000000',
         display: 'standalone',
         orientation: 'landscape',
-        start_url: '/',
+        start_url: '.',
         scope: '/',
         icons: [
           {
-            src: 'apple-touch-icon.png',
+            src: '/apple-touch-icon.png',
             sizes: '180x180',
-            type: 'image/png'
-          },
-          {
-            src: 'apple-touch-icon.png',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: 'apple-touch-icon.png',
-            sizes: '512x512',
-            type: 'image/png'
-          },
-          {
-            src: 'apple-touch-icon.png',
-            sizes: '512x512',
             type: 'image/png',
-            purpose: 'maskable'
+            purpose: 'any'
           }
         ]
       },
