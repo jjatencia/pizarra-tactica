@@ -6,7 +6,7 @@
   "start_url": "/",
   "background_color": "#0b1220",
   "theme_color": "#0b1220",
-  "orientation": "landscape",
+  "orientation": "portrait",
   "scope": "/",
   "icons": [
     {

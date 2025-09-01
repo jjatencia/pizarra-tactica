@@ -52,7 +52,7 @@
 - [ ] Funciona offline después de instalación
 - [ ] Icono aparece en pantalla de inicio
 - [ ] Abre en modo standalone (sin barra de Safari)
-- [ ] Orientación landscape por defecto
+- [ ] Orientación vertical (portrait) por defecto
 
 ### ✅ Interacciones Táctiles
 - [ ] Arrastre fluido de fichas con un dedo

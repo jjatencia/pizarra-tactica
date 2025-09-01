@@ -22,8 +22,8 @@
 ## Configuración Recomendada
 
 ### Orientación
-- **Landscape (horizontal)**: La aplicación está optimizada para uso horizontal
-- Gira tu iPad a modo landscape antes de usar la aplicación
+- **Portrait (vertical)**: La aplicación está optimizada para uso vertical
+- Gira tu iPad a modo portrait antes de usar la aplicación
 
 ### Gestos Táctiles Principales
 - **Arrastrar fichas**: Toca y arrastra cualquier ficha roja o azul
@@ -79,7 +79,7 @@
 ## Tips de Uso
 
 ### Flujo de Trabajo Recomendado
-1. **Orientación**: Coloca el iPad en landscape
+1. **Orientación**: Coloca el iPad en vertical
 2. **Formación base**: Usa el botón "📋 Formaciones" para empezar
 3. **Ajustes**: Arrastra fichas a posiciones específicas
 4. **Movimientos**: Cambia a modo flecha para dibujar movimientos
