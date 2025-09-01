@@ -263,24 +263,22 @@ function App() {
       
       {/* Main Content: Pitch */}
       <main 
-        className="flex items-center justify-center p-2"
+        className="flex items-stretch justify-stretch"
         style={{ 
           gridArea: 'content',
           minHeight: 0,
           height: '100%',
-          paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))'
+          padding: 0
         }}
       >
-        <div id="board" className={clsx("shadow-2xl rounded-lg relative bg-gray-900 p-1", {
+        <div id="board" className={clsx("shadow-2xl rounded-lg relative bg-gray-900", {
           'erase-mode': mode === 'erase'
         })} style={{ 
           touchAction: 'none',
-          aspectRatio: '105/68',
           width: '100%',
           height: '100%',
           maxWidth: '100%',
-          maxHeight: '100%',
-          objectFit: 'contain'
+          maxHeight: '100%'
         }}>
           <div id="pitch" className="pitch w-full h-full rounded-md relative">
             <svg

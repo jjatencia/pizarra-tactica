@@ -233,8 +233,7 @@
     
     main {
       /* Use all available space minus safe area */
-      padding: 0.5rem !important;
-      padding-bottom: calc(0.5rem + env(safe-area-inset-bottom)) !important;
+      padding: 0 !important;
       height: 100% !important;
       min-height: 0 !important;
     }
@@ -246,6 +245,7 @@
       max-width: 100% !important;
       max-height: 100% !important;
       margin: 0 !important;
+      padding: 0 !important;
     }
     
     #pitch {
