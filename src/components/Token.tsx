@@ -22,7 +22,15 @@ export const Token: React.FC<TokenProps> = ({
   
   const isSelected = selectedTokenId === token.id;
   const objectType: ObjectType = token.type || 'player';
-  const radius = objectType === 'player' ? 3 : objectType === 'ball' ? 2 : objectType === 'cone' ? 2 : 3;
+  // Reduce cone size by 20% to make it smaller than before
+  const radius =
+    objectType === 'player'
+      ? 3
+      : objectType === 'ball'
+      ? 2
+      : objectType === 'cone'
+      ? 1.6
+      : 3;
   const hitRadius = 8; // Larger hit area for better touch response on iPad
   
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
