@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { BoardState, Token, Arrow, Trajectory, Team, Formation, HistoryState, ObjectType } from '../types';
+import { BoardState, Token, Arrow, Trajectory, Team, Formation, HistoryState, ObjectType, TokenSize } from '../types';
 import { loadFromStorage, saveToStorage } from '../lib/localStorage';
 
 interface BoardStore extends BoardState {
@@ -7,8 +7,8 @@ interface BoardStore extends BoardState {
   history: HistoryState;
   
   // Token actions
-  addToken: (team: Team, x: number, y: number, type?: ObjectType) => void;
-  addObject: (type: ObjectType, x: number, y: number) => void;
+  addToken: (team: Team, x: number, y: number, type?: ObjectType, size?: TokenSize) => void;
+  addObject: (type: ObjectType, x: number, y: number, size?: TokenSize) => void;
   updateToken: (id: string, updates: Partial<Token>) => void;
   removeToken: (id: string) => void;
   selectToken: (id: string | null) => void;
@@ -110,7 +110,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     ...initialState,
     history: initialHistory,
     
-    addToken: (team: Team, x: number, y: number, type: ObjectType = 'player') => {
+    addToken: (team: Team, x: number, y: number, type: ObjectType = 'player', size: TokenSize = 'large') => {
       const state = get();
       
       if (type === 'player') {
@@ -131,6 +131,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         x,
         y,
         type,
+        size,
       };
       
       const newState = {
@@ -145,7 +146,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       });
     },
 
-    addObject: (type: ObjectType, x: number, y: number) => {
+    addObject: (type: ObjectType, x: number, y: number, size: TokenSize = 'large') => {
       const state = get();
       
       const newToken: Token = {
@@ -155,6 +156,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         x,
         y,
         type,
+        size,
       };
       
       const newState = {
