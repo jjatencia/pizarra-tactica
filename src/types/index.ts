@@ -36,6 +36,7 @@ export interface BoardState {
   selectedTokenId: string | null;
   selectedArrowId: string | null;
   selectedTrajectoryId: string | null;
+  editingTokenId: string | null;
 }
 
 export interface HistoryState {

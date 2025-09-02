@@ -10,6 +10,7 @@ import { TrajectoriesLayer } from './components/TrajectoriesLayer';
 import { Toolbar } from './components/Toolbar';
 import { PresetsPanel } from './components/PresetsPanel';
 import { FormationsModal } from './components/FormationsModal';
+import { NumberModal } from './components/NumberModal';
 import { Team, ObjectType } from './types';
 import { clampToField, snapToGrid } from './lib/geometry';
 import clsx from 'clsx';
@@ -41,6 +42,9 @@ function App() {
     selectTrajectory,
     updateTrajectory,
     load,
+    editingTokenId,
+    updateToken,
+    closeNumberEdit,
   } = useBoardStore();
   
   // Field dimensions
@@ -213,10 +217,27 @@ function App() {
     position = clampToField(position, viewBoxWidth, fieldHeight);
     
     addObject(type, position.x, position.y);
-    
+
     // Automatically switch to move mode after adding an object
     setDrawingMode('move');
   }, [addObject, showFullField, fieldWidth, fieldHeight, viewBoxWidth, gridSnap, setDrawingMode]);
+
+  const validateNumber = useCallback((num: number): string | null => {
+    if (num < 1 || num > 99) return 'Debe estar entre 1 y 99';
+    const editingToken = tokens.find(t => t.id === editingTokenId);
+    if (!editingToken) return 'Ficha no encontrada';
+    const teamTokens = tokens.filter(t => t.team === editingToken.team && (t.type === 'player' || !t.type));
+    if (teamTokens.some(t => t.number === num && t.id !== editingToken.id)) {
+      return 'Número ya utilizado en este equipo';
+    }
+    return null;
+  }, [tokens, editingTokenId]);
+
+  const handleSaveNumber = useCallback((num: number) => {
+    if (!editingTokenId) return;
+    updateToken(editingTokenId, { number: num });
+    closeNumberEdit();
+  }, [editingTokenId, updateToken, closeNumberEdit]);
 
   // Handle canvas pointer down - no double tap for lines
   const handleCanvasPointerDown = useCallback((e: any) => {
@@ -410,6 +431,14 @@ function App() {
       <PresetsPanel
         isOpen={showPresets}
         onClose={() => setShowPresets(false)}
+      />
+
+      <NumberModal
+        isOpen={editingTokenId !== null}
+        initialNumber={tokens.find(t => t.id === editingTokenId)?.number || 1}
+        onSave={handleSaveNumber}
+        onClose={closeNumberEdit}
+        validate={validateNumber}
       />
     </div>
   );

@@ -12,6 +12,8 @@ interface BoardStore extends BoardState {
   updateToken: (id: string, updates: Partial<Token>) => void;
   removeToken: (id: string) => void;
   selectToken: (id: string | null) => void;
+  openNumberEdit: (id: string) => void;
+  closeNumberEdit: () => void;
   
   // Arrow actions
   addArrow: (from: { x: number; y: number }, to: { x: number; y: number }) => void;
@@ -69,6 +71,7 @@ const initialState: BoardState = {
   selectedTokenId: null,
   selectedArrowId: null,
   selectedTrajectoryId: null,
+  editingTokenId: null,
 };
 
 const initialHistory: HistoryState = {
@@ -202,6 +205,14 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     
     selectToken: (id: string | null) => {
       set({ selectedTokenId: id, selectedArrowId: null, selectedTrajectoryId: null });
+    },
+
+    openNumberEdit: (id: string) => {
+      set({ editingTokenId: id });
+    },
+
+    closeNumberEdit: () => {
+      set({ editingTokenId: null });
     },
     
     addArrow: (from: { x: number; y: number }, to: { x: number; y: number }) => {
@@ -525,6 +536,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         selectedTokenId: null, // Don't persist selection
         selectedArrowId: null,
         selectedTrajectoryId: null,
+        editingTokenId: null,
       });
     },
     
