@@ -10,7 +10,8 @@ import { TrajectoriesLayer } from './components/TrajectoriesLayer';
 import { Toolbar } from './components/Toolbar';
 import { PresetsPanel } from './components/PresetsPanel';
 import { FormationsModal } from './components/FormationsModal';
-import { Team, ObjectType, TokenSize } from './types';
+import { TokenNumberModal } from './components/TokenNumberModal';
+import { Team, ObjectType, TokenSize, Token as TokenType } from './types';
 import { clampToField, snapToGrid } from './lib/geometry';
 import clsx from 'clsx';
 
@@ -21,6 +22,7 @@ function App() {
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [showPresets, setShowPresets] = useState(false);
   const [showFormations, setShowFormations] = useState(false);
+  const [editingToken, setEditingToken] = useState<TokenType | null>(null);
   // Removed canvas tap refs as double tap is not used for lines anymore
   
   const {
@@ -40,6 +42,7 @@ function App() {
     updateArrow,
     selectTrajectory,
     updateTrajectory,
+    updateToken,
     load,
   } = useBoardStore();
   
@@ -193,10 +196,31 @@ function App() {
   // Handle formation application
   const handleApplyFormation = useCallback((team: Team, formation: string) => {
     applyFormationByName(formation, team);
-    
+
     // Automatically switch to move mode after applying formation
     setDrawingMode('move');
   }, [applyFormationByName, setDrawingMode]);
+
+  const handleEditNumber = useCallback((token: TokenType) => {
+    setEditingToken(token);
+  }, []);
+
+  const handleSaveNumber = useCallback((newNumber: number) => {
+    if (!editingToken) return;
+    if (Number.isNaN(newNumber) || newNumber < 1 || newNumber > 99) {
+      alert('Número inválido');
+      return;
+    }
+    const teamTokens = tokens.filter(t => t.team === editingToken.team && t.id !== editingToken.id);
+    if (teamTokens.some(t => t.number === newNumber)) {
+      alert('Número ya utilizado en este equipo');
+      return;
+    }
+    updateToken(editingToken.id, { number: newNumber });
+    setEditingToken(null);
+  }, [editingToken, tokens, updateToken]);
+
+  const handleCloseEdit = useCallback(() => setEditingToken(null), []);
 
   // Handle adding objects
   const handleAddObject = useCallback((type: ObjectType, size: TokenSize) => {
@@ -348,6 +372,7 @@ function App() {
                   fieldWidth={viewBoxWidth}
                   fieldHeight={fieldHeight}
                   onPointerDown={handleTokenPointerDown}
+                  onEditNumber={handleEditNumber}
                 />
               ))}
             </g>
@@ -410,6 +435,13 @@ function App() {
       <PresetsPanel
         isOpen={showPresets}
         onClose={() => setShowPresets(false)}
+      />
+
+      <TokenNumberModal
+        isOpen={!!editingToken}
+        currentNumber={editingToken?.number ?? 0}
+        onClose={handleCloseEdit}
+        onSave={handleSaveNumber}
       />
     </div>
   );
