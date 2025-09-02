@@ -1,13 +1,13 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { useBoardStore } from '../hooks/useBoardStore';
 import { exportSVGToPNG, downloadJSON } from '../lib/exportPng';
-import { Team, ObjectType, DrawingMode } from '../types';
+import { Team, ObjectType, DrawingMode, TokenSize } from '../types';
 import clsx from 'clsx';
 
 interface ToolbarProps {
   svgRef: React.RefObject<SVGSVGElement>;
-  onAddToken: (team: Team) => void;
-  onAddObject: (type: ObjectType) => void;
+  onAddToken: (team: Team, size: TokenSize) => void;
+  onAddObject: (type: ObjectType, size: TokenSize) => void;
   onShowPresets: () => void;
   onShowFormations: () => void;
   drawColor: string;
@@ -60,6 +60,43 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   
   const redTokens = tokens.filter(t => t.team === 'red');
   const blueTokens = tokens.filter(t => t.team === 'blue');
+
+  const [sizeSettings, setSizeSettings] = useState<Record<string, TokenSize>>({
+    red: 'large',
+    blue: 'large',
+    ball: 'large',
+    cone: 'large',
+    minigoal: 'large'
+  });
+  const [menuTarget, setMenuTarget] = useState<string | null>(null);
+  const longPressTimeout = useRef<number>();
+
+  const startPress = (key: string) => {
+    if (longPressTimeout.current) clearTimeout(longPressTimeout.current);
+    longPressTimeout.current = window.setTimeout(() => {
+      setMenuTarget(key);
+    }, 1500);
+  };
+
+  const cancelPress = () => {
+    if (longPressTimeout.current) {
+      clearTimeout(longPressTimeout.current);
+      longPressTimeout.current = undefined;
+    }
+  };
+
+  const handlePressEnd = (action: () => void) => {
+    if (longPressTimeout.current) {
+      clearTimeout(longPressTimeout.current);
+      longPressTimeout.current = undefined;
+      if (!menuTarget) action();
+    }
+  };
+
+  const handleSizeSelect = (key: string, size: TokenSize) => {
+    setSizeSettings(prev => ({ ...prev, [key]: size }));
+    setMenuTarget(null);
+  };
   
   const handleExportPNG = async () => {
     if (svgRef.current) {
@@ -118,12 +155,16 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   ];
   
   return (
+    <>
     <header className="w-full bg-gray-900 p-2 shadow-lg flex items-center justify-between flex-wrap gap-2">
       {/* Left Section: Title and Team Buttons */}
       <div className="flex items-center gap-2">
         <h1 className="text-xl font-bold text-green-400 hidden sm:block">Pizarra Táctica</h1>
-        <button 
-          onClick={() => onAddToken('red')}
+        <button
+          onPointerDown={() => startPress('red')}
+          onPointerUp={() => handlePressEnd(() => onAddToken('red', sizeSettings.red))}
+          onPointerLeave={cancelPress}
+          onPointerCancel={cancelPress}
           disabled={redTokens.length >= 11}
           className={clsx(
             "w-10 h-10 bg-red-600 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md hover:bg-red-500 transition-colors",
@@ -133,8 +174,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         >
           +
         </button>
-        <button 
-          onClick={() => onAddToken('blue')}
+        <button
+          onPointerDown={() => startPress('blue')}
+          onPointerUp={() => handlePressEnd(() => onAddToken('blue', sizeSettings.blue))}
+          onPointerLeave={cancelPress}
+          onPointerCancel={cancelPress}
           disabled={blueTokens.length >= 11}
           className={clsx(
             "w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md hover:bg-blue-500 transition-colors",
@@ -145,27 +189,36 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           +
         </button>
       </div>
-      
+
       {/* Center Section: Objects */}
       <div className="flex items-center gap-2 border-l border-r border-gray-700 px-3">
-        <button 
+        <button
           className="control-btn"
           title="Añadir Balón"
-          onClick={() => onAddObject('ball')}
+          onPointerDown={() => startPress('ball')}
+          onPointerUp={() => handlePressEnd(() => onAddObject('ball', sizeSettings.ball))}
+          onPointerLeave={cancelPress}
+          onPointerCancel={cancelPress}
         >
           <BallIcon />
         </button>
-        <button 
+        <button
           className="control-btn"
           title="Añadir Cono"
-          onClick={() => onAddObject('cone')}
+          onPointerDown={() => startPress('cone')}
+          onPointerUp={() => handlePressEnd(() => onAddObject('cone', sizeSettings.cone))}
+          onPointerLeave={cancelPress}
+          onPointerCancel={cancelPress}
         >
           <ConeIcon />
         </button>
-        <button 
+        <button
           className="control-btn"
           title="Añadir Mini Portería"
-          onClick={() => onAddObject('minigoal')}
+          onPointerDown={() => startPress('minigoal')}
+          onPointerUp={() => handlePressEnd(() => onAddObject('minigoal', sizeSettings.minigoal))}
+          onPointerLeave={cancelPress}
+          onPointerCancel={cancelPress}
         >
           <MiniGoalIcon />
         </button>
@@ -291,5 +344,15 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         </button>
       </div>
     </header>
+    {menuTarget && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setMenuTarget(null)}>
+        <div className="bg-gray-800 p-4 rounded-lg flex flex-col gap-2" onClick={e => e.stopPropagation()}>
+          <button className="control-btn" onClick={() => handleSizeSelect(menuTarget, 'large')}>Grande</button>
+          <button className="control-btn" onClick={() => handleSizeSelect(menuTarget, 'medium')}>Mediano</button>
+          <button className="control-btn" onClick={() => handleSizeSelect(menuTarget, 'small')}>Pequeño</button>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
