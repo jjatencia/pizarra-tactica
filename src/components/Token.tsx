@@ -8,12 +8,13 @@ interface TokenProps {
   fieldWidth: number;
   fieldHeight: number;
   onPointerDown: (e: React.PointerEvent, token: TokenType) => void;
+  onEditNumber: (token: TokenType) => void;
 }
 
-export const Token: React.FC<TokenProps> = ({ 
-  token, 
-   
-  onPointerDown 
+export const Token: React.FC<TokenProps> = ({
+  token,
+  onPointerDown,
+  onEditNumber
 }) => {
   const { selectedTokenId, selectToken, removeToken } = useBoardStore();
   const lastTapRef = useRef<number>(0);
@@ -49,33 +50,33 @@ export const Token: React.FC<TokenProps> = ({
       clearTimeout(tapTimeoutRef.current);
       tapTimeoutRef.current = null;
     }
-    
-    if (tapCountRef.current === 2 && timeDiff < 300) {
-      // Double tap detected - delete immediately
-      console.log('🗑️ Fast double tap delete token:', token.id);
-      removeToken(token.id);
+
+    if (tapCountRef.current === 3 && timeDiff < 300) {
+      console.log('✏️ Triple tap edit token:', token.id);
+      if (objectType === 'player') {
+        onEditNumber(token);
+      }
       tapCountRef.current = 0;
       return;
     }
-    
-    // Immediately start drag interaction for responsive touch
-    selectToken(token.id);
-    onPointerDown(e, token);
-    
-    // Set timeout to reset tap count only
-    tapTimeoutRef.current = setTimeout(() => {
-      tapCountRef.current = 0;
-      tapTimeoutRef.current = null;
-    }, 300);
-    
-  }, [token, onPointerDown, selectToken, removeToken]);
-  
-  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    console.log('🗑️ Double click delete token:', token.id);
-    removeToken(token.id);
-  }, [token.id, removeToken]);
+
+    if (tapCountRef.current === 2 && timeDiff < 300) {
+      tapTimeoutRef.current = window.setTimeout(() => {
+        console.log('🗑️ Double tap delete token:', token.id);
+        removeToken(token.id);
+        tapCountRef.current = 0;
+      }, 300);
+    } else {
+      selectToken(token.id);
+      onPointerDown(e, token);
+
+      tapTimeoutRef.current = window.setTimeout(() => {
+        tapCountRef.current = 0;
+        tapTimeoutRef.current = null;
+      }, 300);
+    }
+
+  }, [token, onPointerDown, onEditNumber, selectToken, removeToken]);
   
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -201,7 +202,6 @@ export const Token: React.FC<TokenProps> = ({
           touchAction: 'none' // Prevent default touch behaviors for smoother dragging
         }}
         onPointerDown={handlePointerDown}
-        onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
       />
       
