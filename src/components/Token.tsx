@@ -10,15 +10,34 @@ interface TokenProps {
   onPointerDown: (e: React.PointerEvent, token: TokenType) => void;
 }
 
-export const Token: React.FC<TokenProps> = ({ 
-  token, 
-   
-  onPointerDown 
+export const Token: React.FC<TokenProps> = ({
+  token,
+
+  onPointerDown
 }) => {
-  const { selectedTokenId, selectToken, removeToken } = useBoardStore();
-  const lastTapRef = useRef<number>(0);
+  const { selectedTokenId, selectToken, removeToken, tokens, updateToken } = useBoardStore();
   const tapCountRef = useRef<number>(0);
   const tapTimeoutRef = useRef<number | null>(null);
+
+  const handleEditNumber = useCallback(() => {
+    if (token.type && token.type !== 'player') return;
+
+    const newNumberStr = window.prompt('Número del jugador (1-99):', token.number.toString());
+    if (newNumberStr === null) return;
+    const newNumber = parseInt(newNumberStr, 10);
+    if (isNaN(newNumber) || newNumber < 1 || newNumber > 99) {
+      window.alert('Número inválido. Debe estar entre 1 y 99.');
+      return;
+    }
+    const teamTokens = tokens.filter(
+      t => t.team === token.team && (t.type === 'player' || !t.type)
+    );
+    if (teamTokens.some(t => t.number === newNumber && t.id !== token.id)) {
+      window.alert('Número ya utilizado en este equipo.');
+      return;
+    }
+    updateToken(token.id, { number: newNumber });
+  }, [token, tokens, updateToken]);
   
   const isSelected = selectedTokenId === token.id;
   const objectType: ObjectType = token.type || 'player';
@@ -28,52 +47,30 @@ export const Token: React.FC<TokenProps> = ({
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    
-    const now = Date.now();
-    const timeDiff = now - lastTapRef.current;
-    
-    console.log('👆 Token tap:', token.id, 'Time diff:', timeDiff, 'Tap count:', tapCountRef.current);
-    
-    // Reset tap count if too much time has passed
-    if (timeDiff > 300) {
-      tapCountRef.current = 0;
-    }
-    
+
     tapCountRef.current++;
-    lastTapRef.current = now;
-    
-    // Clear any existing timeout
+
     if (tapTimeoutRef.current) {
       clearTimeout(tapTimeoutRef.current);
       tapTimeoutRef.current = null;
     }
-    
-    if (tapCountRef.current === 2 && timeDiff < 300) {
-      // Double tap detected - delete immediately
-      console.log('🗑️ Fast double tap delete token:', token.id);
-      removeToken(token.id);
-      tapCountRef.current = 0;
-      return;
-    }
-    
-    // Immediately start drag interaction for responsive touch
-    selectToken(token.id);
-    onPointerDown(e, token);
-    
-    // Set timeout to reset tap count only
-    tapTimeoutRef.current = setTimeout(() => {
+
+    tapTimeoutRef.current = window.setTimeout(() => {
+      if (tapCountRef.current === 2) {
+        console.log('🗑️ Double tap delete token:', token.id);
+        removeToken(token.id);
+      } else if (tapCountRef.current === 3) {
+        console.log('✏️ Triple tap edit token number:', token.id);
+        handleEditNumber();
+      }
       tapCountRef.current = 0;
       tapTimeoutRef.current = null;
     }, 300);
-    
-  }, [token, onPointerDown, selectToken, removeToken]);
-  
-  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    console.log('🗑️ Double click delete token:', token.id);
-    removeToken(token.id);
-  }, [token.id, removeToken]);
+
+    selectToken(token.id);
+    onPointerDown(e, token);
+
+  }, [token, onPointerDown, selectToken, removeToken, handleEditNumber]);
   
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -194,12 +191,11 @@ export const Token: React.FC<TokenProps> = ({
         cy={token.y}
         r={hitRadius}
         fill="transparent"
-        style={{ 
+        style={{
           cursor: 'grab',
           touchAction: 'none' // Prevent default touch behaviors for smoother dragging
         }}
         onPointerDown={handlePointerDown}
-        onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
       />
       
