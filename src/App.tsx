@@ -10,7 +10,7 @@ import { TrajectoriesLayer } from './components/TrajectoriesLayer';
 import { Toolbar } from './components/Toolbar';
 import { PresetsPanel } from './components/PresetsPanel';
 import { FormationsModal } from './components/FormationsModal';
-import { Team, ObjectType } from './types';
+import { Team, ObjectType, TokenSize } from './types';
 import { clampToField, snapToGrid } from './lib/geometry';
 import clsx from 'clsx';
 
@@ -171,7 +171,7 @@ function App() {
   }, [attachWheelListener, attachTouchListeners]);
   
   // Handle adding tokens
-  const handleAddToken = useCallback((team: Team) => {
+  const handleAddToken = useCallback((team: Team, size: TokenSize) => {
     // Add token at center of visible area
     const centerX = showFullField ? fieldWidth / 2 : viewBoxWidth / 2;
     const centerY = fieldHeight / 2;
@@ -184,7 +184,7 @@ function App() {
     
     position = clampToField(position, viewBoxWidth, fieldHeight);
     
-    addToken(team, position.x, position.y);
+    addToken(team, position.x, position.y, 'player', size);
     
     // Automatically switch to move mode after adding a token
     setDrawingMode('move');
@@ -199,7 +199,7 @@ function App() {
   }, [applyFormationByName, setDrawingMode]);
 
   // Handle adding objects
-  const handleAddObject = useCallback((type: ObjectType) => {
+  const handleAddObject = useCallback((type: ObjectType, size: TokenSize) => {
     // Add object at center of visible area
     const centerX = showFullField ? fieldWidth / 2 : viewBoxWidth / 2;
     const centerY = fieldHeight / 2;
@@ -212,7 +212,7 @@ function App() {
     
     position = clampToField(position, viewBoxWidth, fieldHeight);
     
-    addObject(type, position.x, position.y);
+    addObject(type, position.x, position.y, size);
     
     // Automatically switch to move mode after adding an object
     setDrawingMode('move');
