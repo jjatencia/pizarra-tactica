@@ -1,5 +1,6 @@
 export type Team = 'red' | 'blue';
 export type ObjectType = 'player' | 'ball' | 'cone' | 'minigoal';
+export type TokenSize = 'large' | 'medium' | 'small';
 
 export interface Token {
   id: string;
@@ -8,6 +9,7 @@ export interface Token {
   x: number;
   y: number;
   type?: ObjectType; // Optional for backward compatibility
+  size?: TokenSize;
 }
 
 export interface Arrow {

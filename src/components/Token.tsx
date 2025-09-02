@@ -22,8 +22,10 @@ export const Token: React.FC<TokenProps> = ({
   
   const isSelected = selectedTokenId === token.id;
   const objectType: ObjectType = token.type || 'player';
-  const radius = objectType === 'player' ? 3 : objectType === 'ball' ? 2 : objectType === 'cone' ? 2 : 3;
-  const hitRadius = 8; // Larger hit area for better touch response on iPad
+  const baseRadius = objectType === 'player' ? 3 : objectType === 'ball' ? 2 : objectType === 'cone' ? 2 : 3;
+  const sizeMultiplier = token.size === 'small' ? 0.5 : token.size === 'medium' ? 0.8 : 1;
+  const radius = baseRadius * sizeMultiplier;
+  const hitRadius = 8 * sizeMultiplier; // Adjust hit area based on size
   
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     e.stopPropagation();
@@ -175,7 +177,7 @@ export const Token: React.FC<TokenProps> = ({
               textAnchor="middle"
               dominantBaseline="central"
               fill="white"
-              fontSize="2.5"
+              fontSize={2.5 * sizeMultiplier}
               fontWeight="bold"
               style={{ pointerEvents: 'none', userSelect: 'none' }}
             >
