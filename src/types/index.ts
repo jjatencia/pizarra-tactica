@@ -35,7 +35,7 @@ export interface BoardState {
   zoom: number;
   pan: { x: number; y: number };
   showFullField: boolean;
-  selectedTokenId: string | null;
+  selectedTokenIds: string[];
   selectedArrowId: string | null;
   selectedTrajectoryId: string | null;
 }
