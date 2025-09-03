@@ -24,13 +24,13 @@ function App() {
   const [showFormations, setShowFormations] = useState(false);
   const [editingToken, setEditingToken] = useState<TokenType | null>(null);
   const [sizeSettings, setSizeSettings] = useState<Record<Team | 'ball' | 'cone' | 'minigoal', TokenSize>>({
-    red: 'large',
-    blue: 'large',
-    green: 'large',
-    yellow: 'large',
-    ball: 'large',
-    cone: 'large',
-    minigoal: 'large',
+    red: 'medium',
+    blue: 'medium',
+    green: 'medium',
+    yellow: 'medium',
+    ball: 'medium',
+    cone: 'medium',
+    minigoal: 'medium',
   });
   // Removed canvas tap refs as double tap is not used for lines anymore
   

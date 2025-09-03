@@ -122,7 +122,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
   tokenPaths: {},
   recordingStartPositions: {},
     
-    addToken: (team: Team, x: number, y: number, type: ObjectType = 'player', size: TokenSize = 'large') => {
+    addToken: (team: Team, x: number, y: number, type: ObjectType = 'player', size: TokenSize = 'medium') => {
       const state = get();
       
       if (type === 'player') {
@@ -158,7 +158,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       });
     },
 
-    addObject: (type: ObjectType, x: number, y: number, size: TokenSize = 'large') => {
+    addObject: (type: ObjectType, x: number, y: number, size: TokenSize = 'medium') => {
       const state = get();
       
       const newToken: Token = {
@@ -407,7 +407,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       });
     },
     
-    applyFormation: (formation: Formation, team: Team, size: TokenSize = 'large') => {
+    applyFormation: (formation: Formation, team: Team, size: TokenSize = 'medium') => {
       const state = get();
       const otherTeamTokens = state.tokens.filter(t => t.team !== team);
       const formationTokens = formation.tokens.map(token => ({
@@ -429,7 +429,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       });
     },
 
-    applyFormationByName: (formationName: string, team: Team, size: TokenSize = 'large') => {
+    applyFormationByName: (formationName: string, team: Team, size: TokenSize = 'medium') => {
       // Formation positions from FormationsModal
       const formations: Record<string, Record<string, number[][]>> = {
         '4-3-3': {
