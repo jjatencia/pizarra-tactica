@@ -35,6 +35,8 @@ export const usePointerInteractions = (
     selectTokens,
     selectArrow,
     selectTrajectory,
+    recording,
+    addTokenPathPoint,
   } = useBoardStore();
   
   const [dragState, setDragState] = useState<DragState>({
@@ -91,6 +93,13 @@ export const usePointerInteractions = (
       initialPositions: positions,
     });
 
+    if (recording) {
+      currentSelected.forEach(id => {
+        const pos = positions[id];
+        addTokenPathPoint(id, { x: pos.x, y: pos.y });
+      });
+    }
+
     // Capture pointer
     (e.target as Element).setPointerCapture(e.pointerId);
   }, [mode, getSVGPoint]);
@@ -99,6 +108,7 @@ export const usePointerInteractions = (
     const svgPoint = getSVGPoint(e.clientX, e.clientY);
 
     if (mode === 'trajectory') {
+      const currentSelected = recording ? useBoardStore.getState().selectedTokenIds : [];
       // Start trajectory drawing
       setDragState({
         isDragging: false,
@@ -109,11 +119,11 @@ export const usePointerInteractions = (
         isDrawingTrajectory: true,
         selectionStart: null,
         selectionRect: null,
-        selectedTokenIds: [],
+        selectedTokenIds: currentSelected,
         initialPositions: {},
       });
       selectArrow(null);
-      selectToken(null);
+      if (!recording) selectToken(null);
       selectTrajectory(null);
     } else {
       // Start selection box
@@ -133,7 +143,7 @@ export const usePointerInteractions = (
       selectArrow(null);
       selectTrajectory(null);
     }
-  }, [mode, getSVGPoint, selectToken, selectTokens, selectArrow, selectTrajectory]);
+  }, [mode, getSVGPoint, recording, selectToken, selectTokens, selectArrow, selectTrajectory]);
   
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     // Handle selection box drawing
@@ -166,6 +176,9 @@ export const usePointerInteractions = (
         }
         newPosition = clampToField(newPosition, fieldWidth, fieldHeight);
         updateToken(id, newPosition);
+        if (recording) {
+          addTokenPathPoint(id, newPosition);
+        }
       });
       return;
     }
@@ -210,6 +223,7 @@ export const usePointerInteractions = (
         
         // Create trajectory
         addTrajectory(finalPoints, trajectoryType);
+        // Movement paths are recorded via dragging tokens
       }
       
       setDragState({
@@ -254,6 +268,15 @@ export const usePointerInteractions = (
 
     // Handle token dragging end
     if (dragState.isDragging) {
+      if (recording) {
+        const { tokens } = useBoardStore.getState();
+        dragState.selectedTokenIds.forEach(id => {
+          const token = tokens.find(t => t.id === id);
+          if (token) {
+            addTokenPathPoint(id, { x: token.x, y: token.y });
+          }
+        });
+      }
       setDragState({
         isDragging: false,
         dragStartPoint: null,
@@ -270,7 +293,7 @@ export const usePointerInteractions = (
       // Release pointer capture
       (e.target as Element).releasePointerCapture(e.pointerId);
     }
-  }, [mode, dragState, getSVGPoint, gridSnap, fieldWidth, fieldHeight, addArrow, addTrajectory, trajectoryType, selectTokens]);
+  }, [mode, dragState, getSVGPoint, gridSnap, fieldWidth, fieldHeight, addArrow, addTrajectory, trajectoryType, selectTokens, recording, addTokenPathPoint]);
   
   const handlePointerCancel = useCallback((_e: React.PointerEvent) => {
     setDragState({

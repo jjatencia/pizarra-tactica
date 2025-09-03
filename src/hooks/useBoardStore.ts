@@ -1,10 +1,13 @@
 import { create } from 'zustand';
-import { BoardState, Token, Arrow, Trajectory, Team, Formation, HistoryState, ObjectType, TokenSize } from '../types';
+import { BoardState, Token, Arrow, Trajectory, Team, Formation, HistoryState, ObjectType, TokenSize, Point } from '../types';
 import { loadFromStorage, saveToStorage } from '../lib/localStorage';
 
 interface BoardStore extends BoardState {
   // History
   history: HistoryState;
+  recording: boolean;
+  tokenPaths: Record<string, Point[]>;
+  recordingStartPositions: Record<string, Point>;
   
   // Token actions
   addToken: (team: Team, x: number, y: number, type?: ObjectType, size?: TokenSize) => void;
@@ -54,6 +57,10 @@ interface BoardStore extends BoardState {
   load: () => void;
   exportState: () => string;
   importState: (data: string) => void;
+  setRecording: (value: boolean) => void;
+  addTokenPathPoint: (id: string, point: Point) => void;
+  clearTokenPaths: () => void;
+  playTokenPaths: () => void;
 }
 
 const initialState: BoardState = {
@@ -109,7 +116,10 @@ const addToHistory = (currentState: BoardState, history: HistoryState): HistoryS
 
 export const useBoardStore = create<BoardStore>((set, get) => ({
     ...initialState,
-    history: initialHistory,
+  history: initialHistory,
+  recording: false,
+  tokenPaths: {},
+  recordingStartPositions: {},
     
     addToken: (team: Team, x: number, y: number, type: ObjectType = 'player', size: TokenSize = 'large') => {
       const state = get();
@@ -359,10 +369,12 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         showFullField: get().showFullField,
         gridSnap: get().gridSnap,
       };
-      
+
       set({
         ...newState,
         history: addToHistory(newState, get().history),
+        tokenPaths: {},
+        recording: false,
       });
     },
     
@@ -558,6 +570,8 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
             states: [newState],
             currentIndex: 0,
           },
+          tokenPaths: {},
+          recording: false,
         });
       }
     },
@@ -585,15 +599,65 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
             selectedArrowId: null,
             selectedTrajectoryId: null,
           };
-          
+
           set({
             ...newState,
             history: addToHistory(newState, get().history),
+            tokenPaths: {},
+            recording: false,
           });
         }
       } catch (error) {
         console.error('Error importing state:', error);
       }
+    },
+
+    setRecording: (value: boolean) => {
+      if (value) {
+        const startPositions: Record<string, Point> = {};
+        get().tokens.forEach(t => {
+          startPositions[t.id] = { x: t.x, y: t.y };
+        });
+        set({ recording: true, recordingStartPositions: startPositions, tokenPaths: {} });
+      } else {
+        const start = get().recordingStartPositions;
+        set(state => ({
+          recording: false,
+          tokens: state.tokens.map(t => start[t.id] ? { ...t, x: start[t.id].x, y: start[t.id].y } : t),
+        }));
+      }
+    },
+
+    addTokenPathPoint: (id: string, point: Point) => {
+      set(state => {
+        const path = state.tokenPaths[id] || [];
+        return { tokenPaths: { ...state.tokenPaths, [id]: [...path, point] } };
+      });
+    },
+
+    clearTokenPaths: () => {
+      set({ tokenPaths: {} });
+    },
+
+    playTokenPaths: () => {
+      const paths = get().tokenPaths;
+      const maxSteps = Math.max(0, ...Object.values(paths).map(p => p.length));
+      let step = 0;
+      const animate = () => {
+        if (step >= maxSteps) return;
+        const updates: Record<string, Point> = {};
+        Object.entries(paths).forEach(([id, path]) => {
+          const point = path[Math.min(step, path.length - 1)];
+          updates[id] = point;
+        });
+        set(state => ({
+          ...state,
+          tokens: state.tokens.map(t => updates[t.id] ? { ...t, x: updates[t.id].x, y: updates[t.id].y } : t)
+        }));
+        step++;
+        requestAnimationFrame(animate);
+      };
+      animate();
     },
   }));
 
