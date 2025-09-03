@@ -11,7 +11,7 @@ import { Toolbar } from './components/Toolbar';
 import { PresetsPanel } from './components/PresetsPanel';
 import { FormationsModal } from './components/FormationsModal';
 import { TokenNumberModal } from './components/TokenNumberModal';
-import { Team, ObjectType, TokenSize, Token as TokenType } from './types';
+import { Team, ObjectType, TokenSize, Token as TokenType, Formation } from './types';
 import { clampToField, snapToGrid } from './lib/geometry';
 import clsx from 'clsx';
 
@@ -23,6 +23,15 @@ function App() {
   const [showPresets, setShowPresets] = useState(false);
   const [showFormations, setShowFormations] = useState(false);
   const [editingToken, setEditingToken] = useState<TokenType | null>(null);
+  const [sizeSettings, setSizeSettings] = useState<Record<Team | 'ball' | 'cone' | 'minigoal', TokenSize>>({
+    red: 'large',
+    blue: 'large',
+    green: 'large',
+    yellow: 'large',
+    ball: 'large',
+    cone: 'large',
+    minigoal: 'large',
+  });
   // Removed canvas tap refs as double tap is not used for lines anymore
   
   const {
@@ -37,6 +46,7 @@ function App() {
 
     addToken,
     addObject,
+    applyFormation,
     applyFormationByName,
     selectArrow,
     updateArrow,
@@ -193,13 +203,19 @@ function App() {
     setDrawingMode('move');
   }, [addToken, showFullField, fieldWidth, fieldHeight, viewBoxWidth, gridSnap, setDrawingMode]);
 
-  // Handle formation application
+  // Handle formation application from modal
   const handleApplyFormation = useCallback((team: Team, formation: string) => {
-    applyFormationByName(formation, team);
+    applyFormationByName(formation, team, sizeSettings[team]);
 
     // Automatically switch to move mode after applying formation
     setDrawingMode('move');
-  }, [applyFormationByName, setDrawingMode]);
+  }, [applyFormationByName, setDrawingMode, sizeSettings]);
+
+  // Handle formation application from presets panel
+  const handlePresetFormation = useCallback((formation: Formation, team: Team) => {
+    applyFormation(formation, team, sizeSettings[team]);
+    setDrawingMode('move');
+  }, [applyFormation, setDrawingMode, sizeSettings]);
 
   const handleEditNumber = useCallback((token: TokenType) => {
     setEditingToken(token);
@@ -282,6 +298,8 @@ function App() {
         onUndoDraw={undoDraw}
         onRedoDraw={redoDraw}
         onClearCanvas={clearCanvas}
+        sizeSettings={sizeSettings}
+        onSizeChange={(key, size) => setSizeSettings(prev => ({ ...prev, [key]: size }))}
         />
       </div>
       
@@ -435,6 +453,7 @@ function App() {
       <PresetsPanel
         isOpen={showPresets}
         onClose={() => setShowPresets(false)}
+        onApplyFormation={handlePresetFormation}
       />
 
       <TokenNumberModal
