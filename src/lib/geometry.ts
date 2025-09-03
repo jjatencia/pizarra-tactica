@@ -11,8 +11,12 @@ export const snapToGrid = (point: Point, gridSize: number = 24): Point => {
   };
 };
 
-export const clampToField = (point: Point, fieldWidth: number, fieldHeight: number): Point => {
-  const margin = 5; // margin from field edges
+export const clampToField = (
+  point: Point,
+  fieldWidth: number,
+  fieldHeight: number,
+  margin: number = 5
+): Point => {
   return {
     x: Math.max(margin, Math.min(fieldWidth - margin, point.x)),
     y: Math.max(margin, Math.min(fieldHeight - margin, point.y)),

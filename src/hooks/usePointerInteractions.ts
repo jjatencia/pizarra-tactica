@@ -3,6 +3,13 @@ import { useBoardStore } from './useBoardStore';
 import { Token, Point } from '../types';
 import { clampToField, snapToGrid, screenToSVG } from '../lib/geometry';
 
+const getTokenRadius = (token: Token): number => {
+  const objectType = token.type || 'player';
+  const baseRadius = objectType === 'player' ? 3 : objectType === 'ball' ? 2 : objectType === 'cone' ? 2 : 3;
+  const sizeMultiplier = token.size === 'small' ? 0.5 : token.size === 'medium' ? 0.8 : 1;
+  return baseRadius * sizeMultiplier;
+};
+
 interface DragState {
   isDragging: boolean;
   dragStartPoint: Point | null;
@@ -174,7 +181,9 @@ export const usePointerInteractions = (
         if (gridSnap) {
           newPosition = snapToGrid(newPosition);
         }
-        newPosition = clampToField(newPosition, fieldWidth, fieldHeight);
+        const token = useBoardStore.getState().tokens.find(t => t.id === id);
+        const margin = token ? getTokenRadius(token) : 5;
+        newPosition = clampToField(newPosition, fieldWidth, fieldHeight, margin);
         updateToken(id, newPosition);
         if (recording) {
           addTokenPathPoint(id, newPosition);
