@@ -35,6 +35,8 @@ export const usePointerInteractions = (
     selectTokens,
     selectArrow,
     selectTrajectory,
+    recording,
+    setTokenPath,
   } = useBoardStore();
   
   const [dragState, setDragState] = useState<DragState>({
@@ -99,6 +101,7 @@ export const usePointerInteractions = (
     const svgPoint = getSVGPoint(e.clientX, e.clientY);
 
     if (mode === 'trajectory') {
+      const currentSelected = recording ? useBoardStore.getState().selectedTokenIds : [];
       // Start trajectory drawing
       setDragState({
         isDragging: false,
@@ -109,11 +112,11 @@ export const usePointerInteractions = (
         isDrawingTrajectory: true,
         selectionStart: null,
         selectionRect: null,
-        selectedTokenIds: [],
+        selectedTokenIds: currentSelected,
         initialPositions: {},
       });
       selectArrow(null);
-      selectToken(null);
+      if (!recording) selectToken(null);
       selectTrajectory(null);
     } else {
       // Start selection box
@@ -133,7 +136,7 @@ export const usePointerInteractions = (
       selectArrow(null);
       selectTrajectory(null);
     }
-  }, [mode, getSVGPoint, selectToken, selectTokens, selectArrow, selectTrajectory]);
+  }, [mode, getSVGPoint, recording, selectToken, selectTokens, selectArrow, selectTrajectory]);
   
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     // Handle selection box drawing
@@ -210,6 +213,9 @@ export const usePointerInteractions = (
         
         // Create trajectory
         addTrajectory(finalPoints, trajectoryType);
+        if (recording && dragState.selectedTokenIds.length > 0 && trajectoryType === 'movement') {
+          dragState.selectedTokenIds.forEach(id => setTokenPath(id, finalPoints));
+        }
       }
       
       setDragState({
@@ -270,7 +276,7 @@ export const usePointerInteractions = (
       // Release pointer capture
       (e.target as Element).releasePointerCapture(e.pointerId);
     }
-  }, [mode, dragState, getSVGPoint, gridSnap, fieldWidth, fieldHeight, addArrow, addTrajectory, trajectoryType, selectTokens]);
+  }, [mode, dragState, getSVGPoint, gridSnap, fieldWidth, fieldHeight, addArrow, addTrajectory, trajectoryType, selectTokens, recording, setTokenPath]);
   
   const handlePointerCancel = useCallback((_e: React.PointerEvent) => {
     setDragState({
