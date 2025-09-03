@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './styles/index.css'
+import { initLandscapeEnforcement } from './enforce-landscape'
 
 // Register service worker
 if ('serviceWorker' in navigator) {
@@ -15,6 +16,8 @@ if ('serviceWorker' in navigator) {
       });
   });
 }
+
+initLandscapeEnforcement()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

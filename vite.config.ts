@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
+      includeAssets: ['favicon.ico', 'icons/apple-touch-icon.png'],
       manifest: {
         name: 'Pizarra Táctica de Fútbol',
         short_name: 'Pizarra',
@@ -20,22 +20,22 @@ export default defineConfig({
         scope: '/',
         icons: [
           {
-            src: 'apple-touch-icon.png',
+            src: 'icons/apple-touch-icon.png',
             sizes: '180x180',
             type: 'image/png'
           },
           {
-            src: 'apple-touch-icon.png',
+            src: 'icons/apple-touch-icon.png',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: 'apple-touch-icon.png',
+            src: 'icons/apple-touch-icon.png',
             sizes: '512x512',
             type: 'image/png'
           },
           {
-            src: 'apple-touch-icon.png',
+            src: 'icons/apple-touch-icon.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable'

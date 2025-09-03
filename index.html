@@ -3,25 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
     
     <!-- PWA Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Pizarra Fútbol" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="application-name" content="Pizarra Fútbol" />
     
     <!-- Apple Touch Icons -->
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <link rel="apple-touch-icon" sizes="167x167" href="/apple-touch-icon.png" />
-    <link rel="apple-touch-icon" sizes="192x192" href="/apple-touch-icon.png" />
-    <link rel="apple-touch-icon" sizes="512x512" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     
     <!-- Manifest -->
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="manifest" href="/manifest.json" />
     
     <title>Pizarra Táctica de Fútbol Profesional</title>
     
@@ -35,6 +30,12 @@
   </head>
   <body class="bg-gray-800 text-white overflow-hidden">
     <div id="root"></div>
+    <div id="rotate-overlay" aria-live="polite" aria-hidden="true">
+      <div class="rotate-card">
+        <p>Gira el iPad para continuar</p>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5.6 5.6l2.1 2.1m8.6 8.6l2.1 2.1M5.6 18.4l2.1-2.1m8.6-8.6l2.1-2.1"/></svg>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
