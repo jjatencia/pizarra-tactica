@@ -1,10 +1,12 @@
 import { create } from 'zustand';
-import { BoardState, Token, Arrow, Trajectory, Team, Formation, HistoryState, ObjectType, TokenSize } from '../types';
+import { BoardState, Token, Arrow, Trajectory, Team, Formation, HistoryState, ObjectType, TokenSize, Point } from '../types';
 import { loadFromStorage, saveToStorage } from '../lib/localStorage';
 
 interface BoardStore extends BoardState {
   // History
   history: HistoryState;
+  recording: boolean;
+  tokenPaths: Record<string, Point[]>;
   
   // Token actions
   addToken: (team: Team, x: number, y: number, type?: ObjectType, size?: TokenSize) => void;
@@ -54,6 +56,10 @@ interface BoardStore extends BoardState {
   load: () => void;
   exportState: () => string;
   importState: (data: string) => void;
+  setRecording: (value: boolean) => void;
+  setTokenPath: (id: string, path: Point[]) => void;
+  clearTokenPaths: () => void;
+  playTokenPaths: () => void;
 }
 
 const initialState: BoardState = {
@@ -110,6 +116,8 @@ const addToHistory = (currentState: BoardState, history: HistoryState): HistoryS
 export const useBoardStore = create<BoardStore>((set, get) => ({
     ...initialState,
     history: initialHistory,
+    recording: false,
+    tokenPaths: {},
     
     addToken: (team: Team, x: number, y: number, type: ObjectType = 'player', size: TokenSize = 'large') => {
       const state = get();
@@ -359,10 +367,12 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         showFullField: get().showFullField,
         gridSnap: get().gridSnap,
       };
-      
+
       set({
         ...newState,
         history: addToHistory(newState, get().history),
+        tokenPaths: {},
+        recording: false,
       });
     },
     
@@ -558,6 +568,8 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
             states: [newState],
             currentIndex: 0,
           },
+          tokenPaths: {},
+          recording: false,
         });
       }
     },
@@ -585,15 +597,47 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
             selectedArrowId: null,
             selectedTrajectoryId: null,
           };
-          
+
           set({
             ...newState,
             history: addToHistory(newState, get().history),
+            tokenPaths: {},
+            recording: false,
           });
         }
       } catch (error) {
         console.error('Error importing state:', error);
       }
+    },
+
+    setRecording: (value: boolean) => {
+      set({ recording: value });
+    },
+
+    setTokenPath: (id: string, path: Point[]) => {
+      set(state => ({ tokenPaths: { ...state.tokenPaths, [id]: path } }));
+    },
+
+    clearTokenPaths: () => {
+      set({ tokenPaths: {} });
+    },
+
+    playTokenPaths: () => {
+      const state = get();
+      Object.entries(state.tokenPaths).forEach(([id, path]) => {
+        let step = 0;
+        const animate = () => {
+          if (step >= path.length) return;
+          const point = path[step];
+          set(s => ({
+            ...s,
+            tokens: s.tokens.map(t => t.id === id ? { ...t, x: point.x, y: point.y } : t)
+          }));
+          step++;
+          requestAnimationFrame(animate);
+        };
+        animate();
+      });
     },
   }));
 
