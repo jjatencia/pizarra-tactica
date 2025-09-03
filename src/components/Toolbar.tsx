@@ -21,6 +21,9 @@ interface ToolbarProps {
   onClearCanvas: () => void;
   sizeSettings: Record<Team | 'ball' | 'cone' | 'minigoal', TokenSize>;
   onSizeChange: (key: Team | 'ball' | 'cone' | 'minigoal', size: TokenSize) => void;
+  isRecording: boolean;
+  onToggleRecording: () => void;
+  onPlayRecording: () => void;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({ 
@@ -41,7 +44,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onRedoDraw,
   onClearCanvas,
   sizeSettings,
-  onSizeChange
+  onSizeChange,
+  isRecording,
+  onToggleRecording,
+  onPlayRecording,
 }) => {
   
   const {
@@ -140,6 +146,18 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     <svg viewBox="0 0 100 100" className="w-7 h-7">
       <rect x="5" y="20" width="90" height="70" stroke="white" strokeWidth="6" fill="none"/>
       <line x1="5" y1="90" x2="95" y2="90" stroke="white" strokeWidth="6"/>
+    </svg>
+  );
+
+  const RecordIcon = () => (
+    <svg viewBox="0 0 24 24" className="w-5 h-5">
+      <circle cx="12" cy="12" r="8" fill="red" />
+    </svg>
+  );
+
+  const PlayIcon = () => (
+    <svg viewBox="0 0 24 24" className="w-5 h-5">
+      <polygon points="8,5 19,12 8,19" fill="white" />
     </svg>
   );
 
@@ -294,7 +312,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           ))}
         </div>
       </div>
-      
+
       {/* Undo/Redo */}
       <div className="flex items-center gap-2 border-l border-r border-gray-700 px-3">
         <button 
@@ -316,7 +334,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           Rehacer
         </button>
       </div>
-      
+
       {/* Right Section: Actions */}
       <div className="flex items-center gap-2">
         <button 
@@ -355,7 +373,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             }}
           />
         </label>
-        <button 
+        <button
           className="control-btn"
           onClick={handleExportPNG}
         >
@@ -369,6 +387,23 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           }}
         >
           Limpiar
+        </button>
+      </div>
+
+      <div className="flex items-center gap-2 border-l border-r border-gray-700 px-3">
+        <button
+          className={clsx('control-btn', { 'bg-red-700': isRecording })}
+          onClick={onToggleRecording}
+          title="Grabar"
+        >
+          <RecordIcon />
+        </button>
+        <button
+          className="control-btn"
+          onClick={onPlayRecording}
+          title="Play"
+        >
+          <PlayIcon />
         </button>
       </div>
     </header>
