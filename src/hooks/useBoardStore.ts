@@ -12,6 +12,7 @@ interface BoardStore extends BoardState {
   updateToken: (id: string, updates: Partial<Token>) => void;
   removeToken: (id: string) => void;
   selectToken: (id: string | null) => void;
+  selectTokens: (ids: string[]) => void;
   
   // Arrow actions
   addArrow: (from: { x: number; y: number }, to: { x: number; y: number }) => void;
@@ -66,7 +67,7 @@ const initialState: BoardState = {
   zoom: 1,
   pan: { x: 0, y: 0 },
   showFullField: true,
-  selectedTokenId: null,
+  selectedTokenIds: [],
   selectedArrowId: null,
   selectedTrajectoryId: null,
 };
@@ -137,7 +138,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       const newState = {
         ...state,
         tokens: [...state.tokens, newToken],
-        selectedTokenId: newToken.id,
+        selectedTokenIds: [newToken.id],
       };
       
       set({
@@ -162,7 +163,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       const newState = {
         ...state,
         tokens: [...state.tokens, newToken],
-        selectedTokenId: newToken.id,
+        selectedTokenIds: [newToken.id],
       };
       
       set({
@@ -193,7 +194,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       const newState = {
         ...state,
         tokens: state.tokens.filter(t => t.id !== id),
-        selectedTokenId: state.selectedTokenId === id ? null : state.selectedTokenId,
+        selectedTokenIds: state.selectedTokenIds.filter(tid => tid !== id),
       };
       
       set({
@@ -203,7 +204,10 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     },
     
     selectToken: (id: string | null) => {
-      set({ selectedTokenId: id, selectedArrowId: null, selectedTrajectoryId: null });
+      set({ selectedTokenIds: id ? [id] : [], selectedArrowId: null, selectedTrajectoryId: null });
+    },
+    selectTokens: (ids: string[]) => {
+      set({ selectedTokenIds: ids, selectedArrowId: null, selectedTrajectoryId: null });
     },
     
     addArrow: (from: { x: number; y: number }, to: { x: number; y: number }) => {
@@ -260,11 +264,11 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     },
     
     selectArrow: (id: string | null) => {
-      set({ selectedArrowId: id, selectedTokenId: null, selectedTrajectoryId: null });
+      set({ selectedArrowId: id, selectedTokenIds: [], selectedTrajectoryId: null });
     },
     
     setMode: (mode: BoardState['mode']) => {
-      set({ mode, selectedTokenId: null, selectedArrowId: null, selectedTrajectoryId: null });
+      set({ mode, selectedTokenIds: [], selectedArrowId: null, selectedTrajectoryId: null });
     },
     
     setArrowStyle: (arrowStyle: 'solid' | 'dashed') => {
@@ -324,7 +328,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     },
     
     selectTrajectory: (id: string | null) => {
-      set({ selectedTrajectoryId: id, selectedTokenId: null, selectedArrowId: null });
+      set({ selectedTrajectoryId: id, selectedTokenIds: [], selectedArrowId: null });
     },
     
     setTrajectoryType: (trajectoryType: 'pass' | 'movement') => {
@@ -403,7 +407,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       const newState = {
         ...state,
         tokens: [...otherTeamTokens, ...formationTokens],
-        selectedTokenId: null,
+        selectedTokenIds: [],
       };
       
       set({
@@ -467,7 +471,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       const newState = {
         ...state,
         tokens: [...otherTokens, ...formationTokens],
-        selectedTokenId: null,
+        selectedTokenIds: [],
       };
       
       set({
@@ -531,7 +535,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         zoom: state.zoom,
         pan: state.pan,
         showFullField: state.showFullField,
-        selectedTokenId: null, // Don't persist selection
+        selectedTokenIds: [], // Don't persist selection
         selectedArrowId: null,
         selectedTrajectoryId: null,
       });
@@ -543,7 +547,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         const newState = {
           ...initialState,
           ...savedState,
-          selectedTokenId: null,
+          selectedTokenIds: [],
           selectedArrowId: null,
           selectedTrajectoryId: null,
         };
@@ -577,7 +581,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
             tokens: parsed.tokens,
             arrows: parsed.arrows,
             trajectories: parsed.trajectories || [],
-            selectedTokenId: null,
+            selectedTokenIds: [],
             selectedArrowId: null,
             selectedTrajectoryId: null,
           };

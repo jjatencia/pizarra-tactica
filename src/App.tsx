@@ -94,6 +94,7 @@ function App() {
     // isDragging, // Not used with new canvas drawing
     isDrawingTrajectory,
     trajectoryPreview,
+    selectionRect,
   } = usePointerInteractions(svgRef, viewBoxWidth, fieldHeight);
 
   // Canvas drawing
@@ -381,7 +382,21 @@ function App() {
                   style={{ pointerEvents: 'none' }}
                 />
               )}
-              
+
+              {selectionRect && (
+                <rect
+                  x={selectionRect.x}
+                  y={selectionRect.y}
+                  width={selectionRect.width}
+                  height={selectionRect.height}
+                  fill="rgba(251,191,36,0.1)"
+                  stroke="#FBBF24"
+                  strokeWidth={0.5}
+                  strokeDasharray="4"
+                  style={{ pointerEvents: 'none' }}
+                />
+              )}
+
               {/* Tokens */}
               {tokens.map((token) => (
                 <Token

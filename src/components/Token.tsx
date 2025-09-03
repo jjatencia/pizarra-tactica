@@ -16,12 +16,12 @@ export const Token: React.FC<TokenProps> = ({
   onPointerDown,
   onEditNumber
 }) => {
-  const { selectedTokenId, selectToken, removeToken } = useBoardStore();
+  const { selectedTokenIds, selectToken, removeToken } = useBoardStore();
   const lastTapRef = useRef<number>(0);
   const tapCountRef = useRef<number>(0);
   const tapTimeoutRef = useRef<number | null>(null);
-  
-  const isSelected = selectedTokenId === token.id;
+
+  const isSelected = selectedTokenIds.includes(token.id);
   const objectType: ObjectType = token.type || 'player';
   const baseRadius = objectType === 'player' ? 3 : objectType === 'ball' ? 2 : objectType === 'cone' ? 2 : 3;
   const sizeMultiplier = token.size === 'small' ? 0.5 : token.size === 'medium' ? 0.8 : 1;
@@ -67,7 +67,9 @@ export const Token: React.FC<TokenProps> = ({
         tapCountRef.current = 0;
       }, 300);
     } else {
-      selectToken(token.id);
+      if (!selectedTokenIds.includes(token.id)) {
+        selectToken(token.id);
+      }
       onPointerDown(e, token);
 
       tapTimeoutRef.current = window.setTimeout(() => {
@@ -76,7 +78,7 @@ export const Token: React.FC<TokenProps> = ({
       }, 300);
     }
 
-  }, [token, onPointerDown, onEditNumber, selectToken, removeToken]);
+  }, [token, onPointerDown, onEditNumber, selectToken, removeToken, selectedTokenIds]);
   
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
