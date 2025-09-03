@@ -1,4 +1,4 @@
-import { Formation } from '../types';
+import { Formation, Team } from '../types';
 
 // Formations are positioned for a 105x68 field
 // Positions are in meters from bottom-left corner
@@ -75,19 +75,19 @@ export const formations: Formation[] = [
 ];
 
 // Mirror formation for red team (attacking from right to left)
-export const getFormationForTeam = (formation: Formation, team: 'red' | 'blue'): Formation => {
-  if (team === 'blue') {
-    return formation;
+export const getFormationForTeam = (formation: Formation, team: Team): Formation => {
+  if (team === 'red') {
+    const fieldWidth = 105;
+    return {
+      ...formation,
+      tokens: formation.tokens.map(token => ({
+        ...token,
+        team: 'red',
+        x: fieldWidth - token.x,
+      })),
+    };
   }
-  
-  // Mirror for red team
-  const fieldWidth = 105;
-  return {
-    ...formation,
-    tokens: formation.tokens.map(token => ({
-      ...token,
-      team: 'red',
-      x: fieldWidth - token.x,
-    })),
-  };
+
+  // For blue, green, and yellow teams, use formation as is
+  return formation;
 };

@@ -1,4 +1,4 @@
-export type Team = 'red' | 'blue';
+export type Team = 'red' | 'blue' | 'green' | 'yellow';
 export type ObjectType = 'player' | 'ball' | 'cone' | 'minigoal';
 export type TokenSize = 'large' | 'medium' | 'small';
 

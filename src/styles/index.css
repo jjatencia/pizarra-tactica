@@ -275,6 +275,14 @@
   .btn-team-blue {
     @apply bg-team-blue hover:bg-blue-600 text-white;
   }
+
+  .btn-team-green {
+    @apply bg-team-green hover:bg-green-600 text-white;
+  }
+
+  .btn-team-yellow {
+    @apply bg-team-yellow hover:bg-yellow-600 text-white;
+  }
   
   .btn-active {
     @apply ring-2 ring-blue-400 bg-blue-700;

@@ -89,6 +89,8 @@ export const Token: React.FC<TokenProps> = ({
   const teamColors = {
     red: '#EF4444',
     blue: '#3B82F6',
+    green: '#22C55E',
+    yellow: '#EAB308',
   };
   
   const renderObject = () => {
