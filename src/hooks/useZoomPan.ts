@@ -4,7 +4,6 @@ import { Point } from '../types';
 
 interface TouchState {
   touches: Touch[];
-  initialDistance: number;
   initialZoom: number;
   initialPan: Point;
   lastTapTime: number;
@@ -14,19 +13,12 @@ export const useZoomPan = (svgRef: React.RefObject<SVGSVGElement>) => {
   const { zoom, pan, setZoom, setPan } = useBoardStore();
   const [touchState, setTouchState] = useState<TouchState>({
     touches: [],
-    initialDistance: 0,
     initialZoom: 1,
     initialPan: { x: 0, y: 0 },
     lastTapTime: 0,
   });
   
   const animationFrameRef = useRef<number>();
-  
-  const getTouchDistance = (touch1: Touch, touch2: Touch): number => {
-    const dx = touch1.clientX - touch2.clientX;
-    const dy = touch1.clientY - touch2.clientY;
-    return Math.sqrt(dx * dx + dy * dy);
-  };
   
   const getTouchCenter = (touch1: Touch, touch2: Touch): Point => {
     return {
@@ -77,12 +69,9 @@ export const useZoomPan = (svgRef: React.RefObject<SVGSVGElement>) => {
         lastTapTime: now,
       }));
     } else if (touches.length === 2) {
-      // Two finger pinch - start zoom/pan
-      const distance = getTouchDistance(touches[0], touches[1]);
-      
+      // Two finger gesture - start pan only (no zoom)
       setTouchState({
         touches,
-        initialDistance: distance,
         initialZoom: zoom,
         initialPan: pan,
         lastTapTime: touchState.lastTapTime,
@@ -96,36 +85,30 @@ export const useZoomPan = (svgRef: React.RefObject<SVGSVGElement>) => {
     
     if (touches.length === 2 && touchState.touches.length === 2) {
       e.preventDefault();
-      
+
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
-      
+
       animationFrameRef.current = requestAnimationFrame(() => {
-        const currentDistance = getTouchDistance(touches[0], touches[1]);
         const currentCenter = getTouchCenter(touches[0], touches[1]);
         const initialCenter = getTouchCenter(touchState.touches[0], touchState.touches[1]);
-        
-        // Calculate zoom
-        const zoomRatio = currentDistance / touchState.initialDistance;
-        const newZoom = Math.max(0.5, Math.min(3, touchState.initialZoom * zoomRatio));
-        
-        // Calculate pan
+
+        // Calculate pan only
         const panDelta = {
           x: currentCenter.x - initialCenter.x,
           y: currentCenter.y - initialCenter.y,
         };
-        
+
         const newPan = {
           x: touchState.initialPan.x + panDelta.x,
           y: touchState.initialPan.y + panDelta.y,
         };
-        
-        setZoom(newZoom);
+
         setPan(newPan);
       });
     }
-  }, [touchState, setZoom, setPan]);
+  }, [touchState, setPan]);
   
   const handleTouchEnd = useCallback((_e: Event) => {
     if (animationFrameRef.current) {
@@ -135,7 +118,6 @@ export const useZoomPan = (svgRef: React.RefObject<SVGSVGElement>) => {
     setTouchState(prev => ({
       ...prev,
       touches: [],
-      initialDistance: 0,
     }));
   }, []);
   
