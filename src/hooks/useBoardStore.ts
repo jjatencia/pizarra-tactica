@@ -413,7 +413,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
 
     applyFormationByName: (formationName: string, team: Team) => {
       // Formation positions from FormationsModal
-      const formations = {
+      const formations: Record<string, Record<string, number[][]>> = {
         '4-3-3': {
           red: [[10, 50], [25, 20], [25, 40], [25, 60], [25, 80], [45, 30], [45, 50], [45, 70], [65, 25], [65, 50], [65, 75]],
           blue: [[90, 50], [75, 20], [75, 40], [75, 60], [75, 80], [55, 30], [55, 50], [55, 70], [35, 25], [35, 50], [35, 75]]
@@ -435,6 +435,11 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
           blue: [[90, 50], [75, 10], [75, 30], [75, 50], [75, 70], [75, 90], [55, 30], [55, 50], [55, 70], [35, 40], [35, 60]]
         }
       };
+
+      Object.values(formations).forEach(f => {
+        f.green = f.blue;
+        f.yellow = f.blue;
+      });
 
       const state = get();
       const fieldWidth = 105;

@@ -6,7 +6,7 @@ Una PWA (Progressive Web App) moderna para entrenadores de fútbol que permite c
 
 - **🎯 Táctil y fluido**: Optimizado para iPad con gestos naturales
 - **⚽ Campo reglamentario**: Proporciones FIFA 105×68m con líneas oficiales
-- **🔴🔵 Fichas de equipos**: Máximo 11 jugadores por equipo (numerados 1-11)
+- **🔴🔵🟢🟡 Fichas de equipos**: Máximo 11 jugadores por equipo (numerados 1-11)
 - **➡️ Flechas tácticas**: Continuas y discontinuas para movimientos y pases
 - **📱 PWA instalable**: Funciona 100% offline en iPad
 - **🎨 Formaciones preset**: 4-3-3, 4-4-2, 3-5-2
@@ -147,7 +147,9 @@ Edita `src/types/index.ts` y `tailwind.config.js`:
 colors: {
   team: {
     red: '#EF4444',    // Rojo del equipo
-    blue: '#3B82F6'    // Azul del equipo
+    blue: '#3B82F6',   // Azul del equipo
+    green: '#22C55E',  // Verde del equipo
+    yellow: '#EAB308'  // Amarillo del equipo
   }
 }
 ```

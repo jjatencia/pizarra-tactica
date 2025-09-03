@@ -14,7 +14,9 @@ export default {
         },
         team: {
           red: '#EF4444',
-          blue: '#3B82F6'
+          blue: '#3B82F6',
+          green: '#22C55E',
+          yellow: '#EAB308'
         }
       },
       fontFamily: {

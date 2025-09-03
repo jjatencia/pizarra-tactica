@@ -60,10 +60,14 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   
   const redTokens = tokens.filter(t => t.team === 'red');
   const blueTokens = tokens.filter(t => t.team === 'blue');
+  const greenTokens = tokens.filter(t => t.team === 'green');
+  const yellowTokens = tokens.filter(t => t.team === 'yellow');
 
   const [sizeSettings, setSizeSettings] = useState<Record<string, TokenSize>>({
     red: 'large',
     blue: 'large',
+    green: 'large',
+    yellow: 'large',
     ball: 'large',
     cone: 'large',
     minigoal: 'large'
@@ -148,9 +152,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
   const colorOptions = [
     { color: 'white', className: 'bg-white border-2 border-gray-400' },
-    { color: '#FBBF24', className: 'bg-yellow-400' },
     { color: '#EF4444', className: 'bg-red-500' },
     { color: '#3B82F6', className: 'bg-blue-500' },
+    { color: '#22C55E', className: 'bg-green-500' },
+    { color: '#EAB308', className: 'bg-yellow-500' },
     { color: 'transparent', className: 'bg-gray-800 border-2 border-gray-500', title: 'Borrador' },
   ];
   
@@ -185,6 +190,34 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             { 'opacity-50 cursor-not-allowed': blueTokens.length >= 11 }
           )}
           title={`Azules: ${blueTokens.length}/11`}
+        >
+          +
+        </button>
+        <button
+          onPointerDown={() => startPress('green')}
+          onPointerUp={() => handlePressEnd(() => onAddToken('green', sizeSettings.green))}
+          onPointerLeave={cancelPress}
+          onPointerCancel={cancelPress}
+          disabled={greenTokens.length >= 11}
+          className={clsx(
+            "w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md hover:bg-green-500 transition-colors",
+            { 'opacity-50 cursor-not-allowed': greenTokens.length >= 11 }
+          )}
+          title={`Verdes: ${greenTokens.length}/11`}
+        >
+          +
+        </button>
+        <button
+          onPointerDown={() => startPress('yellow')}
+          onPointerUp={() => handlePressEnd(() => onAddToken('yellow', sizeSettings.yellow))}
+          onPointerLeave={cancelPress}
+          onPointerCancel={cancelPress}
+          disabled={yellowTokens.length >= 11}
+          className={clsx(
+            "w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md hover:bg-yellow-400 transition-colors",
+            { 'opacity-50 cursor-not-allowed': yellowTokens.length >= 11 }
+          )}
+          title={`Amarillas: ${yellowTokens.length}/11`}
         >
           +
         </button>

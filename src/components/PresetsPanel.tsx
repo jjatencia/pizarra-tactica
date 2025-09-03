@@ -11,9 +11,11 @@ interface PresetsPanelProps {
 
 export const PresetsPanel: React.FC<PresetsPanelProps> = ({ isOpen, onClose }) => {
   const { applyFormation, tokens } = useBoardStore();
-  
+
   const redTokens = tokens.filter(t => t.team === 'red');
   const blueTokens = tokens.filter(t => t.team === 'blue');
+  const greenTokens = tokens.filter(t => t.team === 'green');
+  const yellowTokens = tokens.filter(t => t.team === 'yellow');
   
   const handleApplyFormation = (formationName: string, team: Team) => {
     const formation = formations.find(f => f.name === formationName);
@@ -43,7 +45,7 @@ export const PresetsPanel: React.FC<PresetsPanelProps> = ({ isOpen, onClose }) =
             <div key={formation.name} className="border border-slate-700 rounded-lg p-4">
               <h3 className="font-semibold mb-3">{formation.name}</h3>
               
-              <div className="flex gap-2 mb-2">
+              <div className="flex gap-2 flex-wrap mb-2">
                 <button
                   className={clsx('btn btn-team-blue text-sm flex-1', {
                     'opacity-50 cursor-not-allowed': blueTokens.length > 0
@@ -62,9 +64,27 @@ export const PresetsPanel: React.FC<PresetsPanelProps> = ({ isOpen, onClose }) =
                 >
                   Aplicar Rojas
                 </button>
+                <button
+                  className={clsx('btn btn-team-green text-sm flex-1', {
+                    'opacity-50 cursor-not-allowed': greenTokens.length > 0
+                  })}
+                  onClick={() => handleApplyFormation(formation.name, 'green')}
+                  disabled={greenTokens.length > 0}
+                >
+                  Aplicar Verdes
+                </button>
+                <button
+                  className={clsx('btn btn-team-yellow text-sm flex-1', {
+                    'opacity-50 cursor-not-allowed': yellowTokens.length > 0
+                  })}
+                  onClick={() => handleApplyFormation(formation.name, 'yellow')}
+                  disabled={yellowTokens.length > 0}
+                >
+                  Aplicar Amarillas
+                </button>
               </div>
-              
-              {(blueTokens.length > 0 || redTokens.length > 0) && (
+
+              {(blueTokens.length > 0 || redTokens.length > 0 || greenTokens.length > 0 || yellowTokens.length > 0) && (
                 <p className="text-xs text-slate-400">
                   Elimina las fichas existentes antes de aplicar una formación
                 </p>
@@ -103,6 +123,7 @@ export const PresetsPanel: React.FC<PresetsPanelProps> = ({ isOpen, onClose }) =
           <h3 className="font-semibold mb-2">Instrucciones</h3>
           <ul className="text-sm text-slate-400 space-y-1">
             <li>• Las formaciones se aplican desde la perspectiva del equipo azul</li>
+            <li>• Los equipos verde y amarillo usan la misma orientación que el azul</li>
             <li>• El equipo rojo se coloca automáticamente en posición espejo</li>
             <li>• Limpia el campo antes de aplicar una nueva formación</li>
           </ul>

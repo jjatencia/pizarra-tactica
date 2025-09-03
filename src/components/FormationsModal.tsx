@@ -7,7 +7,7 @@ interface FormationsModalProps {
   onApplyFormation: (team: Team, formation: string) => void;
 }
 
-const formations = {
+const formations: Record<string, Record<string, number[][]>> = {
   '4-3-3': {
     red: [[10, 50], [25, 20], [25, 40], [25, 60], [25, 80], [45, 30], [45, 50], [45, 70], [65, 25], [65, 50], [65, 75]],
     blue: [[90, 50], [75, 20], [75, 40], [75, 60], [75, 80], [55, 30], [55, 50], [55, 70], [35, 25], [35, 50], [35, 75]]
@@ -29,6 +29,11 @@ const formations = {
     blue: [[90, 50], [75, 10], [75, 30], [75, 50], [75, 70], [75, 90], [55, 30], [55, 50], [55, 70], [35, 40], [35, 60]]
   }
 };
+
+Object.values(formations).forEach(f => {
+  f.green = f.blue;
+  f.yellow = f.blue;
+});
 
 export const FormationsModal: React.FC<FormationsModalProps> = ({
   isOpen,
@@ -52,14 +57,16 @@ export const FormationsModal: React.FC<FormationsModalProps> = ({
         
         <div className="mb-4">
           <label htmlFor="team-select" className="block mb-2">Equipo:</label>
-          <select 
-            id="team-select" 
+          <select
+            id="team-select"
             className="w-full bg-gray-700 rounded p-2"
             value={selectedTeam}
             onChange={(e) => setSelectedTeam(e.target.value as Team)}
           >
             <option value="red">Equipo Rojo</option>
             <option value="blue">Equipo Azul</option>
+            <option value="green">Equipo Verde</option>
+            <option value="yellow">Equipo Amarillo</option>
           </select>
         </div>
         
