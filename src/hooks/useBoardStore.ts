@@ -39,8 +39,8 @@ interface BoardStore extends BoardState {
   // Utility actions
   reset: () => void;
   mirror: () => void;
-  applyFormation: (formation: Formation, team: Team) => void;
-  applyFormationByName: (formationName: string, team: Team) => void;
+  applyFormation: (formation: Formation, team: Team, size?: TokenSize) => void;
+  applyFormationByName: (formationName: string, team: Team, size?: TokenSize) => void;
   
   // History actions
   undo: () => void;
@@ -390,13 +390,14 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       });
     },
     
-    applyFormation: (formation: Formation, team: Team) => {
+    applyFormation: (formation: Formation, team: Team, size: TokenSize = 'large') => {
       const state = get();
       const otherTeamTokens = state.tokens.filter(t => t.team !== team);
       const formationTokens = formation.tokens.map(token => ({
         ...token,
         id: generateId(),
         team,
+        size,
       }));
       
       const newState = {
@@ -411,7 +412,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       });
     },
 
-    applyFormationByName: (formationName: string, team: Team) => {
+    applyFormationByName: (formationName: string, team: Team, size: TokenSize = 'large') => {
       // Formation positions from FormationsModal
       const formations: Record<string, Record<string, number[][]>> = {
         '4-3-3': {
@@ -459,7 +460,8 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         number: index + 1,
         x: (pos[0] / 100) * fieldWidth, // Convert percentage to field coordinates
         y: (pos[1] / 100) * fieldHeight,
-        type: 'player'
+        type: 'player',
+        size,
       }));
       
       const newState = {

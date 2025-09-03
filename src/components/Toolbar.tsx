@@ -19,6 +19,8 @@ interface ToolbarProps {
   onUndoDraw: () => void;
   onRedoDraw: () => void;
   onClearCanvas: () => void;
+  sizeSettings: Record<Team | 'ball' | 'cone' | 'minigoal', TokenSize>;
+  onSizeChange: (key: Team | 'ball' | 'cone' | 'minigoal', size: TokenSize) => void;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({ 
@@ -37,7 +39,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onSetDrawingMode,
   onUndoDraw,
   onRedoDraw,
-  onClearCanvas
+  onClearCanvas,
+  sizeSettings,
+  onSizeChange
 }) => {
   
   const {
@@ -63,19 +67,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const greenTokens = tokens.filter(t => t.team === 'green');
   const yellowTokens = tokens.filter(t => t.team === 'yellow');
 
-  const [sizeSettings, setSizeSettings] = useState<Record<string, TokenSize>>({
-    red: 'large',
-    blue: 'large',
-    green: 'large',
-    yellow: 'large',
-    ball: 'large',
-    cone: 'large',
-    minigoal: 'large'
-  });
-  const [menuTarget, setMenuTarget] = useState<string | null>(null);
+  const [menuTarget, setMenuTarget] = useState<(Team | 'ball' | 'cone' | 'minigoal') | null>(null);
   const longPressTimeout = useRef<number>();
 
-  const startPress = (key: string) => {
+  const startPress = (key: Team | 'ball' | 'cone' | 'minigoal') => {
     if (longPressTimeout.current) clearTimeout(longPressTimeout.current);
     longPressTimeout.current = window.setTimeout(() => {
       setMenuTarget(key);
@@ -97,8 +92,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     }
   };
 
-  const handleSizeSelect = (key: string, size: TokenSize) => {
-    setSizeSettings(prev => ({ ...prev, [key]: size }));
+  const handleSizeSelect = (key: Team | 'ball' | 'cone' | 'minigoal', size: TokenSize) => {
+    onSizeChange(key, size);
     setMenuTarget(null);
   };
   

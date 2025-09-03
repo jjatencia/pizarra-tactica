@@ -1,16 +1,17 @@
 import React from 'react';
 import { useBoardStore } from '../hooks/useBoardStore';
 import { formations, getFormationForTeam } from '../lib/formations';
-import { Team } from '../types';
+import { Team, Formation } from '../types';
 import clsx from 'clsx';
 
 interface PresetsPanelProps {
   isOpen: boolean;
   onClose: () => void;
+  onApplyFormation: (formation: Formation, team: Team) => void;
 }
 
-export const PresetsPanel: React.FC<PresetsPanelProps> = ({ isOpen, onClose }) => {
-  const { applyFormation, tokens } = useBoardStore();
+export const PresetsPanel: React.FC<PresetsPanelProps> = ({ isOpen, onClose, onApplyFormation }) => {
+  const { tokens } = useBoardStore();
 
   const redTokens = tokens.filter(t => t.team === 'red');
   const blueTokens = tokens.filter(t => t.team === 'blue');
@@ -21,7 +22,7 @@ export const PresetsPanel: React.FC<PresetsPanelProps> = ({ isOpen, onClose }) =
     const formation = formations.find(f => f.name === formationName);
     if (formation) {
       const teamFormation = getFormationForTeam(formation, team);
-      applyFormation(teamFormation, team);
+      onApplyFormation(teamFormation, team);
     }
   };
   
