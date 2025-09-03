@@ -54,6 +54,9 @@ function App() {
     updateTrajectory,
     updateToken,
     load,
+    recording,
+    setRecording,
+    playTokenPaths,
   } = useBoardStore();
   
   // Field dimensions
@@ -254,10 +257,18 @@ function App() {
     position = clampToField(position, viewBoxWidth, fieldHeight);
     
     addObject(type, position.x, position.y, size);
-    
+
     // Automatically switch to move mode after adding an object
     setDrawingMode('move');
   }, [addObject, showFullField, fieldWidth, fieldHeight, viewBoxWidth, gridSnap, setDrawingMode]);
+
+  const handleToggleRecording = useCallback(() => {
+    setRecording(!recording);
+  }, [recording, setRecording]);
+
+  const handlePlayRecording = useCallback(() => {
+    playTokenPaths();
+  }, [playTokenPaths]);
 
   // Handle canvas pointer down - no double tap for lines
   const handleCanvasPointerDown = useCallback((e: any) => {
@@ -301,6 +312,9 @@ function App() {
         onClearCanvas={clearCanvas}
         sizeSettings={sizeSettings}
         onSizeChange={(key, size) => setSizeSettings(prev => ({ ...prev, [key]: size }))}
+        isRecording={recording}
+        onToggleRecording={handleToggleRecording}
+        onPlayRecording={handlePlayRecording}
         />
       </div>
       
