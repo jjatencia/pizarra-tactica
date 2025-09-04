@@ -1,7 +1,9 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App.tsx'
-import './styles/index.css'
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App.tsx';
+import EquipoPage from './EquipoPage.tsx';
+import EquiposPage from './EquiposPage.tsx';
+import './styles/index.css';
 
 // Register service worker
 if ('serviceWorker' in navigator) {
@@ -16,8 +18,15 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+const Root = () => {
+  const path = window.location.pathname;
+  if (path.startsWith('/equipos')) return <EquiposPage />;
+  if (path.startsWith('/equipo')) return <EquipoPage />;
+  return <App />;
+};
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App />
+    <Root />
   </React.StrictMode>,
 )
