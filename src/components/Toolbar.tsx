@@ -337,7 +337,31 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
       {/* Right Section: Actions */}
       <div className="flex items-center gap-2">
-        <button 
+        <a
+          href="/equipo"
+          className="control-btn"
+        >
+          Equipo
+        </a>
+        <a
+          href="/equipos"
+          className="control-btn"
+        >
+          Equipos
+        </a>
+        <a
+          href="/rivales"
+          className="control-btn"
+        >
+          Rivales
+        </a>
+        <a
+          href="/planes"
+          className="control-btn"
+        >
+          Planes
+        </a>
+        <button
           className="control-btn"
           onClick={onShowFormations}
         >
