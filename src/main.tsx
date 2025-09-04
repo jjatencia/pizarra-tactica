@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
+import EquipoPage from './EquipoPage.tsx'
 import './styles/index.css'
 
 // Register service worker
@@ -16,8 +17,12 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+const Root = () => (
+  window.location.pathname.startsWith('/equipo') ? <EquipoPage /> : <App />
+)
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App />
+    <Root />
   </React.StrictMode>,
 )
