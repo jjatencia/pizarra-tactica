@@ -13,7 +13,9 @@
     "clsx": "^2.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "zustand": "^4.4.7"
+    "zustand": "^4.4.7",
+    "dexie": "^3.2.4",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",
