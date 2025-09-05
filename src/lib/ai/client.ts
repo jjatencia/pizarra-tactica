@@ -8,7 +8,8 @@ export async function fetchAIResponse(payload: any): Promise<AIResponse> {
   });
   if (!res.ok) {
     const err = await res.json().catch(()=>({error:"Error"}));
-    throw new Error(err.error || "Fallo en IA");
+    const msg = err.error || `Fallo en IA (status ${res.status})`;
+    throw new Error(msg);
   }
   return await res.json();
 }
