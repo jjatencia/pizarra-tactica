@@ -123,11 +123,15 @@ export default function PlanesPage() {
     };
 
     const key = simpleHash(JSON.stringify(payload));
-    const ai = await fetchAIResponse(payload);
-    const mapped = mapAIToCanvas(ai);
-    await putTacticsCache({ id: key, createdAt: Date.now(), aiRaw: ai, mapped });
-    sessionStorage.setItem("tactics_to_paint", JSON.stringify({ id: key }));
-    window.location.href = "/tablero";
+    try {
+      const ai = await fetchAIResponse(payload);
+      const mapped = mapAIToCanvas(ai);
+      await putTacticsCache({ id: key, createdAt: Date.now(), aiRaw: ai, mapped });
+      sessionStorage.setItem("tactics_to_paint", JSON.stringify({ id: key }));
+      window.location.href = "/tablero";
+    } catch (e: any) {
+      alert(e.message ?? "Error al generar con IA");
+    }
   }
 
   return (
