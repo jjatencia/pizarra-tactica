@@ -7,8 +7,14 @@ export async function fetchAIResponse(payload: any): Promise<AIResponse> {
     body: JSON.stringify(payload)
   });
   if (!res.ok) {
-    const err = await res.json().catch(()=>({error:"Error"}));
-    const msg = err.error || `Fallo en IA (status ${res.status})`;
+    let msg = `Fallo en IA (status ${res.status})`;
+    try {
+      const err = await res.json();
+      if (err?.error) msg = err.error;
+    } catch {
+      /* ignore json parse errors */
+    }
+
     throw new Error(msg);
   }
   return await res.json();
