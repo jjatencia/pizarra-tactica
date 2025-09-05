@@ -3,6 +3,13 @@ import { z } from "zod";
 import { AIResponseSchema } from "@/lib/ai/types";
 import { simpleHash } from "@/lib/ai/hash";
 import { buildSystemPrompt, buildUserPrompt } from "@/lib/ai/prompt";
+import OpenAI from "openai";
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+const MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 
 const AIPayloadSchema = z.object({
   squadId: z.string(),
@@ -32,7 +39,7 @@ export async function POST(req: NextRequest) {
     const system = buildSystemPrompt();
     const user = buildUserPrompt(parsed);
 
-    const aiRaw = await callAIStub(system, user);
+    const aiRaw = await callAIReal(system, user);
 
     const validated = AIResponseSchema.parse(aiRaw);
 
@@ -43,32 +50,20 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function callAIStub(system: string, user: string) {
-  const payload = JSON.parse(user);
-  const titulares = payload.players.slice(0, 11).map((p: any, i: number) => ({ playerId: p.id, pos: i===0? "POR" : (i<5? "DFC" : i<9? "MC" : "DC") }));
-  const banquillo = payload.players.slice(11).map((p: any) => p.id);
-  return {
-    alineacion: {
-      formation: "4-2-3-1",
-      titularidad: titulares,
-      banquillo,
-      instrucciones: ["Stub: sustituye por IA real"]
-    },
-    planPartido: {
-      faseDefensa: ["Bloque medio"],
-      faseAtaque: ["Progresión por bandas"],
-      transicionOf: ["Contragolpe"],
-      transicionDef: ["Repliegue"]
-    },
-    jugadas: [
-      {
-        titulo: "Salida básica",
-        objetivo: "Superar primera línea",
-        instrucciones: ["Pivote entre centrales"],
-        primitivas: [
-          { id: "a1", tipo: "arrow", equipo: "propio", targets: [titulares[1]?.playerId], puntos: [{x:0.2,y:0.8},{x:0.4,y:0.8}] }
-        ]
-      }
-    ]
-  };
+async function callAIReal(system: string, user: string) {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("Falta OPENAI_API_KEY en variables de entorno");
+  }
+
+  const res = await openai.chat.completions.create({
+    model: MODEL,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: user }
+    ],
+    response_format: { type: "json_object" }
+  });
+
+  const content = res.choices?.[0]?.message?.content ?? "{}";
+  return JSON.parse(content);
 }
