@@ -26,6 +26,13 @@ const AIPayloadSchema = z.object({
 
 const cache = new Map<string, any>();
 
+export function GET() {
+  return NextResponse.json(
+    { ok: false, error: "Método no permitido. Usa POST" },
+    { status: 405 }
+  );
+}
+
 export async function POST(req: NextRequest) {
   try {
     const json = await req.json();
@@ -46,7 +53,13 @@ export async function POST(req: NextRequest) {
     cache.set(key, validated);
     return NextResponse.json(validated, { status: 200 });
   } catch (err: any) {
-    return NextResponse.json({ ok:false, error: err?.message || "Error" }, { status: 400 });
+    const status = err?.status || err?.response?.status || 400;
+    const code = err?.code || err?.error?.code;
+    let message = err?.message || err?.error?.message || "Error";
+    if (code === "insufficient_quota" || status === 402) {
+      message = "Saldo insuficiente en la API de OpenAI";
+    }
+    return NextResponse.json({ ok:false, error: message }, { status });
   }
 }
 
