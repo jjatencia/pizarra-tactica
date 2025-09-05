@@ -14,6 +14,7 @@ export async function fetchAIResponse(payload: any): Promise<AIResponse> {
     } catch {
       /* ignore json parse errors */
     }
+
     throw new Error(msg);
   }
   return await res.json();
