@@ -15,8 +15,8 @@
   
   html {
     font-family: 'Inter', system-ui, sans-serif;
-    touch-action: none; /* Disable all touch gestures */
-    -ms-touch-action: none;
+    touch-action: pan-y; /* Allow vertical scrolling */
+    -ms-touch-action: pan-y;
     -webkit-user-scalable: no;
     user-scalable: no;
   }
@@ -30,8 +30,8 @@
     -webkit-touch-callout: none;
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior: none;
-    touch-action: none; /* Disable all touch gestures including pinch-zoom */
-    -ms-touch-action: none;
+    touch-action: pan-y; /* Allow vertical scrolling while preventing pinch */
+    -ms-touch-action: pan-y;
     -webkit-user-scalable: no;
     user-scalable: no;
     zoom: 1;
@@ -47,8 +47,6 @@
   
   * {
     box-sizing: border-box;
-    touch-action: none; /* Apply to all elements */
-    -ms-touch-action: none;
   }
 }
 
