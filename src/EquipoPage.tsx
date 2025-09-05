@@ -203,7 +203,7 @@ export default function EquipoPage() {
   }
 
   return (
-      <div className="mx-auto max-w-3xl p-4 h-full overflow-y-auto">
+      <div className="mx-auto max-w-3xl p-4 h-full overflow-y-auto touch-pan-y">
         <button onClick={() => window.history.back()} className="mb-4 text-sm underline">
           ← Volver
         </button>
