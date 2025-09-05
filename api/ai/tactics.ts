@@ -14,6 +14,16 @@ export default async function handler(req: Request): Promise<Response> {
     });
   }
 
+  if (!process.env.OPENAI_API_KEY) {
+    return new Response(
+      JSON.stringify({ error: "Falta configurar la variable OPENAI_API_KEY" }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" }
+      }
+    );
+  }
+
   try {
     const payload = await req.json();
     const systemPrompt = buildSystemPrompt();
