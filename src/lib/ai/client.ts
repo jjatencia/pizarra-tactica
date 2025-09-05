@@ -14,6 +14,9 @@ export async function fetchAIResponse(payload: any): Promise<AIResponse> {
     } catch {
       /* ignore json parse errors */
     }
+    if (msg === `Fallo en IA (status ${res.status})` && res.status === 405) {
+      msg = "Método HTTP no permitido al invocar la IA";
+    }
 
     throw new Error(msg);
   }

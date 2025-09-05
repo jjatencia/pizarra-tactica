@@ -26,6 +26,13 @@ const AIPayloadSchema = z.object({
 
 const cache = new Map<string, any>();
 
+export function GET() {
+  return NextResponse.json(
+    { ok: false, error: "Método no permitido. Usa POST" },
+    { status: 405 }
+  );
+}
+
 export async function POST(req: NextRequest) {
   try {
     const json = await req.json();
