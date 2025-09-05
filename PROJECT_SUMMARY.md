@@ -129,7 +129,7 @@ npm run preview
 - ✅ Reset completo
 
 ### 📱 PWA para iPad
-- ✅ Manifest con orientación landscape
+- ✅ Manifest con orientación portrait
 - ✅ Service Worker con precaching
 - ✅ Iconos Apple Touch (192px, 512px)
 - ✅ Meta tags específicos iPad
@@ -188,7 +188,7 @@ npm run preview
 - ✅ Icono en pantalla de inicio
 - ✅ Abre sin barra de Safari
 - ✅ Funciona offline
-- ✅ Orientación landscape automática
+- ✅ Orientación portrait automática
 
 ## 🎉 ¡Proyecto Completado!
 
