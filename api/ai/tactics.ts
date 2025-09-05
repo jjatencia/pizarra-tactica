@@ -1,4 +1,3 @@
-import OpenAI from "openai";
 import { AIResponseSchema } from "../../src/lib/ai/types";
 import { buildSystemPrompt, buildUserPrompt } from "../../src/lib/ai/prompt";
 
@@ -29,18 +28,32 @@ export default async function handler(req: Request): Promise<Response> {
     const systemPrompt = buildSystemPrompt();
     const userPrompt = buildUserPrompt(payload);
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      response_format: { type: "json_object" }
+    const aiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        response_format: { type: "json_object" }
+      })
     });
 
-    const content = completion.choices[0].message?.content;
+    if (!aiRes.ok) {
+      const text = await aiRes.text();
+      return new Response(JSON.stringify({ error: text || aiRes.statusText }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    const json = await aiRes.json();
+    const content = json.choices?.[0]?.message?.content;
     if (!content) {
       return new Response(JSON.stringify({ error: "Empty response from OpenAI" }), {
         status: 500,

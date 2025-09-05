@@ -9,6 +9,7 @@ import { fetchAIResponse } from "@/lib/ai/client";
 import { mapAIToCanvas } from "@/lib/ai/mapper";
 import { simpleHash } from "@/lib/ai/hash";
 import { putTacticsCache } from "@/lib/ai/cache";
+import type { AIPayloadContext } from "@/lib/ai/payload";
 
 export default function PlanesPage() {
   const [squads, setSquads] = useState<Squad[]>([]);
@@ -110,6 +111,12 @@ export default function PlanesPage() {
     const opponent = rivals.find(r => r.id === plan.opponentId);
     if (!opponent) { alert("No encuentro el rival seleccionado"); return; }
 
+    const formacionesPermitidas: AIPayloadContext["formacionesPermitidas"] = [
+      "4-2-3-1",
+      "4-3-3",
+      "3-5-2",
+    ];
+
     const payload = {
       squadId,
       players,
@@ -118,7 +125,7 @@ export default function PlanesPage() {
       context: {
         objetivos: plan.objetivos,
         recursos: plan.recursos,
-        formacionesPermitidas: ["4-2-3-1","4-3-3","3-5-2"]
+        formacionesPermitidas,
       }
     };
 
