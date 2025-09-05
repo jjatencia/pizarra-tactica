@@ -1,6 +1,7 @@
 import { AIResponse } from "./types";
 import { AIPayload } from "./payload";
 
+
 export async function fetchAIResponse(payload: AIPayload): Promise<AIResponse> {
   let res: Response;
   try {
