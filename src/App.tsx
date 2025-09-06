@@ -513,6 +513,7 @@ function App() {
           const d = dist(passFrom, passTo);
           const LONG_PASS = 25; // metros
           if (d > LONG_PASS) {
+            // Rival-aware control point: curvar alejando del rival más cercano a la línea
             const vx = passTo.x - passFrom.x;
             const vy = passTo.y - passFrom.y;
             const len = Math.hypot(vx, vy) || 1;
@@ -520,8 +521,39 @@ function App() {
             const nx = -uy, ny = ux; // perpendicular
             const mid = { x: (passFrom.x + passTo.x) / 2, y: (passFrom.y + passTo.y) / 2 };
             const offset = clamp(d * 0.18, 6, 18); // altura del arco
-            const cp = { x: mid.x + nx * offset, y: mid.y + ny * offset };
-            addBezier(ballId, lastPoint[ballId] || passFrom, cp, passTo, startStepB, stepsB, easeInOutCubic);
+
+            const passerTeam: 'blue' | 'red' = pr.equipo === 'propio' ? 'blue' : 'red';
+            const rivals = useBoardStore.getState().tokens.filter(t => t.type === 'player' && t.team !== passerTeam);
+
+            const nearestPointOnSeg = (a: {x:number;y:number}, b: {x:number;y:number}, p: {x:number;y:number}) => {
+              const abx = b.x - a.x, aby = b.y - a.y;
+              const ab2 = abx*abx + aby*aby || 1;
+              const apx = p.x - a.x, apy = p.y - a.y;
+              let t = (apx*abx + apy*aby) / ab2; t = Math.max(0, Math.min(1, t));
+              return { x: a.x + abx*t, y: a.y + aby*t };
+            };
+
+            // Elegir lado que deje el control point más lejos del rival más cercano a la línea
+            let cp1 = { x: mid.x + nx * offset, y: mid.y + ny * offset };
+            let cp2 = { x: mid.x - nx * offset, y: mid.y - ny * offset };
+
+            if (rivals.length > 0) {
+              // Rival más cercano al segmento
+              let bestR = rivals[0];
+              let bestD = Infinity;
+              for (const r of rivals) {
+                const np = nearestPointOnSeg(passFrom, passTo, { x: r.x, y: r.y });
+                const dd = dist(np, { x: r.x, y: r.y });
+                if (dd < bestD) { bestD = dd; bestR = r; }
+              }
+              const d1 = dist(cp1, { x: bestR.x, y: bestR.y });
+              const d2 = dist(cp2, { x: bestR.x, y: bestR.y });
+              const cp = d1 >= d2 ? cp1 : cp2;
+              addBezier(ballId, lastPoint[ballId] || passFrom, cp, passTo, startStepB, stepsB, easeInOutCubic);
+            } else {
+              // Sin rivales, usar primer lado por defecto
+              addBezier(ballId, lastPoint[ballId] || passFrom, cp1, passTo, startStepB, stepsB, easeInOutCubic);
+            }
           } else {
             addLinear(ballId, lastPoint[ballId] || passFrom, passTo, startStepB, stepsB, easeInOutCubic);
           }
