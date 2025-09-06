@@ -15,7 +15,7 @@ import { TacticalDescriptionInput } from './components/TacticalDescriptionInput'
 import { PlaybackControls } from './components/PlaybackControls';
 import { Team, ObjectType, TokenSize, Token as TokenType, Formation } from './types';
 import { clampToField, snapToGrid } from './lib/geometry';
-import { convertTacticalToAnimationSequence, setupTokensFromSequence } from './lib/ai/sequenceConverter';
+import { convertTacticalToAnimationSequence, setupTokensFromSequence, updateSequenceWithRealTokenIds } from './lib/ai/sequenceConverter';
 import clsx from 'clsx';
 import { CanvasTacticPack } from './types/canvas';
 
@@ -351,6 +351,16 @@ function App() {
         console.log('🎭 App.tsx: No tokens found, setting up from sequence...');
         setupTokensFromSequence(animationSequence, (team: Team, x: number, y: number) => addToken(team, x, y, 'player', 'medium'), reset);
         console.log('✅ App.tsx: Initial formation set up');
+        
+        // Update sequence with real token IDs after tokens are created
+        console.log('🔄 App.tsx: Updating sequence with real token IDs...');
+        const currentTokens = useBoardStore.getState().tokens; // Get updated tokens after creation
+        const updatedSequence = updateSequenceWithRealTokenIds(animationSequence, currentTokens);
+        console.log('✅ App.tsx: Sequence updated, replacing in store...');
+        // Remove old sequence and add updated one
+        removeSequence(animationSequence.id);
+        addSequence(updatedSequence);
+        console.log('✅ App.tsx: Updated sequence added to store');
       } else {
         console.log('ℹ️ App.tsx: Tokens already exist, skipping initial setup');
       }

@@ -179,29 +179,96 @@ export function setupTokensFromSequence(
   // Clear the board first
   reset();
 
-  const fieldWidth = 105;
-  const fieldHeight = 68;
+  console.log('🏁 Setting up tokens from sequence with', sequence.steps.length, 'steps');
   
-  // Get initial positions from first steps
-  const initialPositions = new Map<string, { team: 'red' | 'blue'; position: Point }>();
+  // Always create a full formation (11 players per team) regardless of sequence
+  // This ensures both teams are visible on the field
   
-  sequence.steps.forEach(step => {
-    if (step.tokenId && !initialPositions.has(step.tokenId)) {
-      // Determine team from the step (you might need to store this info differently)
-      const team = step.tokenId.includes('red') ? 'red' : 'blue'; // Fallback logic
-      
-      initialPositions.set(step.tokenId, {
-        team,
-        position: {
-          x: step.from.x * fieldWidth,
-          y: step.from.y * fieldHeight,
-        },
-      });
-    }
+  // Default 4-3-3 formation for blue team (left side)
+  const blueFormation = [
+    { x: 15, y: 34 },   // GK
+    { x: 25, y: 15 },   // RB  
+    { x: 25, y: 25 },   // CB
+    { x: 25, y: 43 },   // CB
+    { x: 25, y: 53 },   // LB
+    { x: 40, y: 20 },   // CM
+    { x: 40, y: 34 },   // CM
+    { x: 40, y: 48 },   // CM
+    { x: 60, y: 18 },   // RW
+    { x: 60, y: 34 },   // ST
+    { x: 60, y: 50 },   // LW
+  ];
+  
+  // Default 4-3-3 formation for red team (right side)  
+  const redFormation = [
+    { x: 90, y: 34 },   // GK
+    { x: 80, y: 15 },   // RB
+    { x: 80, y: 25 },   // CB  
+    { x: 80, y: 43 },   // CB
+    { x: 80, y: 53 },   // LB
+    { x: 65, y: 20 },   // CM
+    { x: 65, y: 34 },   // CM
+    { x: 65, y: 48 },   // CM
+    { x: 45, y: 18 },   // RW
+    { x: 45, y: 34 },   // ST
+    { x: 45, y: 50 },   // LW
+  ];
+  
+  // Create blue team players
+  blueFormation.forEach((pos, index) => {
+    console.log(`🔵 Creating blue player ${index + 1} at (${pos.x}, ${pos.y})`);
+    addToken('blue', pos.x, pos.y);
   });
+  
+  // Create red team players  
+  redFormation.forEach((pos, index) => {
+    console.log(`🔴 Creating red player ${index + 1} at (${pos.x}, ${pos.y})`);
+    addToken('red', pos.x, pos.y);
+  });
+  
+  console.log('✅ Full formation created: 22 players (11 blue + 11 red)');
+}
 
-  // Create tokens at initial positions
-  initialPositions.forEach(({ team, position }) => {
-    addToken(team, position.x, position.y);
+export function updateSequenceWithRealTokenIds(
+  sequence: AnimationSequence,
+  boardTokens: Token[]
+): AnimationSequence {
+  console.log('🔄 Updating sequence with real token IDs...');
+  console.log('🔍 Board tokens:', boardTokens);
+  console.log('🔍 Sequence steps before update:', sequence.steps);
+  
+  const updatedSteps = sequence.steps.map(step => {
+    // If token ID is virtual, replace with real token ID
+    if (step.tokenId?.startsWith('virtual_')) {
+      const [, team] = step.tokenId.split('_'); // Extract team from virtual_blue_0
+      
+      // Find available token for this team (prefer one not already used)
+      const teamTokens = boardTokens.filter(t => t.team === team && t.type === 'player');
+      const usedTokenIds = new Set(
+        sequence.steps
+          .filter(s => s.tokenId && !s.tokenId.startsWith('virtual_'))
+          .map(s => s.tokenId)
+      );
+      
+      const availableToken = teamTokens.find(t => !usedTokenIds.has(t.id)) || teamTokens[0];
+      
+      if (availableToken) {
+        console.log(`🔄 Mapping ${step.tokenId} -> ${availableToken.id}`);
+        return {
+          ...step,
+          tokenId: availableToken.id,
+        };
+      }
+    }
+    
+    return step;
   });
+  
+  const updatedSequence = {
+    ...sequence,
+    steps: updatedSteps,
+  };
+  
+  console.log('✅ Sequence updated with real token IDs:', updatedSequence.steps);
+  return updatedSequence;
 }
