@@ -25,19 +25,19 @@ DEBES responder SOLO con JSON válido siguiendo EXACTAMENTE esta estructura:
   "alineacion": {
     "formation": "4-3-3",
     "titularidad": [
-      {"playerId": "Jugador1", "pos": "POR", "rol": "Portero"},
-      {"playerId": "Jugador2", "pos": "DFC", "rol": "Defensa Central"},
-      {"playerId": "Jugador3", "pos": "DFC", "rol": "Defensa Central"},
-      {"playerId": "Jugador4", "pos": "LD", "rol": "Lateral Derecho"},
-      {"playerId": "Jugador5", "pos": "LI", "rol": "Lateral Izquierdo"},
-      {"playerId": "Jugador6", "pos": "MCD", "rol": "Mediocentro Defensivo"},
-      {"playerId": "Jugador7", "pos": "MC", "rol": "Mediocentro"},
-      {"playerId": "Jugador8", "pos": "MCO", "rol": "Mediocentro Ofensivo"},
-      {"playerId": "Jugador9", "pos": "ED", "rol": "Extremo Derecho"},
-      {"playerId": "Jugador10", "pos": "EI", "rol": "Extremo Izquierdo"},
-      {"playerId": "Jugador11", "pos": "DC", "rol": "Delantero Centro"}
+      {"playerId": "García", "pos": "POR", "rol": "Portero"},
+      {"playerId": "Martínez", "pos": "DFC", "rol": "Defensa Central"},
+      {"playerId": "López", "pos": "DFC", "rol": "Defensa Central"},
+      {"playerId": "Rodríguez", "pos": "LD", "rol": "Lateral Derecho"},
+      {"playerId": "Fernández", "pos": "LI", "rol": "Lateral Izquierdo"},
+      {"playerId": "González", "pos": "MCD", "rol": "Mediocentro Defensivo"},
+      {"playerId": "Sánchez", "pos": "MC", "rol": "Mediocentro"},
+      {"playerId": "Pérez", "pos": "MCO", "rol": "Mediocentro Ofensivo"},
+      {"playerId": "Díaz", "pos": "ED", "rol": "Extremo Derecho"},
+      {"playerId": "Moreno", "pos": "EI", "rol": "Extremo Izquierdo"},
+      {"playerId": "Jiménez", "pos": "DC", "rol": "Delantero Centro"}
     ],
-    "banquillo": ["Jugador12", "Jugador13"],
+    "banquillo": ["Ruiz", "Herrera"],
     "instrucciones": ["Presión alta tras pérdida", "Juego combinativo"]
   },
   "planPartido": {
@@ -73,9 +73,10 @@ DEBES responder SOLO con JSON válido siguiendo EXACTAMENTE esta estructura:
   ]
 }`;
 
+    const allPlayers = payload?.players || [];
     const contextInfo = {
       squad: payload?.squadId || "Equipo",
-      players: (payload?.players || []).slice(0, 3).map(p => p.nombre || p.id),
+      players: allPlayers.map(p => p.nombre || p.id),
       opponent: payload?.opponent?.rival || "Rival",
       objectives: payload?.plan?.objetivos || ["ganar"],
       resources: payload?.plan?.recursos || ["presión alta"],
@@ -84,11 +85,14 @@ DEBES responder SOLO con JSON válido siguiendo EXACTAMENTE esta estructura:
 
     const user = `Crea un plan táctico para:
 - Equipo: ${contextInfo.squad}
-- Jugadores clave: ${contextInfo.players.join(', ')}
+- Jugadores disponibles: ${contextInfo.players.join(', ')}
 - Rival: ${contextInfo.opponent}
 - Objetivos: ${contextInfo.objectives.join(', ')}
 - Recursos: ${contextInfo.resources.join(', ')}
 - Formaciones permitidas: ${contextInfo.formations.join(', ')}
+
+IMPORTANTE: Usa los nombres reales de los jugadores disponibles en la alineación titular y banquillo. 
+NO uses nombres genéricos como "Jugador1", "Jugador2", etc.
 
 Genera 3 situaciones tácticas diferentes con primitivas gráficas (coordenadas entre 0 y 1).`;
 
@@ -124,15 +128,18 @@ Genera 3 situaciones tácticas diferentes con primitivas gráficas (coordenadas 
 
     // Asegurar que titularidad tenga 11 jugadores
     if (!parsed.alineacion.titularidad || parsed.alineacion.titularidad.length !== 11) {
-      // Completar la alineación si está incompleta
+      // Completar la alineación si está incompleta usando jugadores disponibles
       const currentPlayers = parsed.alineacion.titularidad || [];
       const missingCount = 11 - currentPlayers.length;
       const positions = ["POR","DFC","DFC","LD","LI","MCD","MC","MCO","ED","EI","DC"];
+      const availablePlayers = allPlayers.slice(0); // Copia de jugadores disponibles
       
       for (let i = 0; i < missingCount && i < positions.length; i++) {
+        const playerIndex = currentPlayers.length;
+        const playerName = availablePlayers[playerIndex]?.nombre || `Jugador${playerIndex + 1}`;
         currentPlayers.push({
-          playerId: `Jugador${currentPlayers.length + 1}`,
-          pos: positions[currentPlayers.length] || "MC",
+          playerId: playerName,
+          pos: positions[playerIndex] || "MC",
           rol: "Jugador"
         });
       }
