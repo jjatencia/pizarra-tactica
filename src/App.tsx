@@ -314,15 +314,12 @@ function App() {
     console.log('🎬 App.tsx: Descripción original:', originalDescription);
     
     try {
-      // Check if this is a "questions only" sequence (shouldn't happen now with new dialog system)
-      if (tacticalSequence.questions && tacticalSequence.questions.length > 0 && (!tacticalSequence.steps || tacticalSequence.steps.length === 0)) {
-        console.warn('⚠️ App.tsx: Questions-only sequence received - should be handled by TacticalDescriptionInput');
+      // Check if sequence has questions - these should be handled by the question dialog, not processed directly
+      if (tacticalSequence.questions && tacticalSequence.questions.length > 0) {
+        console.warn('⚠️ App.tsx: Sequence with questions received - this should be handled by TacticalDescriptionInput dialog');
+        console.log('⚠️ Questions:', tacticalSequence.questions);
+        console.log('⚠️ This sequence should not reach App.tsx - questions should be answered first');
         return;
-      }
-      
-      // If AI returned questions WITH steps, just log them but continue processing
-      if (tacticalSequence.questions && tacticalSequence.questions.length > 0 && tacticalSequence.steps && tacticalSequence.steps.length > 0) {
-        console.log('ℹ️ App.tsx: Sequence has optional questions, ignoring and processing steps:', tacticalSequence.questions);
       }
       
       console.log('🔄 App.tsx: Convirtiendo secuencia táctica a secuencia de animación...');
