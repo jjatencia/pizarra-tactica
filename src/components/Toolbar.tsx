@@ -74,6 +74,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const yellowTokens = tokens.filter(t => t.team === 'yellow');
 
   const [menuTarget, setMenuTarget] = useState<(Team | 'ball' | 'cone' | 'minigoal') | null>(null);
+  const [showIaMenu, setShowIaMenu] = useState(false);
   const longPressTimeout = useRef<number>();
 
   const startPress = (key: Team | 'ball' | 'cone' | 'minigoal') => {
@@ -337,30 +338,23 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
       {/* Right Section: Actions */}
       <div className="flex items-center gap-2">
-        <a
-          href="/equipo"
-          className="control-btn"
-        >
-          Equipo
-        </a>
-        <a
-          href="/equipos"
-          className="control-btn"
-        >
-          Equipos
-        </a>
-        <a
-          href="/rivales"
-          className="control-btn"
-        >
-          Rivales
-        </a>
-        <a
-          href="/planes"
-          className="control-btn"
-        >
-          Planes
-        </a>
+        {/* Tácticas IA dropdown */}
+        <div className="relative">
+          <button
+            className="control-btn"
+            onClick={() => setShowIaMenu(v => !v)}
+          >
+            Tácticas IA
+          </button>
+          {showIaMenu && (
+            <div className="absolute right-0 mt-2 bg-gray-800 border border-gray-700 rounded shadow-lg z-50 min-w-[160px]">
+              <a href="/equipo" className="block px-3 py-2 hover:bg-gray-700 text-white" onClick={() => setShowIaMenu(false)}>Equipo</a>
+              <a href="/equipos" className="block px-3 py-2 hover:bg-gray-700 text-white" onClick={() => setShowIaMenu(false)}>Equipos</a>
+              <a href="/rivales" className="block px-3 py-2 hover:bg-gray-700 text-white" onClick={() => setShowIaMenu(false)}>Rivales</a>
+              <a href="/planes" className="block px-3 py-2 hover:bg-gray-700 text-white" onClick={() => setShowIaMenu(false)}>Planes</a>
+            </div>
+          )}
+        </div>
         <button
           className="control-btn"
           onClick={onShowFormations}
