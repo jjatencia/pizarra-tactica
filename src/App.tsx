@@ -346,6 +346,9 @@ function App() {
 
     const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
     const dist = (a: {x:number;y:number}, b: {x:number;y:number}) => Math.hypot(a.x - b.x, a.y - b.y);
+    const easeLinear = (t: number) => t;
+    const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+    const easeOutQuad = (t: number) => 1 - (1 - t) * (1 - t);
     const moveDuration = (from: {x:number;y:number}, to: {x:number;y:number}) => {
       const d = dist(from, to);
       return clamp((d / PLAYER_SPEED_MPS) * 1000, MIN_MOVE_MS, MAX_MOVE_MS);
@@ -443,15 +446,28 @@ function App() {
       const lp = lastPoint[id] || initialPositions[id];
       while (paths[id].length < len) paths[id].push({ x: lp.x, y: lp.y });
     };
-    const addLinear = (id: string, from: {x:number;y:number}, to: {x:number;y:number}, startStep: number, steps: number) => {
+    const addLinear = (id: string, from: {x:number;y:number}, to: {x:number;y:number}, startStep: number, steps: number, ease: (t:number)=>number = easeLinear) => {
       ensureLen(id, startStep);
       const start = paths[id].length === 0 ? from : paths[id][paths[id].length - 1];
       // si hay salto, rellenar con 'from' hasta startStep
       while (paths[id].length < startStep) paths[id].push({ x: start.x, y: start.y });
       for (let i=1; i<=steps; i++) {
-        const t = i/steps;
+        const t = ease(i/steps);
         const x = from.x + (to.x - from.x) * t;
         const y = from.y + (to.y - from.y) * t;
+        paths[id].push({ x, y });
+      }
+      lastPoint[id] = { x: to.x, y: to.y };
+    };
+    const addBezier = (id: string, from: {x:number;y:number}, cp: {x:number;y:number}, to: {x:number;y:number}, startStep: number, steps: number, ease: (t:number)=>number = easeInOutCubic) => {
+      ensureLen(id, startStep);
+      const start = paths[id].length === 0 ? from : paths[id][paths[id].length - 1];
+      while (paths[id].length < startStep) paths[id].push({ x: start.x, y: start.y });
+      for (let i=1; i<=steps; i++) {
+        const te = ease(i/steps);
+        const omt = 1 - te;
+        const x = omt*omt*from.x + 2*omt*te*cp.x + te*te*to.x;
+        const y = omt*omt*from.y + 2*omt*te*cp.y + te*te*to.y;
         paths[id].push({ x, y });
       }
       lastPoint[id] = { x: to.x, y: to.y };
@@ -471,7 +487,7 @@ function App() {
           const startStep = Math.max(0, Math.floor(t0 / FRAME_MS));
           const dur = moveDuration(lastPoint[id] || from, to);
           const steps = Math.max(6, Math.floor(dur / FRAME_MS));
-          addLinear(id, lastPoint[id] || from, to, startStep, steps);
+          addLinear(id, lastPoint[id] || from, to, startStep, steps, easeInOutCubic);
         }
       } else if (pr.tipo === 'arrow') {
         const team = pr.equipo === 'propio' ? 'blue' : 'red';
@@ -483,7 +499,7 @@ function App() {
           const startStepR = Math.max(0, Math.floor((t0 - lead) / FRAME_MS));
           const durR = moveDuration(lastPoint[receiverId] || to, to) * 0.6;
           const stepsR = Math.max(4, Math.floor(durR / FRAME_MS));
-          addLinear(receiverId, lastPoint[receiverId] || to, to, startStepR, stepsR);
+          addLinear(receiverId, lastPoint[receiverId] || to, to, startStepR, stepsR, easeOutQuad);
         }
         // Pase del balón
         const passFrom = passerId ? (lastPoint[passerId] || from) : from;
@@ -493,7 +509,22 @@ function App() {
           const startStepB = Math.max(0, Math.floor(t0 / FRAME_MS));
           const durB = passDuration(passFrom, passTo);
           const stepsB = Math.max(4, Math.floor(durB / FRAME_MS));
-          addLinear(ballId, lastPoint[ballId] || passFrom, passTo, startStepB, stepsB);
+          // Pases largos con ligera curvatura
+          const d = dist(passFrom, passTo);
+          const LONG_PASS = 25; // metros
+          if (d > LONG_PASS) {
+            const vx = passTo.x - passFrom.x;
+            const vy = passTo.y - passFrom.y;
+            const len = Math.hypot(vx, vy) || 1;
+            const ux = vx / len, uy = vy / len;
+            const nx = -uy, ny = ux; // perpendicular
+            const mid = { x: (passFrom.x + passTo.x) / 2, y: (passFrom.y + passTo.y) / 2 };
+            const offset = clamp(d * 0.18, 6, 18); // altura del arco
+            const cp = { x: mid.x + nx * offset, y: mid.y + ny * offset };
+            addBezier(ballId, lastPoint[ballId] || passFrom, cp, passTo, startStepB, stepsB, easeInOutCubic);
+          } else {
+            addLinear(ballId, lastPoint[ballId] || passFrom, passTo, startStepB, stepsB, easeInOutCubic);
+          }
         }
       }
     });
