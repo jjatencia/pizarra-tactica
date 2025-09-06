@@ -334,6 +334,12 @@ function App() {
     const fieldWidth = 105;
     const fieldHeight = 68;
 
+    // Parámetros de tiempo (ms)
+    const FRAME_MS = 33; // ~30fps
+    const MOVE_MS = 1000;
+    const PASS_MS = 700;
+    const RECEIVER_LEAD_MS = 400;
+
     // Helper: encontrar ficha más cercana de un equipo a un punto
     const findNearestTokenId = (team: 'blue' | 'red', point: { x: number; y: number }) => {
       let minD = Infinity; let id: string | null = null;
@@ -346,16 +352,6 @@ function App() {
       return id;
     };
 
-    // Asegurar balón
-    let ballId: string | null = null;
-    const ensureBallAt = (p: { x: number; y: number }) => {
-      const existing = useBoardStore.getState().tokens.find(t => t.type === 'ball');
-      if (existing) { ballId = existing.id; store.updateToken(existing.id, { x: p.x, y: p.y }); return existing.id; }
-      store.addObject('ball', p.x, p.y, 'small');
-      ballId = useBoardStore.getState().tokens.find(t => t.type === 'ball')?.id || null;
-      return ballId;
-    };
-
     // Crear fichas iniciales desde markers y mapear marker.id -> token.id
     const markerToToken: Record<string, string> = {};
     const markers = pack.primitivas.filter(p => p.tipo === 'marker');
@@ -364,7 +360,6 @@ function App() {
       const pt = { x: m.puntos[0].x * fieldWidth, y: m.puntos[0].y * fieldHeight };
       const team = m.equipo === 'propio' ? 'blue' : 'red';
       const before = useBoardStore.getState().tokens.length;
-      // si ya existe una ficha muy cerca, no añadir
       const nearest = findNearestTokenId(team, pt);
       const nearEnough = nearest && Math.hypot((useBoardStore.getState().tokens.find(t => t.id===nearest)!.x - pt.x), (useBoardStore.getState().tokens.find(t => t.id===nearest)!.y - pt.y)) <= 3;
       if (!nearEnough) store.addToken(team, pt.x, pt.y, 'player', 'medium');
@@ -378,62 +373,119 @@ function App() {
       if (created) markerToToken[m.id] = created;
     });
 
-    // Posición inicial del balón: inicio de la primera flecha
-    const firstArrow = pack.primitivas.filter(p => p.tipo === 'arrow').sort((a,b)=>(a.tiempo||0)-(b.tiempo||0))[0];
+    // Preparar timeline
+    const primitives = [...pack.primitivas];
+    const totalDuration = primitives.reduce((acc, pr) => {
+      const base = pr.tipo === 'arrow' ? PASS_MS : pr.tipo === 'move' ? MOVE_MS : 0;
+      const end = (pr.tiempo || 0) + base;
+      return Math.max(acc, end);
+    }, 0);
+    const totalSteps = Math.max(1, Math.ceil(totalDuration / FRAME_MS));
+
+    // Paths por tokenId
+    const tokenIds = useBoardStore.getState().tokens.map(t => t.id);
+    const initialPositions: Record<string, { x:number; y:number }> = {};
+    tokenIds.forEach(id => {
+      const t = useBoardStore.getState().tokens.find(x => x.id === id)!;
+      initialPositions[id] = { x: t.x, y: t.y };
+    });
+
+    // Ball setup
+    let ballId: string | null = useBoardStore.getState().tokens.find(t => t.type === 'ball')?.id || null;
+    const ensureBall = (p: { x:number; y:number }) => {
+      if (!ballId) {
+        store.addObject('ball', p.x, p.y, 'small');
+        ballId = useBoardStore.getState().tokens.find(t => t.type === 'ball')?.id || null;
+        if (ballId) initialPositions[ballId] = { x: p.x, y: p.y };
+      } else {
+        store.updateToken(ballId, { x: p.x, y: p.y });
+        initialPositions[ballId] = { x: p.x, y: p.y };
+      }
+    };
+
+    // Determinar punto inicial del balón
+    const firstArrow = primitives.filter(p => p.tipo === 'arrow').sort((a,b)=>(a.tiempo||0)-(b.tiempo||0))[0];
     if (firstArrow) {
       const from = { x: firstArrow.puntos[0].x * fieldWidth, y: firstArrow.puntos[0].y * fieldHeight };
-      // Intentar anclar a ficha del equipo propio/rival según 'equipo'
       const team = firstArrow.equipo === 'propio' ? 'blue' : 'red';
       const passerId = (firstArrow.targets && firstArrow.targets[0] && markerToToken[firstArrow.targets[0]]) || findNearestTokenId(team, from);
       if (passerId) {
         const passer = useBoardStore.getState().tokens.find(t => t.id === passerId)!;
-        ensureBallAt({ x: passer.x, y: passer.y });
+        ensureBall({ x: passer.x, y: passer.y });
       } else {
-        ensureBallAt(from);
+        ensureBall(from);
       }
     }
 
-    // Construir paths por id
-    const addPath = (id: string, from: {x:number;y:number}, to: {x:number;y:number}, steps = 30) => {
-      for (let i=0;i<=steps;i++) {
+    // Estructuras auxiliares
+    const paths: Record<string, { x:number; y:number }[]> = {};
+    const lastPoint: Record<string, { x:number; y:number }> = { ...initialPositions };
+    const ensureLen = (id: string, len: number) => {
+      if (!paths[id]) paths[id] = [];
+      const lp = lastPoint[id] || initialPositions[id];
+      while (paths[id].length < len) paths[id].push({ x: lp.x, y: lp.y });
+    };
+    const addLinear = (id: string, from: {x:number;y:number}, to: {x:number;y:number}, startStep: number, steps: number) => {
+      ensureLen(id, startStep);
+      const start = paths[id].length === 0 ? from : paths[id][paths[id].length - 1];
+      // si hay salto, rellenar con 'from' hasta startStep
+      while (paths[id].length < startStep) paths[id].push({ x: start.x, y: start.y });
+      for (let i=1; i<=steps; i++) {
         const t = i/steps;
         const x = from.x + (to.x - from.x) * t;
         const y = from.y + (to.y - from.y) * t;
-        store.addTokenPathPoint(id, { x, y });
+        paths[id].push({ x, y });
       }
+      lastPoint[id] = { x: to.x, y: to.y };
     };
 
-    const sorted = [...pack.primitivas].sort((a,b)=>(a.tiempo||0)-(b.tiempo||0));
+    // Construir timeline respetando tiempos
+    const sorted = primitives.sort((a,b)=>(a.tiempo||0)-(b.tiempo||0));
     sorted.forEach(pr => {
+      const t0 = pr.tiempo || 0;
       if (!pr.puntos || pr.puntos.length < 2) return;
       const from = { x: pr.puntos[0].x * fieldWidth, y: pr.puntos[0].y * fieldHeight };
       const to = { x: pr.puntos[1].x * fieldWidth, y: pr.puntos[1].y * fieldHeight };
       if (pr.tipo === 'move') {
         const team = pr.equipo === 'propio' ? 'blue' : 'red';
-        // target explícito o el más cercano
         const id = (pr.targets && pr.targets[0] && markerToToken[pr.targets[0]]) || findNearestTokenId(team, from);
-        if (id) addPath(id, from, to, 24);
+        if (id) {
+          const startStep = Math.max(0, Math.floor(t0 / FRAME_MS));
+          const steps = Math.max(6, Math.floor(MOVE_MS / FRAME_MS));
+          addLinear(id, lastPoint[id] || from, to, startStep, steps);
+        }
       } else if (pr.tipo === 'arrow') {
-        // Tratar flecha como pase: el balón parte del pasador (ficha), no de la nada
         const team = pr.equipo === 'propio' ? 'blue' : 'red';
         const passerId = (pr.targets && pr.targets[0] && markerToToken[pr.targets[0]]) || findNearestTokenId(team, from);
         const receiverId = (pr.targets && pr.targets[1] && markerToToken[pr.targets[1]]) || findNearestTokenId(team, to);
-        let passFrom = from;
-        let passTo = to;
-        if (passerId) {
-          const passer = useBoardStore.getState().tokens.find(t => t.id === passerId)!;
-          passFrom = { x: passer.x, y: passer.y };
-        }
+        // Mover receptor un poco antes
         if (receiverId) {
-          const receiver = useBoardStore.getState().tokens.find(t => t.id === receiverId)!;
-          // opcional: mover receptor ligeramente al punto objetivo antes del pase
-          addPath(receiver.id, { x: receiver.x, y: receiver.y }, to, 12);
-          passTo = { x: receiver.x, y: receiver.y };
+          const startStepR = Math.max(0, Math.floor((t0 - RECEIVER_LEAD_MS) / FRAME_MS));
+          const stepsR = Math.max(4, Math.floor((MOVE_MS * 0.6) / FRAME_MS));
+          addLinear(receiverId, lastPoint[receiverId] || to, to, startStepR, stepsR);
         }
-        if (!ballId) ensureBallAt(passFrom);
-        if (ballId) addPath(ballId, passFrom, passTo, 24);
+        // Pase del balón
+        const passFrom = passerId ? (lastPoint[passerId] || from) : from;
+        const passTo = receiverId ? (lastPoint[receiverId] || to) : to;
+        if (!ballId) ensureBall(passFrom);
+        if (ballId) {
+          const startStepB = Math.max(0, Math.floor(t0 / FRAME_MS));
+          const stepsB = Math.max(4, Math.floor(PASS_MS / FRAME_MS));
+          addLinear(ballId, lastPoint[ballId] || passFrom, passTo, startStepB, stepsB);
+        }
       }
     });
+
+    // Rellenar el resto de la línea de tiempo con la última posición
+    Object.keys(paths).forEach(id => ensureLen(id, totalSteps + 1));
+
+    // Volcar paths al store en orden de tiempo para reproducir coherente
+    for (let s = 0; s <= totalSteps; s++) {
+      Object.entries(paths).forEach(([id, arr]) => {
+        const p = arr[Math.min(s, arr.length - 1)];
+        store.addTokenPathPoint(id, p);
+      });
+    }
 
     // Reproducir
     setTimeout(() => store.playTokenPaths(), 200);
