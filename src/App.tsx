@@ -334,11 +334,26 @@ function App() {
     const fieldWidth = 105;
     const fieldHeight = 68;
 
-    // Parámetros de tiempo (ms)
+    // Parámetros de tiempo (ms) y velocidades realistas
     const FRAME_MS = 33; // ~30fps
-    const MOVE_MS = 1000;
-    const PASS_MS = 700;
-    const RECEIVER_LEAD_MS = 400;
+    const PLAYER_SPEED_MPS = 4.2; // velocidad media de desplazamiento
+    const BALL_SPEED_MPS = 16; // velocidad media del pase raso
+    const MIN_MOVE_MS = 300;
+    const MAX_MOVE_MS = 2500;
+    const MIN_PASS_MS = 200;
+    const MAX_PASS_MS = 1500;
+    const RECEIVER_LEAD_FRAC = 0.35; // el receptor empieza ~35% antes del pase
+
+    const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+    const dist = (a: {x:number;y:number}, b: {x:number;y:number}) => Math.hypot(a.x - b.x, a.y - b.y);
+    const moveDuration = (from: {x:number;y:number}, to: {x:number;y:number}) => {
+      const d = dist(from, to);
+      return clamp((d / PLAYER_SPEED_MPS) * 1000, MIN_MOVE_MS, MAX_MOVE_MS);
+    };
+    const passDuration = (from: {x:number;y:number}, to: {x:number;y:number}) => {
+      const d = dist(from, to);
+      return clamp((d / BALL_SPEED_MPS) * 1000, MIN_PASS_MS, MAX_PASS_MS);
+    };
 
     // Helper: encontrar ficha más cercana de un equipo a un punto
     const findNearestTokenId = (team: 'blue' | 'red', point: { x: number; y: number }) => {
@@ -376,7 +391,10 @@ function App() {
     // Preparar timeline
     const primitives = [...pack.primitivas];
     const totalDuration = primitives.reduce((acc, pr) => {
-      const base = pr.tipo === 'arrow' ? PASS_MS : pr.tipo === 'move' ? MOVE_MS : 0;
+      if (!pr.puntos || pr.puntos.length < 2) return acc;
+      const from = { x: pr.puntos[0].x * fieldWidth, y: pr.puntos[0].y * fieldHeight };
+      const to = { x: pr.puntos[1].x * fieldWidth, y: pr.puntos[1].y * fieldHeight };
+      const base = pr.tipo === 'arrow' ? passDuration(from, to) : pr.tipo === 'move' ? moveDuration(from, to) : 0;
       const end = (pr.tiempo || 0) + base;
       return Math.max(acc, end);
     }, 0);
@@ -451,7 +469,8 @@ function App() {
         const id = (pr.targets && pr.targets[0] && markerToToken[pr.targets[0]]) || findNearestTokenId(team, from);
         if (id) {
           const startStep = Math.max(0, Math.floor(t0 / FRAME_MS));
-          const steps = Math.max(6, Math.floor(MOVE_MS / FRAME_MS));
+          const dur = moveDuration(lastPoint[id] || from, to);
+          const steps = Math.max(6, Math.floor(dur / FRAME_MS));
           addLinear(id, lastPoint[id] || from, to, startStep, steps);
         }
       } else if (pr.tipo === 'arrow') {
@@ -460,8 +479,10 @@ function App() {
         const receiverId = (pr.targets && pr.targets[1] && markerToToken[pr.targets[1]]) || findNearestTokenId(team, to);
         // Mover receptor un poco antes
         if (receiverId) {
-          const startStepR = Math.max(0, Math.floor((t0 - RECEIVER_LEAD_MS) / FRAME_MS));
-          const stepsR = Math.max(4, Math.floor((MOVE_MS * 0.6) / FRAME_MS));
+          const lead = RECEIVER_LEAD_FRAC * passDuration(from, to);
+          const startStepR = Math.max(0, Math.floor((t0 - lead) / FRAME_MS));
+          const durR = moveDuration(lastPoint[receiverId] || to, to) * 0.6;
+          const stepsR = Math.max(4, Math.floor(durR / FRAME_MS));
           addLinear(receiverId, lastPoint[receiverId] || to, to, startStepR, stepsR);
         }
         // Pase del balón
@@ -470,7 +491,8 @@ function App() {
         if (!ballId) ensureBall(passFrom);
         if (ballId) {
           const startStepB = Math.max(0, Math.floor(t0 / FRAME_MS));
-          const stepsB = Math.max(4, Math.floor(PASS_MS / FRAME_MS));
+          const durB = passDuration(passFrom, passTo);
+          const stepsB = Math.max(4, Math.floor(durB / FRAME_MS));
           addLinear(ballId, lastPoint[ballId] || passFrom, passTo, startStepB, stepsB);
         }
       }
