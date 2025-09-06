@@ -47,7 +47,7 @@ export function convertTacticalToAnimationSequence(
   const fieldHeight = 68;
   
   // Find or assign tokens for each unique actor
-  Array.from(uniqueActors).forEach(actorKey => {
+  Array.from(uniqueActors).forEach((actorKey, index) => {
     const [team] = actorKey.split('_');
     
     // Find the best matching token for this actor
@@ -60,6 +60,10 @@ export function convertTacticalToAnimationSequence(
       ) || teamTokens[0];
       
       tokenMapping[actorKey] = availableToken.id;
+    } else {
+      // Create a virtual token ID when no board tokens exist
+      tokenMapping[actorKey] = `virtual_${team}_${index}`;
+      console.log(`🔄 Converter: Created virtual token for ${actorKey}: virtual_${team}_${index}`);
     }
   });
 
