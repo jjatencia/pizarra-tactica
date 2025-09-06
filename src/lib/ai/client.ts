@@ -5,13 +5,23 @@ import { AIPayload } from "./payload";
 export async function fetchAIResponse(payload: AIPayload): Promise<AIResponse> {
   let res: Response;
   try {
+    // Crear AbortController con timeout de 30 segundos
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
     res = await fetch("/api/ai/tactics", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
   } catch (e) {
     const err = e as Error;
+    if (err.name === 'AbortError') {
+      throw new Error("La IA tardó demasiado en responder. Inténtalo de nuevo.");
+    }
     throw new Error(`Fallo de red al invocar la IA: ${err.message}`);
   }
   if (!res.ok) {
