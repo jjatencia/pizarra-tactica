@@ -16,19 +16,71 @@ export default async function handler(req, res) {
     // Lee el payload recibido (usa el que ya probaste con curl)
     const payload = await readJson(req);
 
-    // Construye prompts mínimos (versión simple de prueba)
-    const system = "Eres un asistente táctico de fútbol. Devuelve SOLO JSON válido con {alineacion:{}, planPartido:{}, jugadas:[]}.";
+    // Sistema de prompt mejorado para generar situaciones tácticas
+    const system = `Eres un entrenador de fútbol profesional. Analiza el equipo y rival para crear un plan táctico completo.
 
-    const minimal = {
-      squadId: payload?.squadId,
-      players: (payload?.players || []).map(p => ({
-        id: p.id, nombre: p.nombre, dorsal: p.dorsal, pie: p.pie, posiciones: p.posiciones
-      })),
-      opponent: payload?.opponent,
-      plan: { fecha: payload?.plan?.fecha, objetivos: payload?.plan?.objetivos || [], recursos: payload?.plan?.recursos || [] },
-      context: payload?.context || {}
+DEBES responder SOLO con JSON válido siguiendo EXACTAMENTE esta estructura:
+
+{
+  "alineacion": {
+    "formation": "4-3-3",
+    "titularidad": [
+      {"playerId": "Jugador1", "pos": "POR", "rol": "Portero"}
+    ],
+    "banquillo": ["Jugador12", "Jugador13"],
+    "instrucciones": ["Presión alta tras pérdida", "Juego combinativo"]
+  },
+  "planPartido": {
+    "faseDefensa": ["Bloque medio-alto", "Pressing coordinado"],
+    "faseAtaque": ["Juego por bandas", "Remates desde fuera del área"],
+    "transicionOf": ["Salida rápida por bandas"],
+    "transicionDef": ["Repliegue inmediato"]
+  },
+  "jugadas": [
+    {
+      "titulo": "Ataque por banda derecha",
+      "objetivo": "Crear superioridad numérica",
+      "instrucciones": ["Lateral sube", "Extremo se abre", "Mediocampista apoya"],
+      "primitivas": [
+        {
+          "id": "move1",
+          "tipo": "marker",
+          "equipo": "propio",
+          "targets": [],
+          "puntos": [{"x": 0.8, "y": 0.2}],
+          "estilo": {"etiqueta": "LD"}
+        },
+        {
+          "id": "arrow1",
+          "tipo": "arrow",
+          "equipo": "propio", 
+          "targets": [],
+          "puntos": [{"x": 0.8, "y": 0.2}, {"x": 0.9, "y": 0.1}],
+          "estilo": {"discontinua": false}
+        }
+      ]
+    }
+  ]
+}`;
+
+    const contextInfo = {
+      squad: payload?.squadId || "Equipo",
+      players: (payload?.players || []).slice(0, 3).map(p => p.nombre || p.id),
+      opponent: payload?.opponent?.rival || "Rival",
+      objectives: payload?.plan?.objetivos || ["ganar"],
+      resources: payload?.plan?.recursos || ["presión alta"],
+      formations: payload?.context?.formacionesPermitidas || ["4-3-3", "4-4-2"]
     };
-    const user = JSON.stringify(minimal);
+
+    const user = `Crea un plan táctico para:
+- Equipo: ${contextInfo.squad}
+- Jugadores clave: ${contextInfo.players.join(', ')}
+- Rival: ${contextInfo.opponent}
+- Objetivos: ${contextInfo.objectives.join(', ')}
+- Recursos: ${contextInfo.resources.join(', ')}
+- Formaciones permitidas: ${contextInfo.formations.join(', ')}
+
+Genera 3 situaciones tácticas diferentes con primitivas gráficas (coordenadas entre 0 y 1).`;
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
