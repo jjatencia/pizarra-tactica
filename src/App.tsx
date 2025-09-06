@@ -446,6 +446,11 @@ function App() {
       const lp = lastPoint[id] || initialPositions[id];
       while (paths[id].length < len) paths[id].push({ x: lp.x, y: lp.y });
     };
+    const getPointAt = (id: string, step: number) => {
+      const arr = paths[id];
+      if (arr && arr.length > step) return arr[step];
+      return lastPoint[id] || initialPositions[id];
+    };
     const addLinear = (id: string, from: {x:number;y:number}, to: {x:number;y:number}, startStep: number, steps: number, ease: (t:number)=>number = easeLinear) => {
       ensureLen(id, startStep);
       const start = paths[id].length === 0 ? from : paths[id][paths[id].length - 1];
@@ -501,18 +506,29 @@ function App() {
           const stepsR = Math.max(4, Math.floor(durR / FRAME_MS));
           addLinear(receiverId, lastPoint[receiverId] || to, to, startStepR, stepsR, easeOutQuad);
         }
-        // Pase del balón
-        const passFrom = passerId ? (lastPoint[passerId] || from) : from;
-        const passTo = receiverId ? (lastPoint[receiverId] || to) : to;
+        // Pase del balón con coordinación: espera a que el receptor alcance ~70% de su movimiento
+        const baseStartStep = Math.max(0, Math.floor(t0 / FRAME_MS));
+        let startStepB = baseStartStep;
+        if (receiverId && paths[receiverId]) {
+          // usamos el último tramo añadido para el receptor
+          const stepsR = paths[receiverId].length;
+          const readyStep = Math.max(baseStartStep, Math.floor(stepsR * 0.7));
+          startStepB = Math.max(baseStartStep, readyStep);
+        }
+
+        // Garantizar lectura de posiciones a startStepB
+        if (passerId) ensureLen(passerId, startStepB + 1);
+        if (receiverId) ensureLen(receiverId, startStepB + 1);
+
+        const passFrom = passerId ? getPointAt(passerId, startStepB) : from;
+        const passTo = receiverId ? getPointAt(receiverId, startStepB) : to;
         if (!ballId) ensureBall(passFrom);
         if (ballId) {
-          const startStepB = Math.max(0, Math.floor(t0 / FRAME_MS));
           const durB = passDuration(passFrom, passTo);
           const stepsB = Math.max(4, Math.floor(durB / FRAME_MS));
-          // Pases largos con ligera curvatura
-          const d = dist(passFrom, passTo);
+          const dNow = dist(passFrom, passTo);
           const LONG_PASS = 25; // metros
-          if (d > LONG_PASS) {
+          if (dNow > LONG_PASS) {
             // Rival-aware control point: curvar alejando del rival más cercano a la línea
             const vx = passTo.x - passFrom.x;
             const vy = passTo.y - passFrom.y;
@@ -520,7 +536,7 @@ function App() {
             const ux = vx / len, uy = vy / len;
             const nx = -uy, ny = ux; // perpendicular
             const mid = { x: (passFrom.x + passTo.x) / 2, y: (passFrom.y + passTo.y) / 2 };
-            const offset = clamp(d * 0.18, 6, 18); // altura del arco
+            const offset = clamp(dNow * 0.18, 6, 18); // altura del arco
 
             const passerTeam: 'blue' | 'red' = pr.equipo === 'propio' ? 'blue' : 'red';
             const rivals = useBoardStore.getState().tokens.filter(t => t.type === 'player' && t.team !== passerTeam);
@@ -533,12 +549,11 @@ function App() {
               return { x: a.x + abx*t, y: a.y + aby*t };
             };
 
-            // Elegir lado que deje el control point más lejos del rival más cercano a la línea
+            // Elegir lado
             let cp1 = { x: mid.x + nx * offset, y: mid.y + ny * offset };
             let cp2 = { x: mid.x - nx * offset, y: mid.y - ny * offset };
 
             if (rivals.length > 0) {
-              // Rival más cercano al segmento
               let bestR = rivals[0];
               let bestD = Infinity;
               for (const r of rivals) {
@@ -551,7 +566,6 @@ function App() {
               const cp = d1 >= d2 ? cp1 : cp2;
               addBezier(ballId, lastPoint[ballId] || passFrom, cp, passTo, startStepB, stepsB, easeInOutCubic);
             } else {
-              // Sin rivales, usar primer lado por defecto
               addBezier(ballId, lastPoint[ballId] || passFrom, cp1, passTo, startStepB, stepsB, easeInOutCubic);
             }
           } else {
