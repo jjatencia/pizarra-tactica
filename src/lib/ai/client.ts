@@ -5,9 +5,9 @@ import { AIPayload } from "./payload";
 export async function fetchAIResponse(payload: AIPayload): Promise<AIResponse> {
   let res: Response;
   try {
-    // Crear AbortController con timeout de 30 segundos
+    // Crear AbortController con timeout de 60 segundos
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
     
     res = await fetch("/api/ai/tactics", {
       method: "POST",

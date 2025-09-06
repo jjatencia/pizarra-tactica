@@ -138,18 +138,22 @@ Coordenadas entre 0 y 1 (0,0 = esquina superior izquierda, 1,1 = esquina inferio
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    // Timeout de 25s para no colgar la función
+    // Timeout de 50s para dar más tiempo a la IA
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 25_000);
+    const timer = setTimeout(() => controller.abort(), 50_000);
 
+    console.log("🤖 Iniciando llamada a OpenAI...");
     const completion = await openai.chat.completions.create({
       model: MODEL,
       messages: [
         { role: "system", content: system },
         { role: "user", content: user }
       ],
-      response_format: { type: "json_object" }
+      response_format: { type: "json_object" },
+      max_tokens: 4000,
+      temperature: 0.7
     }, { signal: controller.signal });
+    console.log("✅ OpenAI respondió correctamente");
 
     clearTimeout(timer);
 
