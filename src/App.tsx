@@ -65,6 +65,7 @@ function App() {
     playTokenPaths,
     reset,
     addSequence,
+    removeSequence,
   } = useBoardStore();
   
   // Field dimensions
@@ -380,7 +381,7 @@ function App() {
       const errorMsg = 'Error procesando la secuencia generada: ' + (err instanceof Error ? err.message : 'Error desconocido');
       setError(errorMsg);
     }
-  }, [tokens, addSequence, addToken, reset]);
+  }, [tokens, addSequence, removeSequence, addToken, reset]);
 
   const handleSequenceError = useCallback((errorMessage: string) => {
     setError(errorMessage);
