@@ -403,7 +403,7 @@ function App() {
       const end = (pr.tiempo || 0) + base;
       return Math.max(acc, end);
     }, 0);
-    const totalSteps = Math.max(1, Math.ceil(totalDuration / FRAME_MS));
+    // totalSteps no longer used; maxStepUsed tracks effective length
 
     // Paths por tokenId
     const tokenIds = useBoardStore.getState().tokens.map(t => t.id);
