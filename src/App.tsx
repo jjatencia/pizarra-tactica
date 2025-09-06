@@ -358,15 +358,17 @@ function App() {
       return clamp((d / BALL_SPEED_MPS) * 1000, MIN_PASS_MS, MAX_PASS_MS);
     };
 
-    // Helper: encontrar ficha más cercana de un equipo a un punto
-    const findNearestTokenId = (team: 'blue' | 'red', point: { x: number; y: number }) => {
+    // Helper: encontrar ficha más cercana de un equipo a un punto (prioriza fichas derivadas de markers IA)
+    const findNearestTokenId = (team: 'blue' | 'red', point: { x: number; y: number }, preferMarkerLinked = true) => {
+      const stateTokens = useBoardStore.getState().tokens.filter(t => t.type === 'player' && t.team === team);
+      const markerIds = new Set(Object.values(markerToToken));
+      const pool = preferMarkerLinked ? stateTokens.filter(t => markerIds.has(t.id)) : stateTokens;
+      const candidates = preferMarkerLinked && pool.length > 0 ? pool : stateTokens;
       let minD = Infinity; let id: string | null = null;
-      useBoardStore.getState().tokens
-        .filter(t => t.type === 'player' && t.team === team)
-        .forEach(t => {
-          const d = Math.hypot(t.x - point.x, t.y - point.y);
-          if (d < minD) { minD = d; id = t.id; }
-        });
+      candidates.forEach(t => {
+        const d = Math.hypot(t.x - point.x, t.y - point.y);
+        if (d < minD) { minD = d; id = t.id; }
+      });
       return id;
     };
 
@@ -423,6 +425,34 @@ function App() {
         initialPositions[ballId] = { x: p.x, y: p.y };
       }
     };
+
+    // Asegurar al menos 4 jugadores por equipo para dar contexto
+    const ensureMinPlayers = (team: 'blue'|'red', min = 4) => {
+      const tokensNow = useBoardStore.getState().tokens.filter(t => t.type === 'player' && t.team === team);
+      const need = Math.max(0, min - tokensNow.length);
+      if (need === 0) return;
+      const base: { x:number; y:number }[] = [
+        { x: 0.38 * fieldWidth, y: 0.40 * fieldHeight },
+        { x: 0.46 * fieldWidth, y: 0.58 * fieldHeight },
+        { x: 0.54 * fieldWidth, y: 0.35 * fieldHeight },
+        { x: 0.44 * fieldWidth, y: 0.22 * fieldHeight },
+        { x: 0.60 * fieldWidth, y: 0.48 * fieldHeight },
+      ];
+      const candidates = team === 'blue' ? base : base.map(p => ({ x: fieldWidth - p.x, y: p.y }));
+      const minDist = 3; // metros
+      let added = 0;
+      for (const c of candidates) {
+        if (added >= need) break;
+        const tooClose = useBoardStore.getState().tokens.some(t => Math.hypot(t.x - c.x, t.y - c.y) < minDist);
+        if (!tooClose) {
+          store.addToken(team, c.x, c.y, 'player', 'medium');
+          added++;
+        }
+      }
+    };
+
+    ensureMinPlayers('blue', 4);
+    ensureMinPlayers('red', 4);
 
     // Determinar punto inicial del balón
     const firstArrow = primitives.filter(p => p.tipo === 'arrow').sort((a,b)=>(a.tiempo||0)-(b.tiempo||0))[0];
