@@ -441,6 +441,7 @@ function App() {
     // Estructuras auxiliares
     const paths: Record<string, { x:number; y:number }[]> = {};
     const lastPoint: Record<string, { x:number; y:number }> = { ...initialPositions };
+    let maxStepUsed = Math.max(1, Math.ceil(totalDuration / FRAME_MS));
     const ensureLen = (id: string, len: number) => {
       if (!paths[id]) paths[id] = [];
       const lp = lastPoint[id] || initialPositions[id];
@@ -463,6 +464,7 @@ function App() {
         paths[id].push({ x, y });
       }
       lastPoint[id] = { x: to.x, y: to.y };
+      maxStepUsed = Math.max(maxStepUsed, startStep + steps);
     };
     const addBezier = (id: string, from: {x:number;y:number}, cp: {x:number;y:number}, to: {x:number;y:number}, startStep: number, steps: number, ease: (t:number)=>number = easeInOutCubic) => {
       ensureLen(id, startStep);
@@ -476,6 +478,7 @@ function App() {
         paths[id].push({ x, y });
       }
       lastPoint[id] = { x: to.x, y: to.y };
+      maxStepUsed = Math.max(maxStepUsed, startStep + steps);
     };
 
     // Construir timeline respetando tiempos
@@ -519,6 +522,34 @@ function App() {
         // Garantizar lectura de posiciones a startStepB
         if (passerId) ensureLen(passerId, startStepB + 1);
         if (receiverId) ensureLen(receiverId, startStepB + 1);
+
+        // Control bajo presión: si hay rival muy cerca del pasador, hacer un micro-control antes de pasar
+        const CONTROL_RADIUS = 3; // metros
+        const CONTROL_OFFSET = 1.2; // metros
+        const CONTROL_MS = 280;
+        const controlSteps = Math.max(3, Math.floor(CONTROL_MS / FRAME_MS));
+        if (passerId) {
+          const passerTeam: 'blue' | 'red' = pr.equipo === 'propio' ? 'blue' : 'red';
+          const rivals = useBoardStore.getState().tokens.filter(t => t.type === 'player' && t.team !== passerTeam);
+          const passerAt = getPointAt(passerId, startStepB);
+          let closest = Infinity;
+          let nearest = null as null | { x:number;y:number };
+          for (const r of rivals) {
+            const dpr = dist(passerAt, { x: r.x, y: r.y });
+            if (dpr < closest) { closest = dpr; nearest = { x: r.x, y: r.y }; }
+          }
+          if (nearest && closest < CONTROL_RADIUS) {
+            // Mover ligeramente al pasador alejándose del rival
+            const dx = passerAt.x - nearest.x;
+            const dy = passerAt.y - nearest.y;
+            const ll = Math.hypot(dx, dy) || 1;
+            const ux = dx / ll, uy = dy / ll;
+            const ctrlTo = { x: passerAt.x + ux * CONTROL_OFFSET, y: passerAt.y + uy * CONTROL_OFFSET };
+            addLinear(passerId, passerAt, ctrlTo, startStepB, controlSteps, easeOutQuad);
+            startStepB += controlSteps; // retrasar pase tras el control
+            ensureLen(passerId, startStepB + 1);
+          }
+        }
 
         const passFrom = passerId ? getPointAt(passerId, startStepB) : from;
         const passTo = receiverId ? getPointAt(receiverId, startStepB) : to;
@@ -576,10 +607,10 @@ function App() {
     });
 
     // Rellenar el resto de la línea de tiempo con la última posición
-    Object.keys(paths).forEach(id => ensureLen(id, totalSteps + 1));
+    Object.keys(paths).forEach(id => ensureLen(id, maxStepUsed + 1));
 
     // Volcar paths al store en orden de tiempo para reproducir coherente
-    for (let s = 0; s <= totalSteps; s++) {
+    for (let s = 0; s <= maxStepUsed; s++) {
       Object.entries(paths).forEach(([id, arr]) => {
         const p = arr[Math.min(s, arr.length - 1)];
         store.addTokenPathPoint(id, p);
