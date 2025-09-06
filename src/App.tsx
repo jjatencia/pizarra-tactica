@@ -14,7 +14,7 @@ import { TokenNumberModal } from './components/TokenNumberModal';
 import { Team, ObjectType, TokenSize, Token as TokenType, Formation } from './types';
 import { clampToField, snapToGrid } from './lib/geometry';
 import clsx from 'clsx';
-import { CanvasTacticPack, CanvasPrimitive } from './types/canvas';
+import { CanvasTacticPack } from './types/canvas';
 
 function App() {
   const svgRef = useRef<SVGSVGElement>(null);
