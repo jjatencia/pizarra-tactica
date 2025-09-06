@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { generateTacticalSequence } from '../lib/ai/tacticalSequence';
+import { AIQuestionDialog } from './AIQuestionDialog';
 
 interface TacticalDescriptionInputProps {
   onSequenceGenerated?: (sequence: any, originalDescription: string) => void;
@@ -10,6 +11,9 @@ export function TacticalDescriptionInput({ onSequenceGenerated, onError }: Tacti
   const [description, setDescription] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showQuestions, setShowQuestions] = useState(false);
+  const [aiQuestions, setAiQuestions] = useState<string[]>([]);
+  const [originalDescription, setOriginalDescription] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleGenerate = async () => {
@@ -25,14 +29,16 @@ export function TacticalDescriptionInput({ onSequenceGenerated, onError }: Tacti
       
       // Check if AI returned questions instead of a full sequence
       if (sequence.questions && sequence.questions.length > 0 && (!sequence.steps || sequence.steps.length === 0)) {
-        // Show the questions to the user in a more user-friendly way
-        const questionText = sequence.questions.join('\n• ');
-        onError?.(`La IA necesita más información:\n\n• ${questionText}\n\nPor favor, sé más específico en tu descripción.`);
+        // Store questions and show dialog
+        setAiQuestions(sequence.questions);
+        setOriginalDescription(description);
+        setShowQuestions(true);
+        setIsExpanded(false); // Collapse the input
         return;
       }
       
-      const originalDescription = description; // Store the original
-      onSequenceGenerated?.(sequence, originalDescription);
+      const currentDescription = description; // Store the original
+      onSequenceGenerated?.(sequence, currentDescription);
       setDescription(''); // Clear after successful generation
       setIsExpanded(false);
     } catch (error) {
@@ -135,6 +141,20 @@ Ejemplo: "Equipo azul realiza presión alta a equipo rojo. Los centrales rojos t
           </button>
         </div>
       </div>
+
+      {/* AI Questions Dialog */}
+      <AIQuestionDialog
+        isOpen={showQuestions}
+        originalDescription={originalDescription}
+        questions={aiQuestions}
+        onSequenceGenerated={onSequenceGenerated}
+        onError={onError}
+        onClose={() => {
+          setShowQuestions(false);
+          setAiQuestions([]);
+          setOriginalDescription('');
+        }}
+      />
     </div>
   );
 }

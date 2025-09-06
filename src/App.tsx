@@ -316,12 +316,10 @@ function App() {
       // Convert tactical sequence to animation sequence
       const animationSequence = convertTacticalToAnimationSequence(tacticalSequence, tokens);
       
-      // Check if this is a "questions only" sequence
+      // Check if this is a "questions only" sequence (shouldn't happen now with new dialog system)
       if (animationSequence.questions && animationSequence.questions.length > 0 && animationSequence.steps.length === 0) {
-        // Don't add to store, just show the questions as an error message
-        const questionText = animationSequence.questions.join('\n• ');
-        setError(`La IA necesita más información:\n\n• ${questionText}\n\nPor favor, sé más específico en tu descripción.`);
-        setTimeout(() => setError(null), 8000); // Show longer for questions
+        // This should be handled by the TacticalDescriptionInput component now
+        console.warn('Questions received in App.tsx - should be handled by TacticalDescriptionInput');
         return;
       }
       
