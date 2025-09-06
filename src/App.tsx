@@ -314,37 +314,54 @@ function App() {
     console.log('🎬 App.tsx: Descripción original:', originalDescription);
     
     try {
+      // Check if this is a "questions only" sequence (shouldn't happen now with new dialog system)
+      if (tacticalSequence.questions && tacticalSequence.questions.length > 0 && (!tacticalSequence.steps || tacticalSequence.steps.length === 0)) {
+        console.warn('⚠️ App.tsx: Questions-only sequence received - should be handled by TacticalDescriptionInput');
+        return;
+      }
+      
+      // If AI returned questions WITH steps, just log them but continue processing
+      if (tacticalSequence.questions && tacticalSequence.questions.length > 0 && tacticalSequence.steps && tacticalSequence.steps.length > 0) {
+        console.log('ℹ️ App.tsx: Sequence has optional questions, ignoring and processing steps:', tacticalSequence.questions);
+      }
+      
       console.log('🔄 App.tsx: Convirtiendo secuencia táctica a secuencia de animación...');
+      console.log('🔍 App.tsx: Tactical sequence steps:', tacticalSequence.steps);
+      console.log('🔍 App.tsx: Available tokens:', tokens);
       
       // Convert tactical sequence to animation sequence
       const animationSequence = convertTacticalToAnimationSequence(tacticalSequence, tokens);
       console.log('✅ App.tsx: Secuencia de animación creada:', animationSequence);
       
-      // Check if this is a "questions only" sequence (shouldn't happen now with new dialog system)
-      if (animationSequence.questions && animationSequence.questions.length > 0 && animationSequence.steps.length === 0) {
-        // This should be handled by the TacticalDescriptionInput component now
-        console.warn('⚠️ App.tsx: Questions received - should be handled by TacticalDescriptionInput');
-        return;
-      }
+      console.log('🔍 App.tsx: Validating animation sequence...');
+      console.log('🔍 App.tsx: Animation sequence steps count:', animationSequence.steps?.length || 0);
       
       // Validate animation sequence
       if (!animationSequence.steps || animationSequence.steps.length === 0) {
+        console.error('❌ App.tsx: Animation sequence has no valid steps:', animationSequence);
         throw new Error('La secuencia de animación no tiene pasos válidos');
       }
       
       console.log('📝 App.tsx: Añadiendo secuencia al store...');
       // Add sequence to store
       addSequence(animationSequence);
+      console.log('✅ App.tsx: Sequence added to store successfully');
       
       console.log('🎭 App.tsx: Configurando fichas iniciales si es necesario...');
+      console.log('🔍 App.tsx: Current tokens count:', tokens.length);
       // Set up initial formation if needed
       if (tokens.length === 0) {
+        console.log('🎭 App.tsx: No tokens found, setting up from sequence...');
         setupTokensFromSequence(animationSequence, (team: Team, x: number, y: number) => addToken(team, x, y, 'player', 'medium'), reset);
+        console.log('✅ App.tsx: Initial formation set up');
+      } else {
+        console.log('ℹ️ App.tsx: Tokens already exist, skipping initial setup');
       }
       
       console.log('🎉 App.tsx: Mostrando notificación de éxito...');
       setNotice(`✅ Secuencia creada: ${animationSequence.title}`);
       setTimeout(() => setNotice(null), 2000);
+      console.log('🎉 App.tsx: Process completed successfully!');
       
       // Clear any error
       setError(null);
