@@ -125,6 +125,7 @@ function App() {
   const [aiPacks, setAiPacks] = useState<CanvasTacticPack[] | null>(null);
   const [showAIPackSelector, setShowAIPackSelector] = useState(false);
   const [selectedAIPackIdx, setSelectedAIPackIdx] = useState(0);
+  const [notice, setNotice] = useState<string | null>(null);
   
     // Handle container resize with PWA detection
   useEffect(() => {
@@ -320,10 +321,9 @@ function App() {
         addToken(team, pt.x, pt.y, 'player', 'medium');
       });
     
-    // Show success message
-    setTimeout(() => {
-      alert(`✅ Situación táctica "${pack.titulo}" cargada correctamente`);
-    }, 500);
+    // Mensaje no bloqueante
+    setNotice(`✅ ${pack.titulo}`);
+    setTimeout(() => setNotice(null), 1800);
   }, []);
 
   // Reproducir animación IA: mueve fichas y balón siguiendo primitivas y tiempos
@@ -843,12 +843,19 @@ function App() {
               }}
             />
             
-            {/* Zoom indicator */}
-            {zoom !== 1 && (
-              <div className="absolute top-4 right-4 bg-slate-800 text-white px-2 py-1 rounded text-sm" style={{ zIndex: 3 }}>
-                {Math.round(zoom * 100)}%
-              </div>
-            )}
+      {/* Zoom indicator */}
+      {zoom !== 1 && (
+        <div className="absolute top-4 right-4 bg-slate-800 text-white px-2 py-1 rounded text-sm" style={{ zIndex: 3 }}>
+          {Math.round(zoom * 100)}%
+        </div>
+      )}
+
+      {/* Non-blocking notice */}
+      {notice && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-3 py-2 rounded-md text-sm shadow-md" style={{ zIndex: 4 }}>
+          {notice}
+        </div>
+      )}
           </div>
         </div>
       </main>
