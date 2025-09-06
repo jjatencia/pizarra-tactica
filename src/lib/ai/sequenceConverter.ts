@@ -28,6 +28,10 @@ export function convertTacticalToAnimationSequence(
   if (tacticalSequence.questions && tacticalSequence.questions.length > 0 && tacticalSequence.steps && tacticalSequence.steps.length > 0) {
     console.log('🔄 Converter: IA devolvió secuencia válida con preguntas opcionales, procesando normalmente');
   }
+  
+  console.log('🔄 Converter: Iniciando conversión de pasos IA:', tacticalSequence.steps);
+  console.log('🔄 Converter: Fichas disponibles en el tablero:', boardTokens);
+  
   const animationSteps: AnimationStep[] = [];
   const tokenMapping: TokenMapping = {};
 
@@ -103,7 +107,7 @@ export function convertTacticalToAnimationSequence(
     animationSteps.push(animationStep);
   });
 
-  return {
+  const finalSequence = {
     id: `seq_${Date.now()}`,
     title: tacticalSequence.title,
     description: tacticalSequence.description,
@@ -112,6 +116,12 @@ export function convertTacticalToAnimationSequence(
     loop: false,
     questions: tacticalSequence.questions,
   };
+  
+  console.log('✅ Converter: Secuencia de animación creada:', finalSequence);
+  console.log('✅ Converter: Pasos de animación generados:', animationSteps.length);
+  console.log('✅ Converter: Mapeo de tokens:', tokenMapping);
+  
+  return finalSequence;
 }
 
 export function createInitialFormation(
