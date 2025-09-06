@@ -9,7 +9,10 @@ export async function fetchAIResponse(payload: Partial<AIPayload>): Promise<AIRe
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 60000);
     
-    res = await fetch("/api/ai/tactics", {
+    // Use different endpoint based on payload type
+    const endpoint = payload.prompt ? "/api/ai/sequence" : "/api/ai/tactics";
+    
+    res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),

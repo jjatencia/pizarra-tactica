@@ -85,11 +85,27 @@ Responde SOLO con el JSON válido:`;
 
   const response = await fetchAIResponse(payload);
   
+  // Debug logging
+  console.log('AI Response:', response);
+  
+  if (!response || !response.content) {
+    throw new Error('La IA no devolvió una respuesta válida. Verifica tu configuración de API key.');
+  }
+  
   try {
     const sequence = JSON.parse(response.content);
+    
+    // Validate that we got a proper tactical sequence
+    if (!sequence.title || !sequence.steps || !Array.isArray(sequence.steps)) {
+      throw new Error('La respuesta de la IA no tiene el formato esperado. Intenta con una descripción más específica.');
+    }
+    
     return sequence as TacticalSequence;
   } catch (error) {
-    throw new Error('Error parsing AI response: ' + response.content);
+    if (error instanceof SyntaxError) {
+      throw new Error('La IA devolvió una respuesta malformada. Intenta de nuevo con una descripción más clara.');
+    }
+    throw error;
   }
 }
 

@@ -1,8 +1,5 @@
-import { fetchAIResponse } from './client';
-import { AIPayload } from './payload';
 import { AnimationSequence } from '../../types';
 import { TacticalSequence } from './tacticalSequence';
-
 
 interface RefinementResponse {
   questions?: string[];
@@ -17,72 +14,58 @@ export async function refineSequence(
   feedback: string,
   currentBoardState: any
 ): Promise<RefinementResponse> {
-  const prompt = `Eres un entrenador de fútbol experto. El usuario te pidió crear una secuencia táctica pero no está satisfecho con el resultado.
-
-DESCRIPCIÓN ORIGINAL:
-"${originalDescription}"
-
-SECUENCIA ACTUAL:
-${JSON.stringify({
-  title: currentSequence.title,
-  description: currentSequence.description,
-  steps: currentSequence.steps.map(s => ({
-    timestamp: s.timestamp,
-    type: s.type,
-    description: s.description,
-    from: s.from,
-    to: s.to
-  }))
-}, null, 2)}
-
-FEEDBACK DEL USUARIO:
-"${feedback}"
-
-Tu tarea es:
-1. Analizar el feedback del usuario
-2. Identificar qué aspectos de la secuencia no son correctos
-3. Si necesitas más información, haz preguntas específicas
-4. Si tienes información suficiente, crea una secuencia mejorada
-
-FORMATO DE RESPUESTA (JSON):
-{
-  "needsMoreInfo": true/false,
-  "questions": [
-    "¿Los jugadores deben moverse más rápido o más lento?",
-    "¿En qué posición específica debe estar cada jugador?"
-  ],
-  "clarification": "Explicación de lo que entendiste del feedback",
-  "refinedSequence": {
-    // Solo incluir si needsMoreInfo es false
-    "title": "Título mejorado",
-    "description": "Descripción mejorada",
-    "duration": 8000,
-    "steps": [
-      // Pasos mejorados basados en el feedback
-    ]
-  }
-}
-
-IMPORTANTE:
-- Si el feedback es vago ("no me gusta", "está mal"), haz preguntas específicas
-- Si el feedback es específico ("los jugadores van muy lentos", "falta presión"), mejora la secuencia directamente
-- Mantén la estructura táctica coherente
-- Asegúrate de que los movimientos sean realistas
-
-Responde SOLO con el JSON válido:`;
-
-  const payload: Partial<AIPayload> = {
-    prompt,
+  const payload = {
+    originalDescription,
+    currentSequence,
+    feedback,
     boardState: currentBoardState
   };
 
-  const response = await fetchAIResponse(payload);
+  let res: Response;
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    
+    res = await fetch("/api/ai/refine", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+  } catch (e) {
+    const err = e as Error;
+    if (err.name === 'AbortError') {
+      throw new Error("La IA tardó demasiado en responder. Inténtalo de nuevo.");
+    }
+    throw new Error(`Fallo de red al refinar la secuencia: ${err.message}`);
+  }
+
+  if (!res.ok) {
+    let msg = `Fallo en refinamiento (status ${res.status})`;
+    try {
+      const errorData = await res.json();
+      if (errorData?.error) {
+        msg = errorData.error;
+      }
+    } catch {
+      // ignore
+    }
+    throw new Error(msg);
+  }
+
+  const response = await res.json();
+  
+  if (!response || !response.content) {
+    throw new Error('La IA no devolvió una respuesta válida para el refinamiento.');
+  }
   
   try {
     const refinement = JSON.parse(response.content);
     return refinement as RefinementResponse;
   } catch (error) {
-    throw new Error('Error parsing AI refinement response: ' + response.content);
+    throw new Error('La IA devolvió una respuesta malformada para el refinamiento.');
   }
 }
 
@@ -92,52 +75,65 @@ export async function answerQuestions(
   answers: string[],
   currentBoardState: any
 ): Promise<TacticalSequence> {
-  const prompt = `Eres un entrenador de fútbol experto. Has hecho preguntas sobre una secuencia táctica y el usuario ha respondido.
-
-DESCRIPCIÓN ORIGINAL:
-"${originalDescription}"
-
-PREGUNTAS Y RESPUESTAS:
-${questions.map((q, i) => `P: ${q}\nR: ${answers[i] || 'Sin respuesta'}`).join('\n\n')}
-
-Ahora crea la secuencia táctica definitiva basada en la información completa.
-
-FORMATO DE RESPUESTA (JSON):
-{
-  "title": "Título de la jugada",
-  "description": "Descripción de la situación táctica",
-  "duration": 8000,
-  "steps": [
-    {
-      "timestamp": 0,
-      "type": "move|pass|pressure|intercept",
-      "actor": {
-        "team": "blue|red",
-        "position": {"x": 0.3, "y": 0.5},
-        "role": "central|delantero|mediocampista|lateral"
-      },
-      "target": {
-        "position": {"x": 0.7, "y": 0.3},
-        "team": "blue|red"
-      },
-      "description": "Descripción específica de la acción"
-    }
-  ]
-}
-
-Responde SOLO con el JSON válido:`;
-
-  const payload: Partial<AIPayload> = {
-    prompt,
+  const payload = {
+    originalDescription,
+    questions,
+    answers,
     boardState: currentBoardState
   };
 
-  const response = await fetchAIResponse(payload);
+  let res: Response;
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    
+    res = await fetch("/api/ai/refine", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+  } catch (e) {
+    const err = e as Error;
+    if (err.name === 'AbortError') {
+      throw new Error("La IA tardó demasiado en responder. Inténtalo de nuevo.");
+    }
+    throw new Error(`Fallo de red al procesar las respuestas: ${err.message}`);
+  }
+
+  if (!res.ok) {
+    let msg = `Fallo al procesar respuestas (status ${res.status})`;
+    try {
+      const errorData = await res.json();
+      if (errorData?.error) {
+        msg = errorData.error;
+      }
+    } catch {
+      // ignore
+    }
+    throw new Error(msg);
+  }
+
+  const response = await res.json();
+  
+  if (!response || !response.content) {
+    throw new Error('La IA no devolvió una respuesta válida.');
+  }
   
   try {
     const sequence = JSON.parse(response.content);
+    
+    if (!sequence.title || !sequence.steps || !Array.isArray(sequence.steps)) {
+      throw new Error('La respuesta de la IA no tiene el formato esperado.');
+    }
+    
     return sequence as TacticalSequence;
   } catch (error) {
-    throw new Error('Error parsing AI sequence response: ' + response.content);
+    if (error instanceof SyntaxError) {
+      throw new Error('La IA devolvió una respuesta malformada.');
+    }
+    throw error;
   }
 }
