@@ -129,9 +129,15 @@ Genera 3 situaciones tácticas ANIMADAS diferentes. Cada situación debe incluir
 - Secuencia temporal usando el campo "tiempo" (0, 1000, 2000ms, etc.)
 - Movimientos realistas con múltiples pasos
 
+REGLAS DE COHERENCIA (OBLIGATORIAS):
+- Nunca dibujes un pase que atraviese a un rival. Si la línea de pase está ocupada, añade primero un "move" del receptor o del pasador para abrir la línea y DESPUÉS el pase.
+- En "salida corta desde portero" o "construcción desde el fondo", el receptor se perfila y se mueve para generar el ángulo antes del pase (movimiento coordinado).
+- Prioriza secuencias temporales claras: 0ms marcadores, 500-1500ms movimientos, 1500ms+ pases, etc.
+
 Usa estos tipos de primitivas:
 - "marker": posición de jugador (con etiqueta del nombre/rol)
-- "arrow": movimiento o pase (de punto A a punto B)  
+- "move": desplazamiento coordinado de un jugador (de punto A a punto B)
+- "arrow": movimiento o pase (de punto A a punto B)
 - "zone": área de presión o cobertura
 
 Coordenadas entre 0 y 1 (0,0 = esquina superior izquierda, 1,1 = esquina inferior derecha).`;
@@ -229,4 +235,3 @@ function readJson(req) {
     req.on("error", reject);
   });
 }
-

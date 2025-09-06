@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { CanvasTacticPack, CanvasPrimitive } from '@/types/canvas';
+import { CanvasTacticPack, CanvasPrimitive, CanvasPoint } from '@/types/canvas';
 
 interface TacticalAnimationProps {
   tacticPack: CanvasTacticPack;
@@ -133,6 +133,12 @@ export default function TacticalAnimation({ tacticPack, onClose }: TacticalAnima
 
     console.log(`🎨 Frame ${time}ms: ${elementsToShow.length}/${animatedElements.length} elementos visibles`);
 
+    // Recolectar marcadores rivales activos para coherencia táctica (bloqueo de línea de pase)
+    const activeRivalMarkers: { x: number; y: number }[] = elementsToShow
+      .filter(el => el.primitive.tipo === 'marker' && el.primitive.equipo === 'rival')
+      .map(el => el.primitive.puntos[0])
+      .filter(Boolean);
+
     // Dibujar elementos animados
     elementsToShow.forEach(element => {
       const startTime = element.primitive.tiempo || 0;
@@ -143,7 +149,7 @@ export default function TacticalAnimation({ tacticPack, onClose }: TacticalAnima
         progress = Math.max(0, (time - startTime) / duration);
       }
       
-      drawPrimitive(ctx, element.primitive, progress, canvas.width, canvas.height);
+      drawPrimitive(ctx, element.primitive, progress, canvas.width, canvas.height, activeRivalMarkers);
     });
   };
 
@@ -187,7 +193,8 @@ export default function TacticalAnimation({ tacticPack, onClose }: TacticalAnima
     primitive: CanvasPrimitive,
     progress: number,
     width: number,
-    height: number
+    height: number,
+    activeRivalMarkers: CanvasPoint[]
   ) => {
     const { tipo, equipo, puntos, estilo } = primitive;
 
@@ -196,7 +203,10 @@ export default function TacticalAnimation({ tacticPack, onClose }: TacticalAnima
     if (tipo === 'marker') {
       drawMarker(ctx, puntos[0], equipo, estilo?.etiqueta || '', progress, width, height);
     } else if (tipo === 'arrow') {
-      drawArrow(ctx, puntos, equipo, progress, width, height);
+      drawArrow(ctx, puntos, equipo, progress, width, height, activeRivalMarkers);
+    } else if (tipo === 'move') {
+      // Soporte básico para animar desplazamientos de jugadores (coordinación previa al pase)
+      drawMove(ctx, puntos, equipo, progress, width, height, estilo?.etiqueta);
     } else if (tipo === 'zone') {
       drawZone(ctx, puntos, equipo, progress, width, height);
     }
@@ -248,7 +258,8 @@ export default function TacticalAnimation({ tacticPack, onClose }: TacticalAnima
     team: string,
     progress: number,
     width: number,
-    height: number
+    height: number,
+    activeRivals: CanvasPoint[]
   ) => {
     if (points.length < 2) return;
 
@@ -257,9 +268,28 @@ export default function TacticalAnimation({ tacticPack, onClose }: TacticalAnima
     const toX = points[1].x * width;
     const toY = points[1].y * height;
 
-    // Interpolar la posición actual de la flecha
-    const currentX = fromX + (toX - fromX) * progress;
-    const currentY = fromY + (toY - fromY) * progress;
+    // Verificar si la línea de pase queda bloqueada por un rival
+    const blockers = team === 'propio' ? findLineBlockers({ x: fromX, y: fromY }, { x: toX, y: toY }, activeRivals) : [];
+
+    // Si hay bloqueo, curvamos el pase para evitar la interceptación
+    const useCurve = blockers.length > 0;
+    let controlPoint: { x: number; y: number } | null = null;
+    if (useCurve) {
+      controlPoint = computeAvoidanceControlPoint({ x: fromX, y: fromY }, { x: toX, y: toY }, blockers[0]);
+    }
+
+    // Interpolar la posición actual de la flecha (recta o curva)
+    let currentX: number;
+    let currentY: number;
+    if (useCurve && controlPoint) {
+      const t = progress;
+      const oneMinusT = 1 - t;
+      currentX = oneMinusT * oneMinusT * fromX + 2 * oneMinusT * t * controlPoint.x + t * t * toX;
+      currentY = oneMinusT * oneMinusT * fromY + 2 * oneMinusT * t * controlPoint.y + t * t * toY;
+    } else {
+      currentX = fromX + (toX - fromX) * progress;
+      currentY = fromY + (toY - fromY) * progress;
+    }
 
     const color = team === 'propio' ? '#3b82f6' : '#ef4444';
     ctx.strokeStyle = color;
@@ -269,12 +299,25 @@ export default function TacticalAnimation({ tacticPack, onClose }: TacticalAnima
     // Línea
     ctx.beginPath();
     ctx.moveTo(fromX, fromY);
-    ctx.lineTo(currentX, currentY);
+    if (useCurve && controlPoint) {
+      ctx.quadraticCurveTo(controlPoint.x, controlPoint.y, currentX, currentY);
+    } else {
+      ctx.lineTo(currentX, currentY);
+    }
     ctx.stroke();
 
     // Punta de flecha
     if (progress > 0.7) {
-      const angle = Math.atan2(toY - fromY, toX - fromX);
+      // Calcular ángulo tangente (recto o tangente a la curva)
+      let angle: number;
+      if (useCurve && controlPoint) {
+        const t = Math.max(0.7, progress);
+        const dx = 2 * (1 - t) * (controlPoint.x - fromX) + 2 * t * (toX - controlPoint.x);
+        const dy = 2 * (1 - t) * (controlPoint.y - fromY) + 2 * t * (toY - controlPoint.y);
+        angle = Math.atan2(dy, dx);
+      } else {
+        angle = Math.atan2(toY - fromY, toX - fromX);
+      }
       const arrowSize = 15;
       
       ctx.fillStyle = color;
@@ -293,6 +336,104 @@ export default function TacticalAnimation({ tacticPack, onClose }: TacticalAnima
     }
 
     ctx.globalAlpha = 1;
+  };
+
+  function findLineBlockers(from: CanvasPoint, to: CanvasPoint, rivals: CanvasPoint[]) {
+    const blockers: { rival: CanvasPoint; dist: number; nearest: CanvasPoint }[] = [];
+    const radius = 22; // ~ radio del marcador
+    for (const r of rivals) {
+      const nearest = nearestPointOnSegment(from, to, r);
+      const d = distance(nearest, r);
+      // Considerar bloqueo si está suficientemente cerca y dentro del segmento
+      if (d < radius) {
+        blockers.push({ rival: r, dist: d, nearest });
+      }
+    }
+    // Priorizar el más cercano a la línea
+    blockers.sort((a, b) => a.dist - b.dist);
+    return blockers;
+  }
+
+  function computeAvoidanceControlPoint(from: CanvasPoint, to: CanvasPoint, blocker: { rival: CanvasPoint; dist: number; nearest: CanvasPoint }) {
+    const { nearest, rival } = blocker;
+    // Vector de la línea de pase
+    const vx = to.x - from.x;
+    const vy = to.y - from.y;
+    const len = Math.hypot(vx, vy) || 1;
+    const ux = vx / len;
+    const uy = vy / len;
+    // Perpendiculars
+    const px1 = -uy;
+    const py1 = ux;
+    const px2 = uy;
+    const py2 = -ux;
+    // Elegir lado que aleje más del rival
+    const offsetBase = 40; // cuánto curvar
+    const cand1 = { x: nearest.x + px1 * offsetBase, y: nearest.y + py1 * offsetBase };
+    const cand2 = { x: nearest.x + px2 * offsetBase, y: nearest.y + py2 * offsetBase };
+    const d1 = distance(cand1, rival);
+    const d2 = distance(cand2, rival);
+    return d1 > d2 ? cand1 : cand2;
+  }
+
+  function nearestPointOnSegment(a: CanvasPoint, b: CanvasPoint, p: CanvasPoint): CanvasPoint {
+    const ab = { x: b.x - a.x, y: b.y - a.y };
+    const ab2 = ab.x * ab.x + ab.y * ab.y;
+    if (ab2 === 0) return a;
+    const ap = { x: p.x - a.x, y: p.y - a.y };
+    let t = (ap.x * ab.x + ap.y * ab.y) / ab2;
+    t = Math.max(0, Math.min(1, t));
+    return { x: a.x + ab.x * t, y: a.y + ab.y * t };
+  }
+
+  function distance(a: CanvasPoint, b: CanvasPoint) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
+  const drawMove = (
+    ctx: CanvasRenderingContext2D,
+    points: { x: number; y: number }[],
+    team: string,
+    progress: number,
+    width: number,
+    height: number,
+    label?: string
+  ) => {
+    if (points.length < 2) return;
+    const fromX = points[0].x * width;
+    const fromY = points[0].y * height;
+    const toX = points[1].x * width;
+    const toY = points[1].y * height;
+
+    const x = fromX + (toX - fromX) * progress;
+    const y = fromY + (toY - fromY) * progress;
+    const color = team === 'propio' ? '#3b82f6' : '#ef4444';
+
+    // Trayectoria tenue
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = 0.3;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(fromX, fromY);
+    ctx.lineTo(toX, toY);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // Jugador moviéndose
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, 10, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    if (label) {
+      ctx.fillStyle = 'white';
+      ctx.font = '12px bold sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(label, x, y - 16);
+    }
   };
 
   const drawZone = (
