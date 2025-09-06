@@ -25,7 +25,17 @@ DEBES responder SOLO con JSON válido siguiendo EXACTAMENTE esta estructura:
   "alineacion": {
     "formation": "4-3-3",
     "titularidad": [
-      {"playerId": "Jugador1", "pos": "POR", "rol": "Portero"}
+      {"playerId": "Jugador1", "pos": "POR", "rol": "Portero"},
+      {"playerId": "Jugador2", "pos": "DFC", "rol": "Defensa Central"},
+      {"playerId": "Jugador3", "pos": "DFC", "rol": "Defensa Central"},
+      {"playerId": "Jugador4", "pos": "LD", "rol": "Lateral Derecho"},
+      {"playerId": "Jugador5", "pos": "LI", "rol": "Lateral Izquierdo"},
+      {"playerId": "Jugador6", "pos": "MCD", "rol": "Mediocentro Defensivo"},
+      {"playerId": "Jugador7", "pos": "MC", "rol": "Mediocentro"},
+      {"playerId": "Jugador8", "pos": "MCO", "rol": "Mediocentro Ofensivo"},
+      {"playerId": "Jugador9", "pos": "ED", "rol": "Extremo Derecho"},
+      {"playerId": "Jugador10", "pos": "EI", "rol": "Extremo Izquierdo"},
+      {"playerId": "Jugador11", "pos": "DC", "rol": "Delantero Centro"}
     ],
     "banquillo": ["Jugador12", "Jugador13"],
     "instrucciones": ["Presión alta tras pérdida", "Juego combinativo"]
@@ -107,7 +117,46 @@ Genera 3 situaciones tácticas diferentes con primitivas gráficas (coordenadas 
       return res.status(502).json({ ok: false, error: "La IA no devolvió JSON válido" });
     }
 
-    // Respuesta al cliente (más adelante puedes validar con Zod)
+    // Validación básica de la respuesta
+    if (!parsed.alineacion || !parsed.planPartido || !parsed.jugadas) {
+      return res.status(502).json({ ok: false, error: "La IA no devolvió el formato esperado" });
+    }
+
+    // Asegurar que titularidad tenga 11 jugadores
+    if (!parsed.alineacion.titularidad || parsed.alineacion.titularidad.length !== 11) {
+      // Completar la alineación si está incompleta
+      const currentPlayers = parsed.alineacion.titularidad || [];
+      const missingCount = 11 - currentPlayers.length;
+      const positions = ["POR","DFC","DFC","LD","LI","MCD","MC","MCO","ED","EI","DC"];
+      
+      for (let i = 0; i < missingCount && i < positions.length; i++) {
+        currentPlayers.push({
+          playerId: `Jugador${currentPlayers.length + 1}`,
+          pos: positions[currentPlayers.length] || "MC",
+          rol: "Jugador"
+        });
+      }
+      
+      parsed.alineacion.titularidad = currentPlayers.slice(0, 11);
+    }
+
+    // Asegurar que hay al menos una jugada
+    if (!parsed.jugadas || parsed.jugadas.length === 0) {
+      parsed.jugadas = [{
+        titulo: "Jugada táctica básica",
+        objetivo: "Mantener posesión",
+        instrucciones: ["Pases cortos", "Mantener formación"],
+        primitivas: [{
+          id: "basic1",
+          tipo: "marker",
+          equipo: "propio",
+          targets: [],
+          puntos: [{ x: 0.5, y: 0.5 }],
+          estilo: { etiqueta: "Centro" }
+        }]
+      }];
+    }
+
     return res.status(200).json(parsed);
 
   } catch (err) {
