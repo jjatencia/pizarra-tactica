@@ -30,3 +30,4 @@ workbox-*.js
 
 # Temporary files
 create-icons.html
+.vercel
