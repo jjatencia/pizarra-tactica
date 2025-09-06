@@ -46,4 +46,6 @@ export interface MatchPlan {
   objetivos: string[];
   recursos: string[];
   notas?: string;
+  aiReportId?: string; // ID del informe generado por IA
+  aiGeneratedAt?: number; // Timestamp de cuándo se generó
 }

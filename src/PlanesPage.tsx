@@ -8,7 +8,7 @@ import { listPlayers } from "@/lib/players";
 import { fetchAIResponse } from "@/lib/ai/client";
 import { mapAIToCanvas } from "@/lib/ai/mapper";
 import { simpleHash } from "@/lib/ai/hash";
-import { putTacticsCache } from "@/lib/ai/cache";
+import { putTacticsCache, getTacticsCache } from "@/lib/ai/cache";
 import type { AIPayloadContext } from "@/lib/ai/payload";
 
 export default function PlanesPage() {
@@ -105,6 +105,23 @@ export default function PlanesPage() {
     setPlans(prev => prev.filter(p => p.id !== id));
   }
 
+  async function verInformeIA(plan: MatchPlan) {
+    if (!plan.aiReportId) return;
+    
+    try {
+      const cacheItem = await getTacticsCache(plan.aiReportId);
+      if (cacheItem) {
+        sessionStorage.setItem("tactics_to_paint", JSON.stringify({ id: plan.aiReportId }));
+        window.location.href = "/tablero";
+      } else {
+        setErr("Informe no encontrado. Genera uno nuevo.");
+      }
+    } catch (error) {
+      console.error("Error al cargar informe:", error);
+      setErr("Error al cargar el informe.");
+    }
+  }
+
   async function generarIA(plan: MatchPlan) {
     setLoadingIA(plan.id);
     setErr(null);
@@ -145,6 +162,20 @@ export default function PlanesPage() {
       
       const mapped = mapAIToCanvas(ai);
       await putTacticsCache({ id: key, createdAt: Date.now(), aiRaw: ai, mapped });
+      
+      // Asociar el informe IA con el plan de partido
+      await updatePlan(plan.id, {
+        aiReportId: key,
+        aiGeneratedAt: Date.now()
+      });
+      
+      // Actualizar el estado local para mostrar el botón "Ver Informe"
+      setPlans(prev => prev.map(p => 
+        p.id === plan.id 
+          ? { ...p, aiReportId: key, aiGeneratedAt: Date.now() }
+          : p
+      ));
+      
       sessionStorage.setItem("tactics_to_paint", JSON.stringify({ id: key }));
       
       // Pequeño delay para que el usuario vea el feedback
@@ -195,9 +226,19 @@ export default function PlanesPage() {
           <div key={p.id} className="border rounded p-4">
             <div className="flex items-center justify-between">
               <div className="font-medium">{p.fecha}</div>
-              <div className="flex gap-3 text-sm">
+              <div className="flex gap-3 text-sm flex-wrap">
                 <button className="underline" onClick={()=>openEdit(p)}>Editar</button>
                 <button className="text-red-600 underline" onClick={()=>onDelete(p.id)}>Eliminar</button>
+                
+                {p.aiReportId && (
+                  <button 
+                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded transition-all"
+                    onClick={()=>verInformeIA(p)}
+                  >
+                    📋 Ver Informe IA
+                  </button>
+                )}
+                
                 <button 
                   className={`px-3 py-1 rounded transition-all ${
                     loadingIA === p.id 
@@ -207,7 +248,7 @@ export default function PlanesPage() {
                   onClick={()=>generarIA(p)}
                   disabled={loadingIA === p.id}
                 >
-                  {loadingIA === p.id ? '🤖 Generando...' : 'Generar con IA y pintar'}
+                  {loadingIA === p.id ? '🤖 Generando...' : p.aiReportId ? 'Regenerar con IA' : 'Generar con IA y pintar'}
                 </button>
               </div>
             </div>
@@ -215,6 +256,13 @@ export default function PlanesPage() {
               <ChipGroup title="Objetivos" items={p.objetivos} />
               <ChipGroup title="Recursos" items={p.recursos} />
             </div>
+            
+            {p.aiGeneratedAt && (
+              <div className="mt-2 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                🤖 Informe IA generado: {new Date(p.aiGeneratedAt).toLocaleString('es-ES')}
+              </div>
+            )}
+            
             {p.notas && <div className="mt-2 text-sm text-gray-700"><span className="font-medium">Notas:</span> {p.notas}</div>}
           </div>
         ))}
