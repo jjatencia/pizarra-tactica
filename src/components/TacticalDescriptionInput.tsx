@@ -34,15 +34,20 @@ export function TacticalDescriptionInput({ onSequenceGenerated, onError }: Tacti
         throw new Error('El generador devolvió una secuencia vacía');
       }
       
-      // Check if AI returned questions instead of a full sequence
+      // Check if AI returned ONLY questions without steps (needs clarification)
       if (sequence.questions && sequence.questions.length > 0 && (!sequence.steps || sequence.steps.length === 0)) {
-        console.log('❓ IA devolvió preguntas, mostrando diálogo:', sequence.questions);
+        console.log('❓ IA devolvió solo preguntas (sin pasos), mostrando diálogo:', sequence.questions);
         // Store questions and show dialog
         setAiQuestions(sequence.questions);
         setOriginalDescription(description);
         setShowQuestions(true);
         setIsExpanded(false); // Collapse the input
         return;
+      }
+      
+      // If AI returned questions WITH steps, just log them but proceed with the sequence
+      if (sequence.questions && sequence.questions.length > 0 && sequence.steps && sequence.steps.length > 0) {
+        console.log('ℹ️ IA devolvió secuencia con preguntas opcionales (ignorando preguntas):', sequence.questions);
       }
       
       // Validate that we have steps

@@ -9,8 +9,9 @@ export function convertTacticalToAnimationSequence(
   tacticalSequence: TacticalSequence,
   boardTokens: Token[]
 ): AnimationSequence {
-  // Handle case where IA returned questions instead of sequence
+  // Handle case where IA returned ONLY questions without steps (needs clarification)
   if (tacticalSequence.questions && tacticalSequence.questions.length > 0 && (!tacticalSequence.steps || tacticalSequence.steps.length === 0)) {
+    console.log('🔄 Converter: IA devolvió solo preguntas, creando secuencia placeholder');
     // Return a placeholder sequence that indicates questions need to be answered
     return {
       id: `questions_${Date.now()}`,
@@ -21,6 +22,11 @@ export function convertTacticalToAnimationSequence(
       loop: false,
       questions: tacticalSequence.questions,
     };
+  }
+  
+  // If AI returned questions WITH steps, log but proceed normally
+  if (tacticalSequence.questions && tacticalSequence.questions.length > 0 && tacticalSequence.steps && tacticalSequence.steps.length > 0) {
+    console.log('🔄 Converter: IA devolvió secuencia válida con preguntas opcionales, procesando normalmente');
   }
   const animationSteps: AnimationStep[] = [];
   const tokenMapping: TokenMapping = {};
