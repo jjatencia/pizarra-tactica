@@ -76,6 +76,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const [menuTarget, setMenuTarget] = useState<(Team | 'ball' | 'cone' | 'minigoal') | null>(null);
   const [showIaMenu, setShowIaMenu] = useState(false);
   const iaMenuRef = useRef<HTMLDivElement>(null);
+  const iaButtonRef = useRef<HTMLButtonElement>(null);
+  const [iaMenuPos, setIaMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const longPressTimeout = useRef<number>();
 
   const startPress = (key: Team | 'ball' | 'cone' | 'minigoal') => {
@@ -139,6 +141,42 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       document.removeEventListener('mousedown', handleDocClick);
       document.removeEventListener('touchstart', handleDocClick);
       document.removeEventListener('keydown', handleKey);
+    };
+  }, [showIaMenu]);
+
+  // Position IA menu within viewport (avoid overflow)
+  useEffect(() => {
+    const positionMenu = () => {
+      if (!showIaMenu) return;
+      const btn = iaButtonRef.current;
+      const menu = iaMenuRef.current;
+      if (!btn || !menu) return;
+
+      const rect = btn.getBoundingClientRect();
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+
+      // Default placement: below button, right-aligned to button's right edge
+      let top = rect.bottom + 8; // 8px gap
+      let left = Math.min(rect.right - menu.offsetWidth, vw - menu.offsetWidth - 8);
+      if (left < 8) left = 8;
+
+      // If menu would overflow bottom, open upwards
+      const menuHeight = menu.offsetHeight;
+      if (top + menuHeight > vh - 8) {
+        top = Math.max(8, rect.top - menuHeight - 8);
+      }
+
+      setIaMenuPos({ top, left });
+    };
+
+    // Position after first open and on resize/scroll
+    positionMenu();
+    window.addEventListener('resize', positionMenu);
+    window.addEventListener('scroll', positionMenu, true);
+    return () => {
+      window.removeEventListener('resize', positionMenu);
+      window.removeEventListener('scroll', positionMenu, true);
     };
   }, [showIaMenu]);
   
@@ -362,15 +400,20 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       {/* Right Section: Actions */}
       <div className="flex items-center gap-2">
         {/* Tácticas IA dropdown */}
-        <div className="relative" ref={iaMenuRef}>
+        <div className="relative">
           <button
             className="control-btn"
             onClick={() => setShowIaMenu(v => !v)}
+            ref={iaButtonRef}
           >
             Tácticas IA
           </button>
           {showIaMenu && (
-            <div className="absolute right-0 mt-2 bg-gray-800 border border-gray-700 rounded shadow-lg z-50 min-w-[160px]">
+            <div
+              ref={iaMenuRef}
+              className="bg-gray-800 border border-gray-700 rounded shadow-lg z-50 min-w-[180px] max-h-[60vh] overflow-auto"
+              style={{ position: 'fixed', top: iaMenuPos.top, left: iaMenuPos.left }}
+            >
               <a href="/equipo" className="block px-3 py-2 hover:bg-gray-700 text-white" onClick={() => setShowIaMenu(false)}>Equipo</a>
               <a href="/equipos" className="block px-3 py-2 hover:bg-gray-700 text-white" onClick={() => setShowIaMenu(false)}>Equipos</a>
               <a href="/rivales" className="block px-3 py-2 hover:bg-gray-700 text-white" onClick={() => setShowIaMenu(false)}>Rivales</a>
