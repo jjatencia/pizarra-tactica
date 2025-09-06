@@ -173,6 +173,18 @@ function App() {
   // Load saved state on mount
   useEffect(() => {
     load();
+    
+    // Check if there's a tactical pack to load from the AI report
+    const tacticalPackData = sessionStorage.getItem("tactical_pack_to_load");
+    if (tacticalPackData) {
+      try {
+        const pack = JSON.parse(tacticalPackData);
+        loadTacticalPackToBoard(pack);
+        sessionStorage.removeItem("tactical_pack_to_load");
+      } catch (error) {
+        console.error("Error loading tactical pack:", error);
+      }
+    }
   }, [load]);
   
   // Setup zoom/pan event listeners
@@ -275,6 +287,59 @@ function App() {
     playTokenPaths();
   }, [playTokenPaths]);
 
+  // Function to load tactical pack to board
+  const loadTacticalPackToBoard = useCallback((pack: any) => {
+    console.log("🎯 Cargando situación táctica:", pack.titulo);
+    
+    // Clear the current board
+    const { reset, addToken, addArrow, addTrajectory } = useBoardStore.getState();
+    reset();
+    
+    // Load the tactical situation to the board
+    pack.primitivas.forEach((primitive: any) => {
+      const { tipo, puntos, equipo } = primitive;
+      
+      if (!puntos || puntos.length === 0) return;
+      
+      // Convert relative coordinates (0-1) to field coordinates
+      const fieldWidth = 105; // meters
+      const fieldHeight = 68; // meters
+      
+      const fieldPoints = puntos.map((p: any) => ({
+        x: p.x * fieldWidth,
+        y: p.y * fieldHeight
+      }));
+      
+      switch (tipo) {
+        case 'move':
+        case 'arrow':
+          if (fieldPoints.length >= 2) {
+            addArrow(fieldPoints[0], fieldPoints[fieldPoints.length - 1]);
+          }
+          break;
+          
+        case 'marker':
+          if (fieldPoints.length >= 1) {
+            // Add a token at the marker position
+            const team = equipo === 'propio' ? 'blue' : 'red';
+            addToken(team, fieldPoints[0].x, fieldPoints[0].y, 'player', 'medium');
+          }
+          break;
+          
+        case 'curve':
+          if (fieldPoints.length >= 2) {
+            addTrajectory(fieldPoints, 'movement');
+          }
+          break;
+      }
+    });
+    
+    // Show success message
+    setTimeout(() => {
+      alert(`✅ Situación táctica "${pack.titulo}" cargada correctamente`);
+    }, 500);
+  }, []);
+
   // Handle canvas pointer down - no double tap for lines
   const handleCanvasPointerDown = useCallback((e: any) => {
     if (drawingMode === 'move') return; // Don't handle canvas events in move mode
@@ -298,8 +363,25 @@ function App() {
         gridTemplateAreas: '"toolbar" "content"'
       }}
     >
-      {/* Toolbar */}
+      {/* Navigation */}
       <div style={{ gridArea: 'toolbar', flexShrink: 0 }}>
+        <div className="bg-gray-800 p-2 flex items-center justify-between">
+          <div className="flex gap-2">
+            <button 
+              onClick={() => window.location.href = '/planes'}
+              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm"
+            >
+              📋 Planes IA
+            </button>
+            <button 
+              onClick={() => window.location.href = '/equipos'}
+              className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm"
+            >
+              👥 Equipos
+            </button>
+          </div>
+          <h1 className="text-white font-medium">⚽ Pizarra Táctica</h1>
+        </div>
         <Toolbar
         svgRef={svgRef}
         onAddToken={handleAddToken}
