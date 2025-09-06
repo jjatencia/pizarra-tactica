@@ -86,27 +86,50 @@ Responde SOLO con el JSON válido:`;
   const response = await fetchAIResponse(payload);
   
   // Debug logging
-  console.log('AI Response:', response);
+  console.log('🔍 AI Response raw:', response);
+  console.log('🔍 AI Response content type:', typeof response?.content);
+  console.log('🔍 AI Response content:', response?.content);
   
-  if (!response || !response.content) {
-    throw new Error('La IA no devolvió una respuesta válida. Verifica tu configuración de API key.');
+  if (!response) {
+    throw new Error('La IA no devolvió ninguna respuesta.');
   }
   
+  if (!response.content) {
+    console.error('❌ Response object:', response);
+    throw new Error('La IA no devolvió contenido. Respuesta recibida: ' + JSON.stringify(response));
+  }
+  
+  let sequence;
   try {
-    const sequence = JSON.parse(response.content);
-    
-    // Validate that we got a proper tactical sequence
-    if (!sequence.title || !sequence.steps || !Array.isArray(sequence.steps)) {
-      throw new Error('La respuesta de la IA no tiene el formato esperado. Intenta con una descripción más específica.');
-    }
-    
-    return sequence as TacticalSequence;
+    console.log('🔍 Intentando parsear JSON:', response.content);
+    sequence = JSON.parse(response.content);
+    console.log('✅ JSON parseado exitosamente:', sequence);
   } catch (error) {
-    if (error instanceof SyntaxError) {
-      throw new Error('La IA devolvió una respuesta malformada. Intenta de nuevo con una descripción más clara.');
-    }
-    throw error;
+    console.error('❌ Error parsing JSON:', error);
+    console.error('❌ Content that failed to parse:', response.content);
+    throw new Error('La IA devolvió JSON inválido: ' + (error instanceof Error ? error.message : 'Error desconocido'));
   }
+  
+  // Validate sequence structure
+  console.log('🔍 Validando estructura de secuencia...');
+  console.log('- title:', sequence?.title);
+  console.log('- steps:', sequence?.steps);
+  console.log('- questions:', sequence?.questions);
+  
+  if (!sequence.title) {
+    throw new Error('La secuencia no tiene título. Estructura recibida: ' + JSON.stringify(sequence));
+  }
+  
+  if (!sequence.steps && !sequence.questions) {
+    throw new Error('La secuencia no tiene pasos ni preguntas. Estructura recibida: ' + JSON.stringify(sequence));
+  }
+  
+  if (sequence.steps && !Array.isArray(sequence.steps)) {
+    throw new Error('Los pasos de la secuencia no son un array válido.');
+  }
+  
+  console.log('✅ Secuencia validada exitosamente');
+  return sequence as TacticalSequence;
 }
 
 export function convertSequenceToCanvasPack(sequence: TacticalSequence): CanvasTacticPack {

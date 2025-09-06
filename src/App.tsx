@@ -309,36 +309,52 @@ function App() {
   }, [playTokenPaths]);
 
   // Handle tactical sequence generation
-  const handleSequenceGenerated = useCallback(async (tacticalSequence: any, _originalDescription: string) => {
+  const handleSequenceGenerated = useCallback(async (tacticalSequence: any, originalDescription: string) => {
+    console.log('🎬 App.tsx: Recibiendo secuencia táctica:', tacticalSequence);
+    console.log('🎬 App.tsx: Descripción original:', originalDescription);
+    
     try {
-      console.log('🎯 Procesando secuencia táctica:', tacticalSequence);
+      console.log('🔄 App.tsx: Convirtiendo secuencia táctica a secuencia de animación...');
       
       // Convert tactical sequence to animation sequence
       const animationSequence = convertTacticalToAnimationSequence(tacticalSequence, tokens);
+      console.log('✅ App.tsx: Secuencia de animación creada:', animationSequence);
       
       // Check if this is a "questions only" sequence (shouldn't happen now with new dialog system)
       if (animationSequence.questions && animationSequence.questions.length > 0 && animationSequence.steps.length === 0) {
         // This should be handled by the TacticalDescriptionInput component now
-        console.warn('Questions received in App.tsx - should be handled by TacticalDescriptionInput');
+        console.warn('⚠️ App.tsx: Questions received - should be handled by TacticalDescriptionInput');
         return;
       }
       
+      // Validate animation sequence
+      if (!animationSequence.steps || animationSequence.steps.length === 0) {
+        throw new Error('La secuencia de animación no tiene pasos válidos');
+      }
+      
+      console.log('📝 App.tsx: Añadiendo secuencia al store...');
       // Add sequence to store
       addSequence(animationSequence);
       
+      console.log('🎭 App.tsx: Configurando fichas iniciales si es necesario...');
       // Set up initial formation if needed
       if (tokens.length === 0) {
         setupTokensFromSequence(animationSequence, (team: Team, x: number, y: number) => addToken(team, x, y, 'player', 'medium'), reset);
       }
       
+      console.log('🎉 App.tsx: Mostrando notificación de éxito...');
       setNotice(`✅ Secuencia creada: ${animationSequence.title}`);
       setTimeout(() => setNotice(null), 2000);
       
       // Clear any error
       setError(null);
+      console.log('✅ App.tsx: Procesamiento completado exitosamente');
+      
     } catch (err) {
-      console.error('❌ Error processing sequence:', err);
-      setError('Error procesando la secuencia generada: ' + (err instanceof Error ? err.message : 'Error desconocido'));
+      console.error('❌ App.tsx: Error processing sequence:', err);
+      console.error('❌ App.tsx: Stack trace:', err instanceof Error ? err.stack : 'No stack');
+      const errorMsg = 'Error procesando la secuencia generada: ' + (err instanceof Error ? err.message : 'Error desconocido');
+      setError(errorMsg);
     }
   }, [tokens, addSequence, addToken, reset]);
 

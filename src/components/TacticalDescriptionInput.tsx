@@ -22,13 +22,21 @@ export function TacticalDescriptionInput({ onSequenceGenerated, onError }: Tacti
       return;
     }
 
+    console.log('🚀 Iniciando generación de secuencia para:', description);
     setIsGenerating(true);
+    
     try {
       const sequence = await generateTacticalSequence(description);
-      console.log('✅ Secuencia generada exitosamente:', sequence);
+      console.log('✅ Secuencia recibida del generador:', sequence);
+      
+      // Validate sequence structure
+      if (!sequence) {
+        throw new Error('El generador devolvió una secuencia vacía');
+      }
       
       // Check if AI returned questions instead of a full sequence
       if (sequence.questions && sequence.questions.length > 0 && (!sequence.steps || sequence.steps.length === 0)) {
+        console.log('❓ IA devolvió preguntas, mostrando diálogo:', sequence.questions);
         // Store questions and show dialog
         setAiQuestions(sequence.questions);
         setOriginalDescription(description);
@@ -37,15 +45,26 @@ export function TacticalDescriptionInput({ onSequenceGenerated, onError }: Tacti
         return;
       }
       
+      // Validate that we have steps
+      if (!sequence.steps || sequence.steps.length === 0) {
+        throw new Error('La secuencia no contiene pasos de animación');
+      }
+      
+      console.log('🎯 Enviando secuencia válida al componente padre...');
       const currentDescription = description; // Store the original
       onSequenceGenerated?.(sequence, currentDescription);
       setDescription(''); // Clear after successful generation
       setIsExpanded(false);
+      console.log('✅ Secuencia enviada exitosamente');
+      
     } catch (error) {
-      console.error('❌ Error generating tactical sequence:', error);
-      onError?.(error instanceof Error ? error.message : 'Error generando la secuencia');
+      console.error('❌ Error en handleGenerate:', error);
+      console.error('❌ Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido generando la secuencia';
+      onError?.(errorMessage);
     } finally {
       setIsGenerating(false);
+      console.log('🏁 Generación completada (éxito o error)');
     }
   };
 
