@@ -45,6 +45,8 @@ export default function TableroPage() {
     setShowReport(false);
     // Clear the session storage
     sessionStorage.removeItem("tactics_to_paint");
+    // Navigate back to plans page
+    window.location.href = "/planes";
   }
 
   return (
