@@ -14,6 +14,7 @@ import { TokenNumberModal } from './components/TokenNumberModal';
 import { Team, ObjectType, TokenSize, Token as TokenType, Formation } from './types';
 import { clampToField, snapToGrid } from './lib/geometry';
 import clsx from 'clsx';
+import { CanvasTacticPack, CanvasPrimitive } from './types/canvas';
 
 function App() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -119,6 +120,11 @@ function App() {
     setDrawingMode,
     clearCanvas,
   } = useSimpleDrawing(canvasRef);
+
+  // Selector de jugadas IA en la pizarra
+  const [aiPacks, setAiPacks] = useState<CanvasTacticPack[] | null>(null);
+  const [showAIPackSelector, setShowAIPackSelector] = useState(false);
+  const [selectedAIPackIdx, setSelectedAIPackIdx] = useState(0);
   
     // Handle container resize with PWA detection
   useEffect(() => {
@@ -180,11 +186,19 @@ function App() {
       try {
         const pack = JSON.parse(tacticalPackData);
         loadTacticalPackToBoard(pack);
+        // Reproducir animación basada en primitivas si existen
+        try { playAISequence(pack); } catch (e) { console.warn('No se pudo reproducir la secuencia IA', e); }
         sessionStorage.removeItem("tactical_pack_to_load");
       } catch (error) {
         console.error("Error loading tactical pack:", error);
       }
     }
+
+    // Cargar último set de jugadas para selector
+    try {
+      const packsRaw = sessionStorage.getItem('last_ai_packs');
+      if (packsRaw) setAiPacks(JSON.parse(packsRaw));
+    } catch {}
   }, [load]);
   
   // Setup zoom/pan event listeners
@@ -288,7 +302,7 @@ function App() {
   }, [playTokenPaths]);
 
   // Function to load tactical pack to board
-  const loadTacticalPackToBoard = useCallback((pack: any) => {
+  const loadTacticalPackToBoard = useCallback((pack: CanvasTacticPack) => {
     console.log("🎯 Cargando situación táctica:", pack.titulo);
     
     // Clear the current board
@@ -296,7 +310,7 @@ function App() {
     reset();
     
     // Load the tactical situation to the board
-    pack.primitivas.forEach((primitive: any) => {
+    pack.primitivas.forEach((primitive: CanvasPrimitive) => {
       const { tipo, puntos, equipo } = primitive;
       
       if (!puntos || puntos.length === 0) return;
@@ -340,6 +354,85 @@ function App() {
     }, 500);
   }, []);
 
+  // Reproducir animación IA: mueve fichas y balón siguiendo primitivas y tiempos
+  const playAISequence = useCallback((pack: CanvasTacticPack) => {
+    const store = useBoardStore.getState();
+    store.clearTokenPaths();
+
+    const fieldWidth = 105;
+    const fieldHeight = 68;
+
+    // Helper: encontrar ficha más cercana de un equipo a un punto
+    const findNearestTokenId = (team: 'blue' | 'red', point: { x: number; y: number }) => {
+      let minD = Infinity; let id: string | null = null;
+      useBoardStore.getState().tokens
+        .filter(t => t.type === 'player' && t.team === team)
+        .forEach(t => {
+          const d = Math.hypot(t.x - point.x, t.y - point.y);
+          if (d < minD) { minD = d; id = t.id; }
+        });
+      return id;
+    };
+
+    // Asegurar balón
+    let ballId: string | null = null;
+    const ensureBallAt = (p: { x: number; y: number }) => {
+      const existing = useBoardStore.getState().tokens.find(t => t.type === 'ball');
+      if (existing) { ballId = existing.id; store.updateToken(existing.id, { x: p.x, y: p.y }); return existing.id; }
+      store.addObject('ball', p.x, p.y, 'small');
+      ballId = useBoardStore.getState().tokens.find(t => t.type === 'ball')?.id || null;
+      return ballId;
+    };
+
+    // Crear fichas iniciales desde markers si no existen
+    const markers = pack.primitivas.filter(p => p.tipo === 'marker');
+    markers.forEach(m => {
+      const pt = { x: m.puntos[0].x * fieldWidth, y: m.puntos[0].y * fieldHeight };
+      const team = m.equipo === 'propio' ? 'blue' : 'red';
+      // Evitar duplicar si ya hay una muy cerca
+      const nearest = findNearestTokenId(team, pt);
+      if (!nearest || (nearest && Math.hypot((useBoardStore.getState().tokens.find(t => t.id===nearest)!.x - pt.x), (useBoardStore.getState().tokens.find(t => t.id===nearest)!.y - pt.y)) > 5)) {
+        store.addToken(team, pt.x, pt.y, 'player', 'medium');
+      }
+    });
+
+    // Posición inicial del balón: inicio de la primera flecha
+    const firstArrow = pack.primitivas.filter(p => p.tipo === 'arrow').sort((a,b)=>(a.tiempo||0)-(b.tiempo||0))[0];
+    if (firstArrow) {
+      const p0 = { x: firstArrow.puntos[0].x * fieldWidth, y: firstArrow.puntos[0].y * fieldHeight };
+      ensureBallAt(p0);
+    }
+
+    // Construir paths por id
+    const addPath = (id: string, from: {x:number;y:number}, to: {x:number;y:number}, steps = 30) => {
+      for (let i=0;i<=steps;i++) {
+        const t = i/steps;
+        const x = from.x + (to.x - from.x) * t;
+        const y = from.y + (to.y - from.y) * t;
+        store.addTokenPathPoint(id, { x, y });
+      }
+    };
+
+    const sorted = [...pack.primitivas].sort((a,b)=>(a.tiempo||0)-(b.tiempo||0));
+    sorted.forEach(pr => {
+      if (!pr.puntos || pr.puntos.length < 2) return;
+      const from = { x: pr.puntos[0].x * fieldWidth, y: pr.puntos[0].y * fieldHeight };
+      const to = { x: pr.puntos[1].x * fieldWidth, y: pr.puntos[1].y * fieldHeight };
+      if (pr.tipo === 'move') {
+        const team = pr.equipo === 'propio' ? 'blue' : 'red';
+        const id = findNearestTokenId(team, from);
+        if (id) addPath(id, from, to, 24);
+      } else if (pr.tipo === 'arrow') {
+        // Tratar flecha como pase: mueve el balón
+        if (!ballId) ensureBallAt(from);
+        if (ballId) addPath(ballId, from, to, 24);
+      }
+    });
+
+    // Reproducir
+    setTimeout(() => store.playTokenPaths(), 200);
+  }, []);
+
   // Handle canvas pointer down - no double tap for lines
   const handleCanvasPointerDown = useCallback((e: any) => {
     if (drawingMode === 'move') return; // Don't handle canvas events in move mode
@@ -371,6 +464,7 @@ function App() {
         onAddObject={handleAddObject}
         onShowPresets={() => setShowPresets(true)}
         onShowFormations={() => setShowFormations(true)}
+        onOpenAIPackSelector={() => setShowAIPackSelector(true)}
         drawColor={drawColor}
         drawingMode={drawingMode}
         canUndoDraw={canUndoDraw}
@@ -561,6 +655,55 @@ function App() {
         onClose={handleCloseEdit}
         onSave={handleSaveNumber}
       />
+
+      {/* Selector de jugadas IA (dentro de la pizarra) */}
+      {showAIPackSelector && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowAIPackSelector(false)} />
+          <div className="relative z-10 bg-white text-black rounded-xl shadow-xl w-full max-w-xl p-4 md:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Elegir jugada IA</h2>
+              <button onClick={() => setShowAIPackSelector(false)} className="text-gray-500">✕</button>
+            </div>
+            <div className="space-y-2 max-h-[60vh] overflow-auto">
+              {(aiPacks || []).map((p, idx) => (
+                <label key={idx} className="flex items-start gap-3 p-3 rounded border hover:bg-gray-50">
+                  <input
+                    type="radio"
+                    name="board-ia-pack"
+                    className="mt-1"
+                    checked={selectedAIPackIdx === idx}
+                    onChange={() => setSelectedAIPackIdx(idx)}
+                  />
+                  <div>
+                    <div className="font-medium">{p.titulo}</div>
+                    <div className="text-sm text-gray-600">{p.instrucciones?.join(' • ')}</div>
+                    <div className="text-xs text-gray-500">{p.primitivas.length} movimientos</div>
+                  </div>
+                </label>
+              ))}
+              {(!aiPacks || aiPacks.length === 0) && (
+                <div className="text-sm text-gray-600">No hay jugadas recientes. Genera un informe en Planes.</div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <button className="px-4 py-2 bg-gray-200 rounded" onClick={() => setShowAIPackSelector(false)}>Cancelar</button>
+              <button
+                className="px-4 py-2 bg-blue-600 text-white rounded"
+                onClick={() => {
+                  if (!aiPacks || aiPacks.length === 0) return;
+                  const pack = aiPacks[selectedAIPackIdx];
+                  loadTacticalPackToBoard(pack);
+                  try { playAISequence(pack); } catch {}
+                  setShowAIPackSelector(false);
+                }}
+              >
+                Pintar y reproducir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

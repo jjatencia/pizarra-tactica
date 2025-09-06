@@ -10,6 +10,7 @@ interface ToolbarProps {
   onAddObject: (type: ObjectType, size: TokenSize) => void;
   onShowPresets: () => void;
   onShowFormations: () => void;
+  onOpenAIPackSelector?: () => void;
   drawColor: string;
   drawingMode: DrawingMode;
   canUndoDraw: boolean;
@@ -32,6 +33,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onAddObject,
   // onShowPresets, // Will be used later
   onShowFormations,
+  onOpenAIPackSelector,
   drawColor,
   // drawLineStyle, // Not used with new mode system
   drawingMode,
@@ -414,6 +416,16 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               className="bg-gray-800 border border-gray-700 rounded shadow-lg z-50 min-w-[180px] max-h-[60vh] overflow-auto"
               style={{ position: 'fixed', top: iaMenuPos.top, left: iaMenuPos.left }}
             >
+              <button
+                className="block w-full text-left px-3 py-2 hover:bg-gray-700 text-white"
+                onClick={() => {
+                  setShowIaMenu(false);
+                  onOpenAIPackSelector && onOpenAIPackSelector();
+                }}
+              >
+                Cargar jugada IA...
+              </button>
+              <div className="h-px bg-gray-700" />
               <a href="/equipo" className="block px-3 py-2 hover:bg-gray-700 text-white" onClick={() => setShowIaMenu(false)}>Equipo</a>
               <a href="/equipos" className="block px-3 py-2 hover:bg-gray-700 text-white" onClick={() => setShowIaMenu(false)}>Equipos</a>
               <a href="/rivales" className="block px-3 py-2 hover:bg-gray-700 text-white" onClick={() => setShowIaMenu(false)}>Rivales</a>

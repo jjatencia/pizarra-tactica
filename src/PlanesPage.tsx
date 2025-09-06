@@ -168,6 +168,8 @@ export default function PlanesPage() {
       
       const mapped = mapAIToCanvas(ai);
       await putTacticsCache({ id: key, createdAt: Date.now(), aiRaw: ai, mapped });
+      // Guarda las jugadas mapeadas para selector posterior en la pizarra
+      try { sessionStorage.setItem('last_ai_packs', JSON.stringify(mapped)); } catch {}
       
       // Asociar el informe IA con el plan de partido
       await updatePlan(plan.id, {
