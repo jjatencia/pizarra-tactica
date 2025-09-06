@@ -306,47 +306,19 @@ function App() {
     console.log("🎯 Cargando situación táctica:", pack.titulo);
     
     // Clear the current board
-    const { reset, addToken, addArrow, addTrajectory } = useBoardStore.getState();
+    const { reset, addToken } = useBoardStore.getState();
     reset();
     
-    // Load the tactical situation to the board
-    pack.primitivas.forEach((primitive: CanvasPrimitive) => {
-      const { tipo, puntos, equipo } = primitive;
-      
-      if (!puntos || puntos.length === 0) return;
-      
-      // Convert relative coordinates (0-1) to field coordinates
-      const fieldWidth = 105; // meters
-      const fieldHeight = 68; // meters
-      
-      const fieldPoints = puntos.map((p: any) => ({
-        x: p.x * fieldWidth,
-        y: p.y * fieldHeight
-      }));
-      
-      switch (tipo) {
-        case 'move':
-        case 'arrow':
-          if (fieldPoints.length >= 2) {
-            addArrow(fieldPoints[0], fieldPoints[fieldPoints.length - 1]);
-          }
-          break;
-          
-        case 'marker':
-          if (fieldPoints.length >= 1) {
-            // Add a token at the marker position
-            const team = equipo === 'propio' ? 'blue' : 'red';
-            addToken(team, fieldPoints[0].x, fieldPoints[0].y, 'player', 'medium');
-          }
-          break;
-          
-        case 'curve':
-          if (fieldPoints.length >= 2) {
-            addTrajectory(fieldPoints, 'movement');
-          }
-          break;
-      }
-    });
+    // Place only player tokens (markers). Lines are handled by animation.
+    pack.primitivas
+      .filter((pr) => pr.tipo === 'marker' && pr.puntos && pr.puntos.length > 0)
+      .forEach((m) => {
+        const fieldWidth = 105;
+        const fieldHeight = 68;
+        const pt = { x: m.puntos[0].x * fieldWidth, y: m.puntos[0].y * fieldHeight };
+        const team = m.equipo === 'propio' ? 'blue' : 'red';
+        addToken(team, pt.x, pt.y, 'player', 'medium');
+      });
     
     // Show success message
     setTimeout(() => {
@@ -384,23 +356,41 @@ function App() {
       return ballId;
     };
 
-    // Crear fichas iniciales desde markers si no existen
+    // Crear fichas iniciales desde markers y mapear marker.id -> token.id
+    const markerToToken: Record<string, string> = {};
     const markers = pack.primitivas.filter(p => p.tipo === 'marker');
     markers.forEach(m => {
+      if (!m.puntos || m.puntos.length === 0) return;
       const pt = { x: m.puntos[0].x * fieldWidth, y: m.puntos[0].y * fieldHeight };
       const team = m.equipo === 'propio' ? 'blue' : 'red';
-      // Evitar duplicar si ya hay una muy cerca
+      const before = useBoardStore.getState().tokens.length;
+      // si ya existe una ficha muy cerca, no añadir
       const nearest = findNearestTokenId(team, pt);
-      if (!nearest || (nearest && Math.hypot((useBoardStore.getState().tokens.find(t => t.id===nearest)!.x - pt.x), (useBoardStore.getState().tokens.find(t => t.id===nearest)!.y - pt.y)) > 5)) {
-        store.addToken(team, pt.x, pt.y, 'player', 'medium');
+      const nearEnough = nearest && Math.hypot((useBoardStore.getState().tokens.find(t => t.id===nearest)!.x - pt.x), (useBoardStore.getState().tokens.find(t => t.id===nearest)!.y - pt.y)) <= 3;
+      if (!nearEnough) store.addToken(team, pt.x, pt.y, 'player', 'medium');
+      const afterTokens = useBoardStore.getState().tokens;
+      let created: string | null = null;
+      if (afterTokens.length > before) {
+        created = afterTokens[afterTokens.length - 1].id;
+      } else if (nearest) {
+        created = nearest;
       }
+      if (created) markerToToken[m.id] = created;
     });
 
     // Posición inicial del balón: inicio de la primera flecha
     const firstArrow = pack.primitivas.filter(p => p.tipo === 'arrow').sort((a,b)=>(a.tiempo||0)-(b.tiempo||0))[0];
     if (firstArrow) {
-      const p0 = { x: firstArrow.puntos[0].x * fieldWidth, y: firstArrow.puntos[0].y * fieldHeight };
-      ensureBallAt(p0);
+      const from = { x: firstArrow.puntos[0].x * fieldWidth, y: firstArrow.puntos[0].y * fieldHeight };
+      // Intentar anclar a ficha del equipo propio/rival según 'equipo'
+      const team = firstArrow.equipo === 'propio' ? 'blue' : 'red';
+      const passerId = (firstArrow.targets && firstArrow.targets[0] && markerToToken[firstArrow.targets[0]]) || findNearestTokenId(team, from);
+      if (passerId) {
+        const passer = useBoardStore.getState().tokens.find(t => t.id === passerId)!;
+        ensureBallAt({ x: passer.x, y: passer.y });
+      } else {
+        ensureBallAt(from);
+      }
     }
 
     // Construir paths por id
@@ -420,12 +410,28 @@ function App() {
       const to = { x: pr.puntos[1].x * fieldWidth, y: pr.puntos[1].y * fieldHeight };
       if (pr.tipo === 'move') {
         const team = pr.equipo === 'propio' ? 'blue' : 'red';
-        const id = findNearestTokenId(team, from);
+        // target explícito o el más cercano
+        const id = (pr.targets && pr.targets[0] && markerToToken[pr.targets[0]]) || findNearestTokenId(team, from);
         if (id) addPath(id, from, to, 24);
       } else if (pr.tipo === 'arrow') {
-        // Tratar flecha como pase: mueve el balón
-        if (!ballId) ensureBallAt(from);
-        if (ballId) addPath(ballId, from, to, 24);
+        // Tratar flecha como pase: el balón parte del pasador (ficha), no de la nada
+        const team = pr.equipo === 'propio' ? 'blue' : 'red';
+        const passerId = (pr.targets && pr.targets[0] && markerToToken[pr.targets[0]]) || findNearestTokenId(team, from);
+        const receiverId = (pr.targets && pr.targets[1] && markerToToken[pr.targets[1]]) || findNearestTokenId(team, to);
+        let passFrom = from;
+        let passTo = to;
+        if (passerId) {
+          const passer = useBoardStore.getState().tokens.find(t => t.id === passerId)!;
+          passFrom = { x: passer.x, y: passer.y };
+        }
+        if (receiverId) {
+          const receiver = useBoardStore.getState().tokens.find(t => t.id === receiverId)!;
+          // opcional: mover receptor ligeramente al punto objetivo antes del pase
+          addPath(receiver.id, { x: receiver.x, y: receiver.y }, to, 12);
+          passTo = { x: receiver.x, y: receiver.y };
+        }
+        if (!ballId) ensureBallAt(passFrom);
+        if (ballId) addPath(ballId, passFrom, passTo, 24);
       }
     });
 
