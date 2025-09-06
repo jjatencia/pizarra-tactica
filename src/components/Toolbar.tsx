@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useBoardStore } from '../hooks/useBoardStore';
 import { exportSVGToPNG, downloadJSON } from '../lib/exportPng';
 import { Team, ObjectType, DrawingMode, TokenSize } from '../types';
@@ -75,6 +75,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
   const [menuTarget, setMenuTarget] = useState<(Team | 'ball' | 'cone' | 'minigoal') | null>(null);
   const [showIaMenu, setShowIaMenu] = useState(false);
+  const iaMenuRef = useRef<HTMLDivElement>(null);
   const longPressTimeout = useRef<number>();
 
   const startPress = (key: Team | 'ball' | 'cone' | 'minigoal') => {
@@ -118,6 +119,28 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     const data = exportState();
     downloadJSON(data);
   };
+
+  // Close IA menu on outside click or Escape
+  useEffect(() => {
+    const handleDocClick = (e: MouseEvent | TouchEvent) => {
+      if (!showIaMenu) return;
+      const el = iaMenuRef.current;
+      if (el && !el.contains(e.target as Node)) {
+        setShowIaMenu(false);
+      }
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowIaMenu(false);
+    };
+    document.addEventListener('mousedown', handleDocClick);
+    document.addEventListener('touchstart', handleDocClick);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handleDocClick);
+      document.removeEventListener('touchstart', handleDocClick);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [showIaMenu]);
   
   // const handleImportJSON = async () => {
   //   try {
@@ -339,7 +362,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       {/* Right Section: Actions */}
       <div className="flex items-center gap-2">
         {/* Tácticas IA dropdown */}
-        <div className="relative">
+        <div className="relative" ref={iaMenuRef}>
           <button
             className="control-btn"
             onClick={() => setShowIaMenu(v => !v)}
