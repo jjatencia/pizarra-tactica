@@ -27,52 +27,57 @@ export interface TacticalSequence {
 }
 
 export async function generateTacticalSequence(description: string): Promise<TacticalSequence> {
-  const prompt = `Eres un entrenador de fútbol experto. Tu tarea es convertir una descripción táctica en una secuencia animada específica.
+  const prompt = `Eres un entrenador de fútbol experto. Convierte esta descripción táctica en una secuencia animada realista.
 
-DESCRIPCIÓN DEL USUARIO:
-"${description}"
+DESCRIPCIÓN: "${description}"
+
+CONTEXTO DE CAMPO:
+- Campo 105m x 68m, coordenadas 0-1 (equipo azul ataca hacia la derecha, equipo rojo hacia la izquierda)
+- X=0 es línea de fondo izquierda (portería azul), X=1 es línea de fondo derecha (portería roja)
+- Y=0 es banda inferior, Y=1 es banda superior
+
+POSICIONES TÍPICAS:
+- Defensas: X=0.15-0.25 (azul), X=0.75-0.85 (rojo)
+- Mediocampistas: X=0.35-0.65 
+- Delanteros: X=0.65-0.85 (azul), X=0.15-0.35 (rojo)
 
 INSTRUCCIONES:
-1. Analiza la descripción e identifica todos los movimientos, pases y acciones
-2. Crea una secuencia temporal detallada con timestamps precisos
-3. Especifica posiciones en el campo usando coordenadas normalizadas (0-1)
-4. Si hay ambigüedades, formula preguntas específicas para clarificar
+1. Crea una secuencia táctica realista con 5-8 pasos máximo
+2. Usa coordenadas específicas basadas en posiciones reales de fútbol
+3. Timestamps progresivos (0ms, 1000ms, 2000ms, etc.)
+4. Movimientos coordinados entre jugadores del mismo equipo
+5. Si la descripción es vaga, haz preguntas específicas
 
-FORMATO DE RESPUESTA (JSON):
+FORMATO JSON:
 {
-  "title": "Título breve de la jugada",
-  "description": "Resumen de la situación táctica",
-  "duration": 8000,
+  "title": "Título breve",
+  "description": "Descripción táctica",
+  "duration": 6000,
   "steps": [
     {
       "timestamp": 0,
-      "type": "move|pass|pressure|intercept",
+      "type": "move|pressure|pass|intercept",
       "actor": {
         "team": "blue|red",
-        "position": {"x": 0.3, "y": 0.5},
-        "role": "central|delantero|mediocampista|lateral"
+        "position": {"x": 0.2, "y": 0.4},
+        "role": "central|lateral|delantero|mediocampista"
       },
       "target": {
-        "position": {"x": 0.7, "y": 0.3},
-        "team": "blue|red"
+        "position": {"x": 0.4, "y": 0.5}
       },
-      "description": "Descripción específica de la acción"
+      "description": "Acción específica"
     }
   ],
-  "questions": [
-    "¿En qué zona del campo inicia la jugada?",
-    "¿Cuántos jugadores participan en la presión?"
-  ]
+  "questions": ["¿Pregunta específica?"]
 }
 
-REGLAS:
-- Campo: 105m x 68m, coordenadas normalizadas 0-1
-- Timestamps en milisegundos, secuencia realista
-- Máximo 15 pasos por secuencia
-- Incluye tanto movimientos defensivos como ofensivos
-- Si falta información, pregunta específicamente qué necesitas saber
+Para PRESIÓN ALTA específicamente:
+- Delanteros del equipo presionante avanzan hacia defensas rivales
+- Coordinación entre 2-3 jugadores presionantes
+- Movimientos desde posiciones iniciales hacia el área rival
+- Reducir espacios y forzar errores
 
-Responde SOLO con el JSON válido:`;
+Responde SOLO JSON válido:`;
 
   const payload: Partial<AIPayload> = {
     prompt,

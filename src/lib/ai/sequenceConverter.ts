@@ -11,7 +11,7 @@ export function convertTacticalToAnimationSequence(
 ): AnimationSequence {
   // Handle case where IA returned ONLY questions without steps (needs clarification)
   if (tacticalSequence.questions && tacticalSequence.questions.length > 0 && (!tacticalSequence.steps || tacticalSequence.steps.length === 0)) {
-    console.log('🔄 Converter: IA devolvió solo preguntas, creando secuencia placeholder');
+    console.log('Converter: IA devolvió solo preguntas, creando secuencia placeholder');
     // Return a placeholder sequence that indicates questions need to be answered
     return {
       id: `questions_${Date.now()}`,
@@ -26,11 +26,11 @@ export function convertTacticalToAnimationSequence(
   
   // If AI returned questions WITH steps, log but proceed normally
   if (tacticalSequence.questions && tacticalSequence.questions.length > 0 && tacticalSequence.steps && tacticalSequence.steps.length > 0) {
-    console.log('🔄 Converter: IA devolvió secuencia válida con preguntas opcionales, procesando normalmente');
+    console.log('Converter: IA devolvió secuencia válida con preguntas opcionales, procesando normalmente');
   }
   
-  console.log('🔄 Converter: Iniciando conversión de pasos IA:', tacticalSequence.steps);
-  console.log('🔄 Converter: Fichas disponibles en el tablero:', boardTokens);
+  console.log('Converter: Iniciando conversión de pasos IA:', tacticalSequence.steps);
+  console.log('Converter: Fichas disponibles en el tablero:', boardTokens);
   
   const animationSteps: AnimationStep[] = [];
   const tokenMapping: TokenMapping = {};
@@ -63,7 +63,7 @@ export function convertTacticalToAnimationSequence(
     } else {
       // Create a virtual token ID when no board tokens exist
       tokenMapping[actorKey] = `virtual_${team}_${index}`;
-      console.log(`🔄 Converter: Created virtual token for ${actorKey}: virtual_${team}_${index}`);
+      console.log(`Converter: Created virtual token for ${actorKey}: virtual_${team}_${index}`);
     }
   });
 
@@ -121,9 +121,9 @@ export function convertTacticalToAnimationSequence(
     questions: tacticalSequence.questions,
   };
   
-  console.log('✅ Converter: Secuencia de animación creada:', finalSequence);
-  console.log('✅ Converter: Pasos de animación generados:', animationSteps.length);
-  console.log('✅ Converter: Mapeo de tokens:', tokenMapping);
+  console.log('Converter: Secuencia de animación creada:', finalSequence);
+  console.log('Converter: Pasos de animación generados:', animationSteps.length);
+  console.log('Converter: Mapeo de tokens:', tokenMapping);
   
   return finalSequence;
 }
@@ -179,7 +179,7 @@ export function setupTokensFromSequence(
   // Clear the board first
   reset();
 
-  console.log('🏁 Setting up tokens from sequence with', sequence.steps.length, 'steps');
+  console.log('Setting up tokens from sequence with', sequence.steps.length, 'steps');
   
   // Always create a full formation (11 players per team) regardless of sequence
   // This ensures both teams are visible on the field
@@ -216,26 +216,26 @@ export function setupTokensFromSequence(
   
   // Create blue team players
   blueFormation.forEach((pos, index) => {
-    console.log(`🔵 Creating blue player ${index + 1} at (${pos.x}, ${pos.y})`);
+    console.log(`Creating blue player ${index + 1} at (${pos.x}, ${pos.y})`);
     addToken('blue', pos.x, pos.y);
   });
   
   // Create red team players  
   redFormation.forEach((pos, index) => {
-    console.log(`🔴 Creating red player ${index + 1} at (${pos.x}, ${pos.y})`);
+    console.log(`Creating red player ${index + 1} at (${pos.x}, ${pos.y})`);
     addToken('red', pos.x, pos.y);
   });
   
-  console.log('✅ Full formation created: 22 players (11 blue + 11 red)');
+  console.log('Full formation created: 22 players (11 blue + 11 red)');
 }
 
 export function updateSequenceWithRealTokenIds(
   sequence: AnimationSequence,
   boardTokens: Token[]
 ): AnimationSequence {
-  console.log('🔄 Updating sequence with real token IDs...');
-  console.log('🔍 Board tokens:', boardTokens);
-  console.log('🔍 Sequence steps before update:', sequence.steps);
+  console.log('Updating sequence with real token IDs...');
+  console.log('Board tokens:', boardTokens);
+  console.log('Sequence steps before update:', sequence.steps);
   
   const updatedSteps = sequence.steps.map(step => {
     // If token ID is virtual, replace with real token ID
@@ -253,7 +253,7 @@ export function updateSequenceWithRealTokenIds(
       const availableToken = teamTokens.find(t => !usedTokenIds.has(t.id)) || teamTokens[0];
       
       if (availableToken) {
-        console.log(`🔄 Mapping ${step.tokenId} -> ${availableToken.id}`);
+        console.log(`Mapping ${step.tokenId} -> ${availableToken.id}`);
         return {
           ...step,
           tokenId: availableToken.id,
@@ -269,6 +269,6 @@ export function updateSequenceWithRealTokenIds(
     steps: updatedSteps,
   };
   
-  console.log('✅ Sequence updated with real token IDs:', updatedSequence.steps);
+  console.log('Sequence updated with real token IDs:', updatedSequence.steps);
   return updatedSequence;
 }

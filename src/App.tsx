@@ -12,7 +12,6 @@ import { PresetsPanel } from './components/PresetsPanel';
 import { FormationsModal } from './components/FormationsModal';
 import { TokenNumberModal } from './components/TokenNumberModal';
 import { TacticalDescriptionInput } from './components/TacticalDescriptionInput';
-import { PlaybackControls } from './components/PlaybackControls';
 import { Team, ObjectType, TokenSize, Token as TokenType, Formation } from './types';
 import { clampToField, snapToGrid } from './lib/geometry';
 import { convertTacticalToAnimationSequence, setupTokensFromSequence, updateSequenceWithRealTokenIds } from './lib/ai/sequenceConverter';
@@ -791,8 +790,6 @@ function App() {
           onError={handleSequenceError}
         />
         
-        {/* Playback Controls */}
-        <PlaybackControls />
       </div>
       
       {/* Main Content: Pitch */}

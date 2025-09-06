@@ -66,14 +66,14 @@ export function AIQuestionDialog({
       <div className="bg-slate-800 border border-slate-600 rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-auto shadow-xl">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <span className="text-blue-400">🤖</span>
+            <span className="text-blue-400">AI</span>
             <span className="text-white font-medium text-lg">La IA necesita más información</span>
           </div>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-white transition-colors text-xl"
           >
-            ✕
+            ×
           </button>
         </div>
 
@@ -90,7 +90,7 @@ export function AIQuestionDialog({
           {questions.map((question, index) => (
             <div key={index} className="space-y-2">
               <label className="text-sm text-white font-medium flex items-start gap-2">
-                <span className="text-blue-400 mt-1">Q{index + 1}:</span>
+                <span className="text-blue-400 mt-1">{index + 1}:</span>
                 <span>{question}</span>
               </label>
               <textarea

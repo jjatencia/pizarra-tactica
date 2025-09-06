@@ -43,7 +43,8 @@ export function TacticalDescriptionInput({ onSequenceGenerated, onError }: Tacti
         setAiQuestions(sequence.questions);
         setOriginalDescription(description);
         setShowQuestions(true);
-        setIsExpanded(false); // Collapse the input
+        // Keep expanded to show user there are questions to answer
+        // setIsExpanded(false); // Don't collapse - let user see the status
         return;
       }
       
@@ -96,7 +97,7 @@ Ejemplo: "Equipo azul realiza presión alta a equipo rojo. Los centrales rojos t
           className="w-full text-left text-gray-300 hover:text-white transition-colors"
         >
           <div className="flex items-center gap-2">
-            <span className="text-blue-400">🤖</span>
+            <span className="text-blue-400">AI</span>
             <span>Describe una situación táctica para generar secuencia animada...</span>
           </div>
         </button>
@@ -108,7 +109,7 @@ Ejemplo: "Equipo azul realiza presión alta a equipo rojo. Los centrales rojos t
     <div className="bg-slate-800 border border-slate-600 rounded-lg p-4 mb-3 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-blue-400">🤖</span>
+          <span className="text-blue-400">AI</span>
           <span className="text-white font-medium">Generador de Secuencias IA</span>
         </div>
         <button
@@ -118,7 +119,7 @@ Ejemplo: "Equipo azul realiza presión alta a equipo rojo. Los centrales rojos t
           }}
           className="text-gray-400 hover:text-white transition-colors"
         >
-          ✕
+          ×
         </button>
       </div>
 
@@ -136,6 +137,8 @@ Ejemplo: "Equipo azul realiza presión alta a equipo rojo. Los centrales rojos t
         <div className="text-xs text-gray-400">
           {isGenerating ? (
             <span>Generando secuencia...</span>
+          ) : showQuestions ? (
+            <span className="text-yellow-400">La IA tiene preguntas para ti - revisa el diálogo</span>
           ) : (
             <span>Ctrl/Cmd + Enter para generar</span>
           )}
