@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { BoardState, Token, Arrow, Trajectory, Team, Formation, HistoryState, ObjectType, TokenSize, Point } from '../types';
+import { BoardState, Token, Arrow, Trajectory, Team, Formation, HistoryState, ObjectType, TokenSize, Point, AnimationSequence, PlaybackState } from '../types';
 import { loadFromStorage, saveToStorage } from '../lib/localStorage';
 
 interface BoardStore extends BoardState {
@@ -8,6 +8,11 @@ interface BoardStore extends BoardState {
   recording: boolean;
   tokenPaths: Record<string, Point[]>;
   recordingStartPositions: Record<string, Point>;
+  
+  // Animation sequences
+  playbackState: PlaybackState;
+  sequences: AnimationSequence[];
+  currentSequence: AnimationSequence | null;
   
   // Token actions
   addToken: (team: Team, x: number, y: number, type?: ObjectType, size?: TokenSize) => void;
@@ -62,6 +67,16 @@ interface BoardStore extends BoardState {
   addTokenPathPoint: (id: string, point: Point) => void;
   clearTokenPaths: () => void;
   playTokenPaths: () => void;
+  
+  // Animation sequence actions
+  addSequence: (sequence: AnimationSequence) => void;
+  removeSequence: (sequenceId: string) => void;
+  playSequence: (sequenceId: string) => void;
+  pauseSequence: () => void;
+  resumeSequence: () => void;
+  stopSequence: () => void;
+  setPlaybackSpeed: (speed: number) => void;
+  seekTo: (time: number) => void;
 }
 
 const initialState: BoardState = {
@@ -115,12 +130,39 @@ const addToHistory = (currentState: BoardState, history: HistoryState): HistoryS
   };
 };
 
+// Easing functions for animations
+const applyEasing = (t: number, easing: 'linear' | 'easeInOut' | 'easeOut'): number => {
+  switch (easing) {
+    case 'linear':
+      return t;
+    case 'easeInOut':
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    case 'easeOut':
+      return 1 - (1 - t) * (1 - t);
+    default:
+      return t;
+  }
+};
+
+const initialPlaybackState: PlaybackState = {
+  isPlaying: false,
+  isPaused: false,
+  currentTime: 0,
+  sequence: null,
+  speed: 1.0,
+};
+
 export const useBoardStore = create<BoardStore>((set, get) => ({
     ...initialState,
   history: initialHistory,
   recording: false,
   tokenPaths: {},
   recordingStartPositions: {},
+  
+  // Animation sequences
+  playbackState: initialPlaybackState,
+  sequences: [],
+  currentSequence: null,
     
     addToken: (team: Team, x: number, y: number, type: ObjectType = 'player', size: TokenSize = 'medium') => {
       const state = get();
@@ -661,6 +703,250 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         requestAnimationFrame(animate);
       };
       animate();
+    },
+
+    // Animation sequence actions
+    addSequence: (sequence: AnimationSequence) => {
+      const state = get();
+      set({
+        sequences: [...state.sequences, sequence],
+      });
+    },
+
+    removeSequence: (sequenceId: string) => {
+      const state = get();
+      set({
+        sequences: state.sequences.filter(s => s.id !== sequenceId),
+        currentSequence: state.currentSequence?.id === sequenceId ? null : state.currentSequence,
+      });
+    },
+
+    playSequence: (sequenceId: string) => {
+      const state = get();
+      const sequence = state.sequences.find(s => s.id === sequenceId);
+      if (!sequence) return;
+
+      set({
+        currentSequence: sequence,
+        playbackState: {
+          ...state.playbackState,
+          isPlaying: true,
+          isPaused: false,
+          currentTime: 0,
+          sequence,
+        },
+      });
+
+      // Start animation loop
+      const startTime = Date.now();
+      const animationLoop = () => {
+        const current = get();
+        if (!current.playbackState.isPlaying || current.playbackState.sequence?.id !== sequenceId) {
+          return;
+        }
+
+        const elapsed = (Date.now() - startTime) * current.playbackState.speed;
+        const progress = Math.min(elapsed / sequence.totalDuration, 1);
+
+        // Update token positions based on current time
+        const activeSteps = sequence.steps.filter(step => 
+          step.timestamp <= elapsed && elapsed <= step.timestamp + step.duration
+        );
+
+        const tokenUpdates: Record<string, Partial<Token>> = {};
+        activeSteps.forEach(step => {
+          if (step.tokenId) {
+            const stepProgress = (elapsed - step.timestamp) / step.duration;
+            const easedProgress = applyEasing(stepProgress, step.easing || 'linear');
+            
+            const x = step.from.x + (step.to.x - step.from.x) * easedProgress;
+            const y = step.from.y + (step.to.y - step.from.y) * easedProgress;
+            
+            // Convert normalized coordinates to field coordinates
+            const fieldWidth = 105;
+            const fieldHeight = 68;
+            
+            tokenUpdates[step.tokenId] = {
+              x: x * fieldWidth,
+              y: y * fieldHeight,
+            };
+          }
+        });
+
+        // Apply token updates
+        if (Object.keys(tokenUpdates).length > 0) {
+          set(state => ({
+            ...state,
+            tokens: state.tokens.map(token => 
+              tokenUpdates[token.id] 
+                ? { ...token, ...tokenUpdates[token.id] }
+                : token
+            ),
+            playbackState: {
+              ...state.playbackState,
+              currentTime: elapsed,
+            },
+          }));
+        } else {
+          set(state => ({
+            ...state,
+            playbackState: {
+              ...state.playbackState,
+              currentTime: elapsed,
+            },
+          }));
+        }
+
+        if (progress < 1) {
+          requestAnimationFrame(animationLoop);
+        } else {
+          // Animation finished
+          set(state => ({
+            ...state,
+            playbackState: {
+              ...state.playbackState,
+              isPlaying: false,
+              currentTime: sequence.totalDuration,
+            },
+          }));
+        }
+      };
+
+      requestAnimationFrame(animationLoop);
+    },
+
+    pauseSequence: () => {
+      set(state => ({
+        ...state,
+        playbackState: {
+          ...state.playbackState,
+          isPlaying: false,
+          isPaused: true,
+        },
+      }));
+    },
+
+    resumeSequence: () => {
+      const state = get();
+      if (!state.playbackState.sequence || !state.playbackState.isPaused) return;
+      
+      set({
+        playbackState: {
+          ...state.playbackState,
+          isPlaying: true,
+          isPaused: false,
+        },
+      });
+
+      // Resume animation from current time
+      const startTime = Date.now() - (state.playbackState.currentTime / state.playbackState.speed);
+      const sequence = state.playbackState.sequence;
+      
+      const animationLoop = () => {
+        const current = get();
+        if (!current.playbackState.isPlaying) return;
+
+        const elapsed = (Date.now() - startTime) * current.playbackState.speed;
+        const progress = Math.min(elapsed / sequence.totalDuration, 1);
+
+        // Same animation logic as playSequence
+        const activeSteps = sequence.steps.filter(step => 
+          step.timestamp <= elapsed && elapsed <= step.timestamp + step.duration
+        );
+
+        const tokenUpdates: Record<string, Partial<Token>> = {};
+        activeSteps.forEach(step => {
+          if (step.tokenId) {
+            const stepProgress = (elapsed - step.timestamp) / step.duration;
+            const easedProgress = applyEasing(stepProgress, step.easing || 'linear');
+            
+            const x = step.from.x + (step.to.x - step.from.x) * easedProgress;
+            const y = step.from.y + (step.to.y - step.from.y) * easedProgress;
+            
+            const fieldWidth = 105;
+            const fieldHeight = 68;
+            
+            tokenUpdates[step.tokenId] = {
+              x: x * fieldWidth,
+              y: y * fieldHeight,
+            };
+          }
+        });
+
+        if (Object.keys(tokenUpdates).length > 0) {
+          set(state => ({
+            ...state,
+            tokens: state.tokens.map(token => 
+              tokenUpdates[token.id] 
+                ? { ...token, ...tokenUpdates[token.id] }
+                : token
+            ),
+            playbackState: {
+              ...state.playbackState,
+              currentTime: elapsed,
+            },
+          }));
+        } else {
+          set(state => ({
+            ...state,
+            playbackState: {
+              ...state.playbackState,
+              currentTime: elapsed,
+            },
+          }));
+        }
+
+        if (progress < 1) {
+          requestAnimationFrame(animationLoop);
+        } else {
+          set(state => ({
+            ...state,
+            playbackState: {
+              ...state.playbackState,
+              isPlaying: false,
+              currentTime: sequence.totalDuration,
+            },
+          }));
+        }
+      };
+
+      requestAnimationFrame(animationLoop);
+    },
+
+    stopSequence: () => {
+      set(state => ({
+        ...state,
+        playbackState: {
+          ...state.playbackState,
+          isPlaying: false,
+          isPaused: false,
+          currentTime: 0,
+        },
+      }));
+    },
+
+    setPlaybackSpeed: (speed: number) => {
+      set(state => ({
+        ...state,
+        playbackState: {
+          ...state.playbackState,
+          speed: Math.max(0.1, Math.min(3, speed)), // Clamp between 0.1x and 3x
+        },
+      }));
+    },
+
+    seekTo: (time: number) => {
+      const state = get();
+      if (!state.playbackState.sequence) return;
+      
+      const clampedTime = Math.max(0, Math.min(state.playbackState.sequence.totalDuration, time));
+      
+      set({
+        playbackState: {
+          ...state.playbackState,
+          currentTime: clampedTime,
+        },
+      });
     },
   }));
 

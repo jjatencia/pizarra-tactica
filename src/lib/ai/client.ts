@@ -2,7 +2,7 @@ import { AIResponse } from "./types";
 import { AIPayload } from "./payload";
 
 
-export async function fetchAIResponse(payload: AIPayload): Promise<AIResponse> {
+export async function fetchAIResponse(payload: Partial<AIPayload>): Promise<AIResponse> {
   let res: Response;
   try {
     // Crear AbortController con timeout de 60 segundos

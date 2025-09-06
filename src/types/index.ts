@@ -67,3 +67,34 @@ export interface PitchDimensions {
   height: number;
   scale: number;
 }
+
+// Animation sequence types
+export interface AnimationStep {
+  id: string;
+  timestamp: number; // milliseconds from sequence start
+  type: 'move' | 'pass' | 'pressure' | 'intercept';
+  tokenId?: string; // token that performs the action
+  from: Point;
+  to: Point;
+  duration: number; // milliseconds
+  easing?: 'linear' | 'easeInOut' | 'easeOut';
+  description?: string;
+}
+
+export interface AnimationSequence {
+  id: string;
+  title: string;
+  description: string;
+  totalDuration: number; // milliseconds
+  steps: AnimationStep[];
+  loop?: boolean;
+  questions?: string[]; // AI clarification questions
+}
+
+export interface PlaybackState {
+  isPlaying: boolean;
+  isPaused: boolean;
+  currentTime: number; // current position in milliseconds
+  sequence: AnimationSequence | null;
+  speed: number; // playback speed multiplier (1.0 = normal)
+}

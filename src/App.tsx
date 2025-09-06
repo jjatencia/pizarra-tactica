@@ -11,8 +11,11 @@ import { Toolbar } from './components/Toolbar';
 import { PresetsPanel } from './components/PresetsPanel';
 import { FormationsModal } from './components/FormationsModal';
 import { TokenNumberModal } from './components/TokenNumberModal';
+import { TacticalDescriptionInput } from './components/TacticalDescriptionInput';
+import { PlaybackControls } from './components/PlaybackControls';
 import { Team, ObjectType, TokenSize, Token as TokenType, Formation } from './types';
 import { clampToField, snapToGrid } from './lib/geometry';
+import { convertTacticalToAnimationSequence, setupTokensFromSequence } from './lib/ai/sequenceConverter';
 import clsx from 'clsx';
 import { CanvasTacticPack } from './types/canvas';
 
@@ -33,6 +36,7 @@ function App() {
     cone: 'medium',
     minigoal: 'medium',
   });
+  const [error, setError] = useState<string | null>(null);
   // Removed canvas tap refs as double tap is not used for lines anymore
   
   const {
@@ -59,6 +63,8 @@ function App() {
     startRecording,
     stopRecording,
     playTokenPaths,
+    reset,
+    addSequence,
   } = useBoardStore();
   
   // Field dimensions
@@ -301,6 +307,36 @@ function App() {
   const handlePlayRecording = useCallback(() => {
     playTokenPaths();
   }, [playTokenPaths]);
+
+  // Handle tactical sequence generation
+  const handleSequenceGenerated = useCallback(async (tacticalSequence: any, _originalDescription: string) => {
+    try {
+      // Convert tactical sequence to animation sequence
+      const animationSequence = convertTacticalToAnimationSequence(tacticalSequence, tokens);
+      
+      // Add sequence to store
+      addSequence(animationSequence);
+      
+      // Set up initial formation if needed
+      if (tokens.length === 0) {
+        setupTokensFromSequence(animationSequence, (team: Team, x: number, y: number) => addToken(team, x, y, 'player', 'medium'), reset);
+      }
+      
+      setNotice(`✅ Secuencia creada: ${animationSequence.title}`);
+      setTimeout(() => setNotice(null), 2000);
+      
+      // Clear any error
+      setError(null);
+    } catch (err) {
+      console.error('Error processing sequence:', err);
+      setError('Error procesando la secuencia generada');
+    }
+  }, [tokens, addSequence, addToken, reset]);
+
+  const handleSequenceError = useCallback((errorMessage: string) => {
+    setError(errorMessage);
+    setTimeout(() => setError(null), 5000);
+  }, []);
 
   // Function to load tactical pack to board
   const loadTacticalPackToBoard = useCallback((pack: CanvasTacticPack) => {
@@ -675,7 +711,7 @@ function App() {
       }}
     >
       {/* Toolbar */}
-      <div style={{ gridArea: 'toolbar', flexShrink: 0 }}>
+      <div style={{ gridArea: 'toolbar', flexShrink: 0 }} className="space-y-2 p-2">
         <Toolbar
         svgRef={svgRef}
         onAddToken={handleAddToken}
@@ -698,6 +734,15 @@ function App() {
         onToggleRecording={handleToggleRecording}
         onPlayRecording={handlePlayRecording}
         />
+        
+        {/* Tactical Description Input */}
+        <TacticalDescriptionInput
+          onSequenceGenerated={handleSequenceGenerated}
+          onError={handleSequenceError}
+        />
+        
+        {/* Playback Controls */}
+        <PlaybackControls />
       </div>
       
       {/* Main Content: Pitch */}
@@ -854,6 +899,13 @@ function App() {
       {notice && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-3 py-2 rounded-md text-sm shadow-md" style={{ zIndex: 4 }}>
           {notice}
+        </div>
+      )}
+
+      {/* Error notification */}
+      {error && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-red-900/90 text-red-100 px-3 py-2 rounded-md text-sm shadow-md border border-red-700" style={{ zIndex: 4 }}>
+          ❌ {error}
         </div>
       )}
           </div>

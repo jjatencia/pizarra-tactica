@@ -19,4 +19,6 @@ export interface AIPayload {
   plan: MatchPlan;
   context: AIPayloadContext;
   constraints?: AIPayloadConstraints;
+  prompt?: string; // For tactical sequence generation
+  boardState?: any; // For board state context
 }
