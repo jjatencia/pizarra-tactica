@@ -23,6 +23,11 @@ export default function TacticalAnimation({ tacticPack, onClose }: TacticalAnima
   // Obtener la duración total de la animación
   const totalDuration = Math.max(...tacticPack.primitivas.map(p => p.tiempo || 0)) + 2000; // +2s padding
 
+  console.log("🎬 TacticalAnimation iniciado", { 
+    primitivas: tacticPack.primitivas.length, 
+    totalDuration 
+  });
+
   useEffect(() => {
     // Inicializar elementos animados
     const elements = tacticPack.primitivas.map(primitive => ({
@@ -31,7 +36,17 @@ export default function TacticalAnimation({ tacticPack, onClose }: TacticalAnima
       progress: 0
     }));
     setAnimatedElements(elements);
+    
+    console.log("🎭 Elementos animados creados:", elements.length);
   }, [tacticPack]);
+
+  // Efecto para dibujar el frame inicial cuando el canvas esté listo
+  useEffect(() => {
+    if (canvasRef.current && animatedElements.length > 0) {
+      console.log("🎨 Dibujando frame inicial");
+      drawFrame(0);
+    }
+  }, [animatedElements]);
 
   useEffect(() => {
     if (isPlaying) {
@@ -91,12 +106,18 @@ export default function TacticalAnimation({ tacticPack, onClose }: TacticalAnima
     return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
   };
 
-  const drawFrame = (_time: number) => {
+  const drawFrame = (time: number) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      console.warn("⚠️ Canvas no disponible");
+      return;
+    }
 
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) {
+      console.warn("⚠️ Context no disponible");
+      return;
+    }
 
     // Limpiar canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -104,11 +125,25 @@ export default function TacticalAnimation({ tacticPack, onClose }: TacticalAnima
     // Dibujar campo de fútbol simplificado
     drawField(ctx, canvas.width, canvas.height);
 
+    // Debug: mostrar elementos que deberían estar visibles
+    const elementsToShow = animatedElements.filter(el => {
+      const startTime = el.primitive.tiempo || 0;
+      return time >= startTime;
+    });
+
+    console.log(`🎨 Frame ${time}ms: ${elementsToShow.length}/${animatedElements.length} elementos visibles`);
+
     // Dibujar elementos animados
-    animatedElements.forEach(element => {
-      if (element.visible) {
-        drawPrimitive(ctx, element.primitive, element.progress, canvas.width, canvas.height);
+    elementsToShow.forEach(element => {
+      const startTime = element.primitive.tiempo || 0;
+      const duration = 1000;
+      let progress = 1;
+      
+      if (time < startTime + duration) {
+        progress = Math.max(0, (time - startTime) / duration);
       }
+      
+      drawPrimitive(ctx, element.primitive, progress, canvas.width, canvas.height);
     });
   };
 
@@ -155,6 +190,8 @@ export default function TacticalAnimation({ tacticPack, onClose }: TacticalAnima
     height: number
   ) => {
     const { tipo, equipo, puntos, estilo } = primitive;
+
+    console.log(`✏️ Dibujando ${tipo} (${equipo}) con progreso ${progress.toFixed(2)}`);
 
     if (tipo === 'marker') {
       drawMarker(ctx, puntos[0], equipo, estilo?.etiqueta || '', progress, width, height);
