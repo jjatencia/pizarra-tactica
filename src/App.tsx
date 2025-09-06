@@ -363,25 +363,8 @@ function App() {
         gridTemplateAreas: '"toolbar" "content"'
       }}
     >
-      {/* Navigation */}
+      {/* Toolbar */}
       <div style={{ gridArea: 'toolbar', flexShrink: 0 }}>
-        <div className="bg-gray-800 p-2 flex items-center justify-between">
-          <div className="flex gap-2">
-            <button 
-              onClick={() => window.location.href = '/planes'}
-              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm"
-            >
-              📋 Planes IA
-            </button>
-            <button 
-              onClick={() => window.location.href = '/equipos'}
-              className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm"
-            >
-              👥 Equipos
-            </button>
-          </div>
-          <h1 className="text-white font-medium">⚽ Pizarra Táctica</h1>
-        </div>
         <Toolbar
         svgRef={svgRef}
         onAddToken={handleAddToken}
