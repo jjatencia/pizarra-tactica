@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { CanvasTacticPack } from "@/types/canvas";
 import { AIResponse } from "@/lib/ai/types";
+import TacticalAnimation from "./TacticalAnimation";
 
 interface MatchPlanReportProps {
   aiData: AIResponse;
@@ -12,6 +13,18 @@ interface MatchPlanReportProps {
 
 export default function MatchPlanReport({ aiData, tacticPacks, onClose, onLoadToBoard }: MatchPlanReportProps) {
   const [selectedPlay, setSelectedPlay] = useState<number>(0);
+  const [showAnimation, setShowAnimation] = useState<boolean>(false);
+  const [animatingPack, setAnimatingPack] = useState<CanvasTacticPack | null>(null);
+
+  const handleShowAnimation = (pack: CanvasTacticPack) => {
+    setAnimatingPack(pack);
+    setShowAnimation(true);
+  };
+
+  const handleCloseAnimation = () => {
+    setShowAnimation(false);
+    setAnimatingPack(null);
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-gray-900 overflow-y-auto">
@@ -140,6 +153,7 @@ export default function MatchPlanReport({ aiData, tacticPacks, onClose, onLoadTo
                   <TacticalSituationViewer
                     pack={tacticPacks[selectedPlay]}
                     onLoadToBoard={() => onLoadToBoard(tacticPacks[selectedPlay])}
+                    onShowAnimation={() => handleShowAnimation(tacticPacks[selectedPlay])}
                   />
                 </div>
               )}
@@ -147,11 +161,27 @@ export default function MatchPlanReport({ aiData, tacticPacks, onClose, onLoadTo
           </section>
         </div>
       </div>
+
+      {/* Tactical Animation Modal */}
+      {showAnimation && animatingPack && (
+        <TacticalAnimation
+          tacticPack={animatingPack}
+          onClose={handleCloseAnimation}
+        />
+      )}
     </div>
   );
 }
 
-function TacticalSituationViewer({ pack, onLoadToBoard }: { pack: CanvasTacticPack; onLoadToBoard: () => void }) {
+function TacticalSituationViewer({ 
+  pack, 
+  onLoadToBoard, 
+  onShowAnimation 
+}: { 
+  pack: CanvasTacticPack; 
+  onLoadToBoard: () => void;
+  onShowAnimation: () => void;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
   useEffect(() => {
@@ -183,12 +213,20 @@ function TacticalSituationViewer({ pack, onLoadToBoard }: { pack: CanvasTacticPa
     <div className="bg-gray-700/30 rounded-lg p-4">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-lg">{pack.titulo}</h3>
-        <button
-          onClick={onLoadToBoard}
-          className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-medium flex items-center gap-2"
-        >
-          🎯 Cargar en Pizarra
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={onShowAnimation}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium flex items-center gap-2"
+          >
+            🎬 Ver Animación
+          </button>
+          <button
+            onClick={onLoadToBoard}
+            className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-medium flex items-center gap-2"
+          >
+            🎯 Cargar en Pizarra
+          </button>
+        </div>
       </div>
 
       {/* Tactical Preview */}

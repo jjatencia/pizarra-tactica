@@ -48,25 +48,54 @@ DEBES responder SOLO con JSON válido siguiendo EXACTAMENTE esta estructura:
   },
   "jugadas": [
     {
-      "titulo": "Ataque por banda derecha",
-      "objetivo": "Crear superioridad numérica",
-      "instrucciones": ["Lateral sube", "Extremo se abre", "Mediocampista apoya"],
+      "titulo": "Contraataque rápido por banda derecha",
+      "objetivo": "Crear superioridad numérica tras recuperación",
+      "instrucciones": ["Presión inmediata", "Pase largo al espacio", "Apoyo desde el centro"],
       "primitivas": [
         {
-          "id": "move1",
+          "id": "rival1",
           "tipo": "marker",
-          "equipo": "propio",
+          "equipo": "rival",
           "targets": [],
-          "puntos": [{"x": 0.8, "y": 0.2}],
-          "estilo": {"etiqueta": "LD"}
+          "puntos": [{"x": 0.6, "y": 0.4}],
+          "estilo": {"etiqueta": "Rival MC"},
+          "tiempo": 0
         },
         {
-          "id": "arrow1",
+          "id": "propio1",
+          "tipo": "marker", 
+          "equipo": "propio",
+          "targets": [],
+          "puntos": [{"x": 0.4, "y": 0.5}],
+          "estilo": {"etiqueta": "González"},
+          "tiempo": 0
+        },
+        {
+          "id": "recuperacion",
           "tipo": "arrow",
+          "equipo": "propio",
+          "targets": [],
+          "puntos": [{"x": 0.6, "y": 0.4}, {"x": 0.4, "y": 0.5}],
+          "estilo": {"discontinua": false},
+          "tiempo": 500
+        },
+        {
+          "id": "pase_largo",
+          "tipo": "arrow",
+          "equipo": "propio",
+          "targets": [],
+          "puntos": [{"x": 0.4, "y": 0.5}, {"x": 0.8, "y": 0.2}],
+          "estilo": {"discontinua": true},
+          "tiempo": 1000
+        },
+        {
+          "id": "extremo_posicion",
+          "tipo": "marker",
           "equipo": "propio", 
           "targets": [],
-          "puntos": [{"x": 0.8, "y": 0.2}, {"x": 0.9, "y": 0.1}],
-          "estilo": {"discontinua": false}
+          "puntos": [{"x": 0.8, "y": 0.2}],
+          "estilo": {"etiqueta": "Díaz"},
+          "tiempo": 1500
         }
       ]
     }
@@ -94,7 +123,18 @@ DEBES responder SOLO con JSON válido siguiendo EXACTAMENTE esta estructura:
 IMPORTANTE: Usa los nombres reales de los jugadores disponibles en la alineación titular y banquillo. 
 NO uses nombres genéricos como "Jugador1", "Jugador2", etc.
 
-Genera 3 situaciones tácticas diferentes con primitivas gráficas (coordenadas entre 0 y 1).`;
+Genera 3 situaciones tácticas ANIMADAS diferentes. Cada situación debe incluir:
+- Jugadores del equipo propio (equipo: "propio") 
+- Jugadores rivales (equipo: "rival") que participan en la situación
+- Secuencia temporal usando el campo "tiempo" (0, 1000, 2000ms, etc.)
+- Movimientos realistas con múltiples pasos
+
+Usa estos tipos de primitivas:
+- "marker": posición de jugador (con etiqueta del nombre/rol)
+- "arrow": movimiento o pase (de punto A a punto B)  
+- "zone": área de presión o cobertura
+
+Coordenadas entre 0 y 1 (0,0 = esquina superior izquierda, 1,1 = esquina inferior derecha).`;
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
