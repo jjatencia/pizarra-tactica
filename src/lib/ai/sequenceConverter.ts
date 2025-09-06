@@ -9,6 +9,19 @@ export function convertTacticalToAnimationSequence(
   tacticalSequence: TacticalSequence,
   boardTokens: Token[]
 ): AnimationSequence {
+  // Handle case where IA returned questions instead of sequence
+  if (tacticalSequence.questions && tacticalSequence.questions.length > 0 && (!tacticalSequence.steps || tacticalSequence.steps.length === 0)) {
+    // Return a placeholder sequence that indicates questions need to be answered
+    return {
+      id: `questions_${Date.now()}`,
+      title: 'La IA necesita más información',
+      description: 'Responde las preguntas para generar la secuencia',
+      totalDuration: 1000,
+      steps: [],
+      loop: false,
+      questions: tacticalSequence.questions,
+    };
+  }
   const animationSteps: AnimationStep[] = [];
   const tokenMapping: TokenMapping = {};
 

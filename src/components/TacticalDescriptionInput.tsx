@@ -21,12 +21,22 @@ export function TacticalDescriptionInput({ onSequenceGenerated, onError }: Tacti
     setIsGenerating(true);
     try {
       const sequence = await generateTacticalSequence(description);
+      console.log('✅ Secuencia generada exitosamente:', sequence);
+      
+      // Check if AI returned questions instead of a full sequence
+      if (sequence.questions && sequence.questions.length > 0 && (!sequence.steps || sequence.steps.length === 0)) {
+        // Show the questions to the user in a more user-friendly way
+        const questionText = sequence.questions.join('\n• ');
+        onError?.(`La IA necesita más información:\n\n• ${questionText}\n\nPor favor, sé más específico en tu descripción.`);
+        return;
+      }
+      
       const originalDescription = description; // Store the original
       onSequenceGenerated?.(sequence, originalDescription);
       setDescription(''); // Clear after successful generation
       setIsExpanded(false);
     } catch (error) {
-      console.error('Error generating tactical sequence:', error);
+      console.error('❌ Error generating tactical sequence:', error);
       onError?.(error instanceof Error ? error.message : 'Error generando la secuencia');
     } finally {
       setIsGenerating(false);

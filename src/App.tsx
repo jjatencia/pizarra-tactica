@@ -311,8 +311,19 @@ function App() {
   // Handle tactical sequence generation
   const handleSequenceGenerated = useCallback(async (tacticalSequence: any, _originalDescription: string) => {
     try {
+      console.log('🎯 Procesando secuencia táctica:', tacticalSequence);
+      
       // Convert tactical sequence to animation sequence
       const animationSequence = convertTacticalToAnimationSequence(tacticalSequence, tokens);
+      
+      // Check if this is a "questions only" sequence
+      if (animationSequence.questions && animationSequence.questions.length > 0 && animationSequence.steps.length === 0) {
+        // Don't add to store, just show the questions as an error message
+        const questionText = animationSequence.questions.join('\n• ');
+        setError(`La IA necesita más información:\n\n• ${questionText}\n\nPor favor, sé más específico en tu descripción.`);
+        setTimeout(() => setError(null), 8000); // Show longer for questions
+        return;
+      }
       
       // Add sequence to store
       addSequence(animationSequence);
@@ -328,8 +339,8 @@ function App() {
       // Clear any error
       setError(null);
     } catch (err) {
-      console.error('Error processing sequence:', err);
-      setError('Error procesando la secuencia generada');
+      console.error('❌ Error processing sequence:', err);
+      setError('Error procesando la secuencia generada: ' + (err instanceof Error ? err.message : 'Error desconocido'));
     }
   }, [tokens, addSequence, addToken, reset]);
 
@@ -904,8 +915,11 @@ function App() {
 
       {/* Error notification */}
       {error && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-red-900/90 text-red-100 px-3 py-2 rounded-md text-sm shadow-md border border-red-700" style={{ zIndex: 4 }}>
-          ❌ {error}
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-red-900/90 text-red-100 px-4 py-3 rounded-md text-sm shadow-md border border-red-700 max-w-md" style={{ zIndex: 4 }}>
+          <div className="flex items-start gap-2">
+            <span className="text-red-400 mt-0.5">❌</span>
+            <div className="whitespace-pre-line">{error}</div>
+          </div>
         </div>
       )}
           </div>
