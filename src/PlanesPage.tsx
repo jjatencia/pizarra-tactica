@@ -19,6 +19,7 @@ export default function PlanesPage() {
   const [plans, setPlans] = useState<MatchPlan[]>([]);
   const [fecha, setFecha] = useState<string>(new Date().toISOString().slice(0,10));
   const [err, setErr] = useState<string | null>(null);
+  const [loadingIA, setLoadingIA] = useState<string | null>(null);
 
   const [editing, setEditing] = useState<MatchPlan | null>(null);
   const [form, setForm] = useState<MatchPlan | null>(null);
@@ -105,39 +106,57 @@ export default function PlanesPage() {
   }
 
   async function generarIA(plan: MatchPlan) {
-    const squadId = getCurrentSquadId()!;
-    const players = await listPlayers(squadId);
-    const rivals = await listOpponents(squadId);
-    const opponent = rivals.find(r => r.id === plan.opponentId);
-    if (!opponent) { alert("No encuentro el rival seleccionado"); return; }
-
-    const formacionesPermitidas: AIPayloadContext["formacionesPermitidas"] = [
-      "4-2-3-1",
-      "4-3-3",
-      "3-5-2",
-    ];
-
-    const payload = {
-      squadId,
-      players,
-      opponent,
-      plan,
-      context: {
-        objetivos: plan.objetivos,
-        recursos: plan.recursos,
-        formacionesPermitidas,
-      }
-    };
-
-    const key = simpleHash(JSON.stringify(payload));
+    setLoadingIA(plan.id);
+    setErr(null);
+    
     try {
+      const squadId = getCurrentSquadId()!;
+      const players = await listPlayers(squadId);
+      const rivals = await listOpponents(squadId);
+      const opponent = rivals.find(r => r.id === plan.opponentId);
+      if (!opponent) { 
+        setErr("No encuentro el rival seleccionado"); 
+        return; 
+      }
+
+      const formacionesPermitidas: AIPayloadContext["formacionesPermitidas"] = [
+        "4-2-3-1",
+        "4-3-3",
+        "3-5-2",
+      ];
+
+      const payload = {
+        squadId,
+        players,
+        opponent,
+        plan,
+        context: {
+          objetivos: plan.objetivos,
+          recursos: plan.recursos,
+          formacionesPermitidas,
+        }
+      };
+
+      const key = simpleHash(JSON.stringify(payload));
+      console.log("🤖 Generando táctica con IA...", { squadId, players: players.length, opponent: opponent.rival });
+      
       const ai = await fetchAIResponse(payload);
+      console.log("✅ IA respondió correctamente");
+      
       const mapped = mapAIToCanvas(ai);
       await putTacticsCache({ id: key, createdAt: Date.now(), aiRaw: ai, mapped });
       sessionStorage.setItem("tactics_to_paint", JSON.stringify({ id: key }));
-      window.location.href = "/tablero";
+      
+      // Pequeño delay para que el usuario vea el feedback
+      setTimeout(() => {
+        window.location.href = "/tablero";
+      }, 500);
+      
     } catch (e: any) {
-      alert(e.message ?? "Error al generar con IA");
+      console.error("❌ Error al generar con IA:", e);
+      setErr(`Error al generar con IA: ${e.message ?? "Error desconocido"}`);
+    } finally {
+      setLoadingIA(null);
     }
   }
 
@@ -179,7 +198,17 @@ export default function PlanesPage() {
               <div className="flex gap-3 text-sm">
                 <button className="underline" onClick={()=>openEdit(p)}>Editar</button>
                 <button className="text-red-600 underline" onClick={()=>onDelete(p.id)}>Eliminar</button>
-                <button className="underline" onClick={()=>generarIA(p)}>Generar con IA y pintar</button>
+                <button 
+                  className={`px-3 py-1 rounded transition-all ${
+                    loadingIA === p.id 
+                      ? 'bg-blue-600 text-white cursor-not-allowed' 
+                      : 'bg-green-600 hover:bg-green-700 text-white'
+                  }`}
+                  onClick={()=>generarIA(p)}
+                  disabled={loadingIA === p.id}
+                >
+                  {loadingIA === p.id ? '🤖 Generando...' : 'Generar con IA y pintar'}
+                </button>
               </div>
             </div>
             <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
