@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { Squad, OpponentScouting, MatchPlan } from "@/types/squad";
+import { CanvasTacticPack } from "@/types/canvas";
 import { listSquads, ensureCurrentSquad, setCurrentSquadId, getCurrentSquadId } from "@/lib/squads";
 import { listOpponents } from "@/lib/opponents";
 import { listPlans, createPlan, updatePlan, deletePlan } from "@/lib/matchPlans";
@@ -24,6 +25,11 @@ export default function PlanesPage() {
   const [editing, setEditing] = useState<MatchPlan | null>(null);
   const [form, setForm] = useState<MatchPlan | null>(null);
   const isOpen = useMemo(() => !!editing && !!form, [editing, form]);
+  
+  // Selector de jugada IA para pintar
+  const [selectorPlays, setSelectorPlays] = useState<CanvasTacticPack[] | null>(null);
+  const [selectedPlayIdx, setSelectedPlayIdx] = useState<number>(0);
+  const [selectorKey, setSelectorKey] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -176,18 +182,16 @@ export default function PlanesPage() {
           : p
       ));
       
-      // Cargar directamente la primera jugada en la pizarra principal
+      // Abrir selector para elegir qué jugada pintar
       if (mapped && mapped.length > 0) {
-        sessionStorage.setItem("tactical_pack_to_load", JSON.stringify(mapped[0]));
+        setSelectorPlays(mapped);
+        setSelectedPlayIdx(0);
+        setSelectorKey(key);
+      } else {
+        // Si no hay jugadas, solo preparar informe
+        sessionStorage.setItem("tactics_to_paint", JSON.stringify({ id: key }));
+        alert("La IA no generó jugadas. Se guardó el informe para revisar.");
       }
-      
-      // Mantener también el informe disponible para consulta posterior
-      sessionStorage.setItem("tactics_to_paint", JSON.stringify({ id: key }));
-      
-      // Pequeño delay para feedback y navegar a la pizarra
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 500);
       
     } catch (e: any) {
       console.error("❌ Error al generar con IA:", e);
@@ -302,6 +306,72 @@ export default function PlanesPage() {
             <div className="mt-6 flex justify-end gap-3">
               <button onClick={closeModal} className="px-4 py-2 border rounded">Cancelar</button>
               <button onClick={onSave} className="px-4 py-2 bg-black text-white rounded">Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Selector de jugada IA para pintar en pizarra */}
+      {selectorPlays && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setSelectorPlays(null)} />
+          <div className="relative z-10 bg-white text-black rounded-xl shadow-xl w-full max-w-xl p-4 md:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Elegir jugada a pintar</h2>
+              <button onClick={() => setSelectorPlays(null)} className="text-gray-500">✕</button>
+            </div>
+            <div className="space-y-2 max-h-[60vh] overflow-auto">
+              {selectorPlays.map((p, idx) => (
+                <label key={idx} className="flex items-start gap-3 p-3 rounded border hover:bg-gray-50">
+                  <input
+                    type="radio"
+                    name="ia-pack"
+                    className="mt-1"
+                    checked={selectedPlayIdx === idx}
+                    onChange={() => setSelectedPlayIdx(idx)}
+                  />
+                  <div>
+                    <div className="font-medium">{p.titulo}</div>
+                    <div className="text-sm text-gray-600">{p.instrucciones?.join(' • ')}</div>
+                    <div className="text-xs text-gray-500">{p.primitivas.length} movimientos</div>
+                  </div>
+                </label>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2 justify-end mt-4">
+              <button
+                className="px-4 py-2 bg-gray-200 rounded"
+                onClick={() => setSelectorPlays(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                className="px-4 py-2 bg-blue-600 text-white rounded"
+                onClick={() => {
+                  if (!selectorPlays) return;
+                  const pack = selectorPlays[selectedPlayIdx];
+                  if (pack) {
+                    sessionStorage.setItem("tactical_pack_to_load", JSON.stringify(pack));
+                  }
+                  if (selectorKey) {
+                    sessionStorage.setItem("tactics_to_paint", JSON.stringify({ id: selectorKey }));
+                  }
+                  window.location.href = "/";
+                }}
+              >
+                Pintar en pizarra
+              </button>
+              <button
+                className="px-4 py-2 bg-green-600 text-white rounded"
+                onClick={() => {
+                  if (selectorKey) {
+                    sessionStorage.setItem("tactics_to_paint", JSON.stringify({ id: selectorKey }));
+                  }
+                  window.location.href = "/tablero";
+                }}
+              >
+                Ver informe IA
+              </button>
             </div>
           </div>
         </div>
