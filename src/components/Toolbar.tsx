@@ -68,6 +68,12 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     // canRedo,
     exportState,
     importState,
+    // Animation sequence functions
+    sequences,
+    playbackState,
+    playSequence,
+    pauseSequence,
+    stopSequence,
   } = useBoardStore();
   
   const redTokens = tokens.filter(t => t.team === 'red');
@@ -81,6 +87,30 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const iaButtonRef = useRef<HTMLButtonElement>(null);
   const [iaMenuPos, setIaMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const longPressTimeout = useRef<number>();
+
+  // Handle play button - prioritize AI sequences over recordings
+  const handlePlay = () => {
+    if (sequences.length > 0) {
+      // If we have AI sequences, play the most recent one
+      const latestSequence = sequences[sequences.length - 1];
+      console.log('Playing AI sequence:', latestSequence.title);
+      playSequence(latestSequence.id);
+    } else {
+      // Fallback to original recording functionality
+      console.log('Playing token recording');
+      onPlayRecording();
+    }
+  };
+
+  const handlePause = () => {
+    if (playbackState.isPlaying) {
+      pauseSequence();
+    }
+  };
+
+  const handleStop = () => {
+    stopSequence();
+  };
 
   const startPress = (key: Team | 'ball' | 'cone' | 'minigoal') => {
     if (longPressTimeout.current) clearTimeout(longPressTimeout.current);
@@ -222,6 +252,19 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const PlayIcon = () => (
     <svg viewBox="0 0 24 24" className="w-5 h-5">
       <polygon points="8,5 19,12 8,19" fill="white" />
+    </svg>
+  );
+
+  const PauseIcon = () => (
+    <svg viewBox="0 0 24 24" className="w-5 h-5">
+      <rect x="6" y="4" width="4" height="16" fill="white" />
+      <rect x="14" y="4" width="4" height="16" fill="white" />
+    </svg>
+  );
+
+  const StopIcon = () => (
+    <svg viewBox="0 0 24 24" className="w-5 h-5">
+      <rect x="6" y="6" width="12" height="12" fill="white" />
     </svg>
   );
 
@@ -496,10 +539,26 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         </button>
         <button
           className="control-btn"
-          onClick={onPlayRecording}
-          title="Play"
+          onClick={handlePlay}
+          title={sequences.length > 0 ? "Reproducir Secuencia IA" : "Reproducir Grabación"}
         >
           <PlayIcon />
+        </button>
+        <button
+          className={clsx('control-btn', { 'bg-yellow-600': playbackState.isPaused })}
+          onClick={handlePause}
+          disabled={!playbackState.isPlaying}
+          title="Pausa"
+        >
+          <PauseIcon />
+        </button>
+        <button
+          className="control-btn"
+          onClick={handleStop}
+          disabled={!playbackState.isPlaying && !playbackState.isPaused}
+          title="Parar"
+        >
+          <StopIcon />
         </button>
       </div>
     </header>
