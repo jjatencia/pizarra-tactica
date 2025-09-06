@@ -176,11 +176,17 @@ export default function PlanesPage() {
           : p
       ));
       
+      // Cargar directamente la primera jugada en la pizarra principal
+      if (mapped && mapped.length > 0) {
+        sessionStorage.setItem("tactical_pack_to_load", JSON.stringify(mapped[0]));
+      }
+      
+      // Mantener también el informe disponible para consulta posterior
       sessionStorage.setItem("tactics_to_paint", JSON.stringify({ id: key }));
       
-      // Pequeño delay para que el usuario vea el feedback
+      // Pequeño delay para feedback y navegar a la pizarra
       setTimeout(() => {
-        window.location.href = "/tablero";
+        window.location.href = "/";
       }, 500);
       
     } catch (e: any) {
