@@ -187,7 +187,7 @@ const generateSequenceFromPhases = (phases: PhaseRecording[]): AnimationSequence
 
     // Add trajectories and arrows for this phase (show at start of phase)
     phase.trajectories.forEach((trajectory, trajIndex) => {
-      const dur = Math.min(trajectory.durationMs ?? phase.duration, 3000);
+      const dur = Math.min(trajectory.durationMs ?? phase.duration, 2000);
       animationSteps.push({
         id: `phase_${phaseIndex}_trajectory_${trajIndex}`,
         timestamp: currentTime,
@@ -199,7 +199,7 @@ const generateSequenceFromPhases = (phases: PhaseRecording[]): AnimationSequence
     });
     
     phase.arrows.forEach((arrow, arrowIndex) => {
-      const dur = Math.min(3000, phase.duration);
+      const dur = Math.min(2000, phase.duration);
       animationSteps.push({
         id: `phase_${phaseIndex}_arrow_${arrowIndex}`,
         timestamp: currentTime,
@@ -1126,7 +1126,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
               tokenUpdates[step.tokenId] = { x: x * fw, y: y * fh };
             }
           } else if (step.type === 'show_arrow' && step.arrowData) {
-            const revealMs = Math.min(3000, step.duration);
+            const revealMs = Math.min(2000, step.duration);
             const local = Math.min(Math.max(elapsed - step.timestamp, 0), revealMs);
             const pReveal = revealMs > 0 ? local / revealMs : 1;
             const from = step.arrowData.from;
@@ -1162,8 +1162,8 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
                 }
                 temporaryTrajectories.push({ ...step.trajectoryData, points: partial });
               } else {
-                // Fallback: length-based reveal capped to 3s
-                const revealMs = Math.min(3000, step.duration);
+                // Fallback: length-based reveal capped to 2s
+                const revealMs = Math.min(2000, step.duration);
                 const pReveal = revealMs > 0 ? Math.min(localMs / revealMs, 1) : 1;
                 const partial: Point[] = [pts[0]];
                 let total = 0; const segs: number[] = [];
@@ -1314,14 +1314,14 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
               tokenUpdates[step.tokenId] = { x: x * fw, y: y * fh };
             }
           } else if (step.type === 'show_arrow' && step.arrowData) {
-            const revealMs = Math.min(3000, step.duration);
+            const revealMs = Math.min(2000, step.duration);
             const local = Math.min(Math.max(elapsed - step.timestamp, 0), revealMs);
             const pReveal = revealMs > 0 ? local / revealMs : 1;
             const from = step.arrowData.from; const to = step.arrowData.to;
             const toNow = { x: from.x + (to.x - from.x) * pReveal, y: from.y + (to.y - from.y) * pReveal };
             temporaryArrows.push({ ...step.arrowData, to: toNow });
           } else if (step.type === 'show_trajectory' && step.trajectoryData) {
-            const revealMs = Math.min(3000, step.duration);
+            const revealMs = Math.min(2000, step.duration);
             const local = Math.min(Math.max(elapsed - step.timestamp, 0), revealMs);
             const pReveal = revealMs > 0 ? local / revealMs : 1;
             const pts = step.trajectoryData.points as Point[];
