@@ -409,13 +409,21 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
           newPhaseStart[t.id] = { x: t.x, y: t.y };
         });
         
+        // Update initial lines for new phase (current state)
+        const newPhaseStartLines = {
+          trajectories: [...state.trajectories],
+          arrows: [...state.arrows]
+        };
+        
         console.log('New phase starts with positions:', newPhaseStart);
+        console.log('New phase starts with lines:', newPhaseStartLines);
         console.log('Setting recording=true, recordingPaused=false');
         
         autoResumeUpdate = {
           recording: true, 
           recordingPaused: false,
           currentPhaseStart: newPhaseStart,
+          currentPhaseStartLines: newPhaseStartLines,
           tokenPaths: {} // Clear paths for new phase
         };
       }
@@ -459,6 +467,38 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     
     addArrow: (from: { x: number; y: number }, to: { x: number; y: number }) => {
       const state = get();
+      
+      let autoResumeUpdate = {};
+      
+      // Check for auto-resume when drawing arrow while recording paused
+      if (state.recordingPaused) {
+        console.log('Arrow drawn while recording paused - auto-resuming');
+        
+        // Capture current positions as start of new phase
+        const newPhaseStart: Record<string, Point> = {};
+        state.tokens.forEach(t => {
+          newPhaseStart[t.id] = { x: t.x, y: t.y };
+        });
+        
+        // Update initial lines for new phase (current state)
+        const newPhaseStartLines = {
+          trajectories: [...state.trajectories],
+          arrows: [...state.arrows]
+        };
+        
+        console.log('New phase starts with positions:', newPhaseStart);
+        console.log('New phase starts with lines:', newPhaseStartLines);
+        console.log('Setting recording=true, recordingPaused=false');
+        
+        autoResumeUpdate = {
+          recording: true, 
+          recordingPaused: false,
+          currentPhaseStart: newPhaseStart,
+          currentPhaseStartLines: newPhaseStartLines,
+          tokenPaths: {} // Clear paths for new phase
+        };
+      }
+      
       const newArrow: Arrow = {
         id: generateId(),
         from,
@@ -471,6 +511,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         ...state,
         arrows: [...state.arrows, newArrow],
         selectedArrowId: newArrow.id,
+        ...autoResumeUpdate
       };
       
       set({
@@ -524,6 +565,38 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     
     addTrajectory: (points: { x: number; y: number }[], type: 'pass' | 'movement') => {
       const state = get();
+      
+      let autoResumeUpdate = {};
+      
+      // Check for auto-resume when drawing trajectory while recording paused
+      if (state.recordingPaused) {
+        console.log('Trajectory drawn while recording paused - auto-resuming');
+        
+        // Capture current positions as start of new phase
+        const newPhaseStart: Record<string, Point> = {};
+        state.tokens.forEach(t => {
+          newPhaseStart[t.id] = { x: t.x, y: t.y };
+        });
+        
+        // Update initial lines for new phase (current state)
+        const newPhaseStartLines = {
+          trajectories: [...state.trajectories],
+          arrows: [...state.arrows]
+        };
+        
+        console.log('New phase starts with positions:', newPhaseStart);
+        console.log('New phase starts with lines:', newPhaseStartLines);
+        console.log('Setting recording=true, recordingPaused=false');
+        
+        autoResumeUpdate = {
+          recording: true, 
+          recordingPaused: false,
+          currentPhaseStart: newPhaseStart,
+          currentPhaseStartLines: newPhaseStartLines,
+          tokenPaths: {} // Clear paths for new phase
+        };
+      }
+      
       const id = generateId();
       const newTrajectory: Trajectory = {
         id,
@@ -536,6 +609,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         ...state,
         trajectories: [...state.trajectories, newTrajectory],
         selectedTrajectoryId: newTrajectory.id,
+        ...autoResumeUpdate
       };
       
       set({
@@ -948,12 +1022,22 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         endPositions[t.id] = { x: t.x, y: t.y };
       });
       
+      // Capture only NEW lines drawn during this phase
+      const newTrajectories = state.trajectories.filter(t => 
+        !state.currentPhaseStartLines.trajectories.some(initial => initial.id === t.id)
+      );
+      const newArrows = state.arrows.filter(a => 
+        !state.currentPhaseStartLines.arrows.some(initial => initial.id === a.id)
+      );
+      
+      console.log(`Phase captured ${newTrajectories.length} new trajectories and ${newArrows.length} new arrows`);
+      
       // Create a phase from current positions
       const phase: PhaseRecording = {
         startPositions: { ...state.currentPhaseStart },
         endPositions,
-        trajectories: [...state.trajectories],
-        arrows: [...state.arrows], 
+        trajectories: newTrajectories, // Only NEW trajectories from this phase
+        arrows: newArrows, // Only NEW arrows from this phase
         duration: 3000, // 3 seconds as specified
         initialTrajectories: state.currentPhaseStartLines.trajectories,
         initialArrows: state.currentPhaseStartLines.arrows,
@@ -967,6 +1051,10 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         recordingPaused: true,
         recordingPhases: [...state.recordingPhases, phase],
         currentPhaseStart: endPositions, // Next phase starts where this one ended
+        currentPhaseStartLines: { // Update initial lines for next phase
+          trajectories: [...state.trajectories],
+          arrows: [...state.arrows]
+        },
         tokenPaths: {} // Clear paths for next phase
       });
     },
@@ -991,11 +1079,21 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
           endPositions[t.id] = { x: t.x, y: t.y };
         });
         
+        // Capture only NEW lines drawn during this final phase
+        const newTrajectories = state.trajectories.filter(t => 
+          !state.currentPhaseStartLines.trajectories.some(initial => initial.id === t.id)
+        );
+        const newArrows = state.arrows.filter(a => 
+          !state.currentPhaseStartLines.arrows.some(initial => initial.id === a.id)
+        );
+        
+        console.log(`Final phase captured ${newTrajectories.length} new trajectories and ${newArrows.length} new arrows`);
+        
         const finalPhase: PhaseRecording = {
           startPositions: { ...state.currentPhaseStart },
           endPositions,
-          trajectories: [...state.trajectories],
-          arrows: [...state.arrows],
+          trajectories: newTrajectories, // Only NEW trajectories from this phase
+          arrows: newArrows, // Only NEW arrows from this phase
           duration: 3000,
           initialTrajectories: state.currentPhaseStartLines.trajectories,
           initialArrows: state.currentPhaseStartLines.arrows,
