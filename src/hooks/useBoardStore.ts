@@ -1151,24 +1151,24 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
           } else if (step.type === 'show_trajectory' && step.trajectoryData) {
             const pts = step.trajectoryData.points as Point[];
             const times: number[] | undefined = step.trajectoryData.timeStampsMs as number[] | undefined;
-            const localMs = Math.max(0, Math.min(elapsed - step.timestamp, step.duration));
+            const localMs = Math.max(0, elapsed - step.timestamp);
             if (pts && pts.length > 1) {
               if (times && times.length === pts.length) {
-                // Time-based reveal from recorded drawing
-                const total = Math.max(...times);
-                const tMs = Math.min(localMs, total);
+                // Time-based reveal from recorded drawing - use actual recorded timing
                 const partial: Point[] = [pts[0]];
                 for (let i=1;i<pts.length;i++) {
-                  if (times[i] <= tMs) {
+                  if (times[i] <= localMs) {
                     partial.push(pts[i]);
-                  } else {
+                  } else if (localMs > times[i-1]) {
                     // interpolate between i-1 and i based on time
                     const t0 = times[i-1];
                     const t1 = times[i];
-                    const r = t1 === t0 ? 1 : (tMs - t0) / (t1 - t0);
+                    const r = t1 === t0 ? 1 : (localMs - t0) / (t1 - t0);
                     const x = pts[i-1].x + (pts[i].x - pts[i-1].x) * r;
                     const y = pts[i-1].y + (pts[i].y - pts[i-1].y) * r;
                     partial.push({ x, y });
+                    break;
+                  } else {
                     break;
                   }
                 }
@@ -1333,21 +1333,46 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
             const toNow = { x: from.x + (to.x - from.x) * pReveal, y: from.y + (to.y - from.y) * pReveal };
             temporaryArrows.push({ ...step.arrowData, to: toNow });
           } else if (step.type === 'show_trajectory' && step.trajectoryData) {
-            const revealMs = Math.min(2000, step.duration);
-            const local = Math.min(Math.max(elapsed - step.timestamp, 0), revealMs);
-            const pReveal = revealMs > 0 ? local / revealMs : 1;
             const pts = step.trajectoryData.points as Point[];
+            const times: number[] | undefined = step.trajectoryData.timeStampsMs as number[] | undefined;
+            const localMs = Math.max(0, elapsed - step.timestamp);
             if (pts && pts.length > 1) {
-              const partial: Point[] = [pts[0]];
-              let total = 0; const segs: number[] = [];
-              for (let i=1;i<pts.length;i++){ const d=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y); segs.push(d); total+=d; }
-              const target = total * pReveal; let acc = 0;
-              for (let i=1;i<pts.length;i++){
-                const d = segs[i-1];
-                if (acc + d < target) { partial.push(pts[i]); acc += d; }
-                else { const remain = target - acc; const r = d===0?1:remain/d; const x=pts[i-1].x+(pts[i].x-pts[i-1].x)*r; const y=pts[i-1].y+(pts[i].y-pts[i-1].y)*r; partial.push({x,y}); break; }
+              if (times && times.length === pts.length) {
+                // Time-based reveal from recorded drawing - use actual recorded timing
+                const partial: Point[] = [pts[0]];
+                for (let i=1;i<pts.length;i++) {
+                  if (times[i] <= localMs) {
+                    partial.push(pts[i]);
+                  } else if (localMs > times[i-1]) {
+                    // interpolate between i-1 and i based on time
+                    const t0 = times[i-1];
+                    const t1 = times[i];
+                    const r = t1 === t0 ? 1 : (localMs - t0) / (t1 - t0);
+                    const x = pts[i-1].x + (pts[i].x - pts[i-1].x) * r;
+                    const y = pts[i-1].y + (pts[i].y - pts[i-1].y) * r;
+                    partial.push({ x, y });
+                    break;
+                  } else {
+                    break;
+                  }
+                }
+                temporaryTrajectories.push({ ...step.trajectoryData, points: partial });
+              } else {
+                // Fallback: length-based reveal capped to 2s
+                const revealMs = Math.min(2000, step.duration);
+                const local = Math.min(Math.max(elapsed - step.timestamp, 0), revealMs);
+                const pReveal = revealMs > 0 ? local / revealMs : 1;
+                const partial: Point[] = [pts[0]];
+                let total = 0; const segs: number[] = [];
+                for (let i=1;i<pts.length;i++){ const d=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y); segs.push(d); total+=d; }
+                const target = total * pReveal; let acc = 0;
+                for (let i=1;i<pts.length;i++){
+                  const d = segs[i-1];
+                  if (acc + d < target) { partial.push(pts[i]); acc += d; }
+                  else { const remain = target - acc; const r = d===0?1:remain/d; const x=pts[i-1].x+(pts[i].x-pts[i-1].x)*r; const y=pts[i-1].y+(pts[i].y-pts[i-1].y)*r; partial.push({x,y}); break; }
+                }
+                temporaryTrajectories.push({ ...step.trajectoryData, points: partial });
               }
-              temporaryTrajectories.push({ ...step.trajectoryData, points: partial });
             } else {
               temporaryTrajectories.push(step.trajectoryData);
             }
