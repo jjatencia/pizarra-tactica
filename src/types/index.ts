@@ -72,13 +72,16 @@ export interface PitchDimensions {
 export interface AnimationStep {
   id: string;
   timestamp: number; // milliseconds from sequence start
-  type: 'move' | 'pass' | 'pressure' | 'intercept';
+  type: 'move' | 'pass' | 'pressure' | 'intercept' | 'show_arrow' | 'show_trajectory';
   tokenId?: string; // token that performs the action
-  from: Point;
-  to: Point;
+  from?: Point;
+  to?: Point;
   duration: number; // milliseconds
   easing?: 'linear' | 'easeInOut' | 'easeOut';
   description?: string;
+  // Additional data for line rendering
+  arrowData?: any;
+  trajectoryData?: any;
 }
 
 export interface AnimationSequence {
