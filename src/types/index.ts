@@ -74,7 +74,7 @@ export interface PitchDimensions {
 export interface AnimationStep {
   id: string;
   timestamp: number; // milliseconds from sequence start
-  type: 'move' | 'pass' | 'pressure' | 'intercept' | 'show_arrow' | 'show_trajectory' | 'show_canvas';
+  type: 'move' | 'pass' | 'pressure' | 'intercept' | 'show_arrow' | 'show_trajectory' | 'show_canvas' | 'hide_lines';
   tokenId?: string; // token that performs the action
   from?: Point;
   to?: Point;
@@ -90,6 +90,9 @@ export interface AnimationStep {
   pathPoints?: Point[];
   // Optional normalized times [0..1] aligned with pathPoints for speed profile
   pathTimes?: number[];
+  // For hide_lines type
+  trajectoryIds?: string[];
+  arrowIds?: string[];
 }
 
 export interface AnimationSequence {

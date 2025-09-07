@@ -12,6 +12,9 @@ interface PhaseRecording {
   initialTrajectories: any[];
   initialArrows: any[];
   overlayCanvas?: string; // snapshot of drawing canvas at pause
+  // Token movement paths with timestamps
+  tokenPaths: Record<string, { points: Point[], timestamps: number[] }>;
+  phaseStartTime: number;
 }
 
 interface BoardStore extends BoardState {
@@ -23,7 +26,9 @@ interface BoardStore extends BoardState {
   currentPhaseStartLines: { trajectories: any[], arrows: any[] };
   recordingPaused: boolean;
   tokenPaths: Record<string, Point[]>;
+  tokenPathTimestamps: Record<string, number[]>;
   recordingStartPositions: Record<string, Point>;
+  phaseStartTime: number;
   
   // Animation sequences
   playbackState: PlaybackState;
@@ -84,7 +89,7 @@ interface BoardStore extends BoardState {
   stopRecording: () => void;
   pauseRecording: () => void;
   resumeRecording: () => void;
-  addTokenPathPoint: (id: string, point: Point) => void;
+  addTokenPathPoint: (id: string, point: Point, timestamp?: number) => void;
   clearTokenPaths: () => void;
   playTokenPaths: () => void;
   // New phase recording functions
@@ -185,9 +190,19 @@ const generateSequenceFromPhases = (phases: PhaseRecording[]): AnimationSequence
       });
     }
 
-    // Add trajectories and arrows for this phase (show at start of phase)
-    phase.trajectories.forEach((trajectory, trajIndex) => {
-      const dur = Math.min(trajectory.durationMs ?? phase.duration, 3000);
+    // Get lines that were added during this phase (not present at start)
+    const newTrajectories = phase.trajectories.filter(traj => 
+      !phase.initialTrajectories.some(initial => initial.id === traj.id)
+    );
+    const newArrows = phase.arrows.filter(arrow => 
+      !phase.initialArrows.some(initial => initial.id === arrow.id)
+    );
+    
+    // Add new trajectories for this phase
+    newTrajectories.forEach((trajectory, trajIndex) => {
+      // Limit trajectory duration between 1-2 seconds
+      let dur = trajectory.durationMs ?? 1500;
+      dur = Math.max(1000, Math.min(2000, dur)); // Clamp between 1-2 seconds
       animationSteps.push({
         id: `phase_${phaseIndex}_trajectory_${trajIndex}`,
         timestamp: currentTime,
@@ -198,8 +213,9 @@ const generateSequenceFromPhases = (phases: PhaseRecording[]): AnimationSequence
       });
     });
     
-    phase.arrows.forEach((arrow, arrowIndex) => {
-      const dur = Math.min(3000, phase.duration);
+    // Add new arrows for this phase
+    newArrows.forEach((arrow, arrowIndex) => {
+      const dur = Math.min(2000, phase.duration); // Max 2 seconds for arrows
       animationSteps.push({
         id: `phase_${phaseIndex}_arrow_${arrowIndex}`,
         timestamp: currentTime,
@@ -210,7 +226,45 @@ const generateSequenceFromPhases = (phases: PhaseRecording[]): AnimationSequence
       });
     });
     
-    console.log(`Phase ${phaseIndex + 1} added ${phase.trajectories.length} trajectories and ${phase.arrows.length} arrows`);
+    // Calculate when lines should be hidden (if they were deleted)
+    const deletedTrajectories = phase.initialTrajectories.filter(initial =>
+      !phase.trajectories.some(traj => traj.id === initial.id)
+    );
+    const deletedArrows = phase.initialArrows.filter(initial =>
+      !phase.arrows.some(arrow => arrow.id === initial.id)
+    );
+    
+    // Hide deleted lines just before token movement starts
+    if (deletedTrajectories.length > 0 || deletedArrows.length > 0) {
+      const hideTime = currentTime + Math.max(...newTrajectories.map(t => {
+        let dur = t.durationMs ?? 1500;
+        return Math.max(1000, Math.min(2000, dur));
+      }).concat([0]));
+      
+      animationSteps.push({
+        id: `phase_${phaseIndex}_hide_lines`,
+        timestamp: hideTime,
+        type: 'hide_lines',
+        trajectoryIds: deletedTrajectories.map(t => t.id),
+        arrowIds: deletedArrows.map(a => a.id),
+        duration: 0,
+        description: `Phase ${phaseIndex + 1} hide deleted lines`
+      });
+    }
+    
+    console.log(`Phase ${phaseIndex + 1} added ${newTrajectories.length} new trajectories and ${newArrows.length} new arrows`);
+    
+    // Calculate when token movements should start
+    // If we have new lines, wait for them to draw first
+    let tokenMovementStartTime = currentTime;
+    if (newTrajectories.length > 0) {
+      const trajectoryDurations = newTrajectories.map(t => {
+        let dur = t.durationMs ?? 1500;
+        return Math.max(1000, Math.min(2000, dur));
+      });
+      const maxTrajectoryDuration = Math.max(...trajectoryDurations);
+      tokenMovementStartTime = currentTime + maxTrajectoryDuration;
+    }
     
     // Create movement steps for each token that moved in this phase
     Object.keys(phase.startPositions).forEach(tokenId => {
@@ -222,41 +276,41 @@ const generateSequenceFromPhases = (phases: PhaseRecording[]): AnimationSequence
       console.log(`Token ${tokenId}: distance ${distance.toFixed(2)} from (${start.x}, ${start.y}) to (${end.x}, ${end.y})`);
       
       if (distance > 1) { // Minimum movement threshold
-        // Try to attach a curved path if a trajectory in this phase matches start/end
         let pathPoints: Point[] | undefined;
         let pathTimesNorm: number[] | undefined;
-        if (phase.trajectories && phase.trajectories.length > 0) {
-          let bestIdx = -1; let bestScore = Infinity;
-          phase.trajectories.forEach((traj: any, idx: number) => {
-            const pts: Point[] = traj.points || [];
-            if (pts.length < 2) return;
-            const s = Math.hypot(pts[0].x - start.x, pts[0].y - start.y);
-            const e = Math.hypot(pts[pts.length - 1].x - end.x, pts[pts.length - 1].y - end.y);
-            const score = s + e;
-            if (score < bestScore) { bestScore = score; bestIdx = idx; }
-          });
-          if (bestIdx >= 0) {
-            // Normalize to 0..1 for playback rendering
+        
+        // First check if we have recorded path for this token
+        if (phase.tokenPaths && phase.tokenPaths[tokenId]) {
+          const tokenPath = phase.tokenPaths[tokenId];
+          if (tokenPath.points.length > 1) {
+            // Use the recorded path
             const fw = 105, fh = 68;
-            const traj = phase.trajectories[bestIdx];
-            pathPoints = (traj.points as Point[]).map(p => ({ x: p.x / fw, y: p.y / fh }));
-            const tms: number[] | undefined = traj.timeStampsMs as number[] | undefined;
-            if (tms && tms.length === pathPoints.length) {
-              const total = Math.max(...tms);
-              pathTimesNorm = total > 0 ? tms.map(v => v / total) : tms.map(() => 0);
+            pathPoints = tokenPath.points.map(p => ({ x: p.x / fw, y: p.y / fh }));
+            
+            // Normalize timestamps to 0..1
+            if (tokenPath.timestamps.length === tokenPath.points.length) {
+              const minTime = Math.min(...tokenPath.timestamps);
+              const maxTime = Math.max(...tokenPath.timestamps);
+              const timeRange = maxTime - minTime;
+              pathTimesNorm = timeRange > 0 
+                ? tokenPath.timestamps.map(t => (t - minTime) / timeRange)
+                : tokenPath.timestamps.map(() => 0);
             }
           }
         }
 
+        // Limit token movement duration to max 3 seconds
+        const moveDuration = Math.min(3000, phase.duration);
+        
         const step = {
           id: `phase_${phaseIndex}_token_${tokenId}`,
-          timestamp: currentTime,
+          timestamp: tokenMovementStartTime,
           type: 'move',
           tokenId: tokenId,
           from: { x: start.x / 105, y: start.y / 68 }, // Normalize to 0-1
           to: { x: end.x / 105, y: end.y / 68 },
-          duration: phase.duration,
-          easing: 'easeInOut',
+          duration: moveDuration,
+          easing: 'linear', // Use linear since we have exact path
           pathPoints,
           pathTimes: pathTimesNorm,
           description: `Phase ${phaseIndex + 1} movement`
@@ -270,11 +324,31 @@ const generateSequenceFromPhases = (phases: PhaseRecording[]): AnimationSequence
     
     console.log(`Phase ${phaseIndex + 1} generated ${phaseMovements} movements`);
     
+    // Calculate actual phase duration considering sequential line drawing and movement
+    let phaseDuration = 0;
+    if (newTrajectories.length > 0) {
+      const trajectoryDurations = newTrajectories.map(t => {
+        let dur = t.durationMs ?? 1500;
+        return Math.max(1000, Math.min(2000, dur));
+      });
+      phaseDuration = Math.max(...trajectoryDurations);
+    }
+    if (phaseMovements > 0) {
+      const moveDuration = Math.min(3000, phase.duration);
+      phaseDuration = Math.max(phaseDuration, tokenMovementStartTime - currentTime + moveDuration);
+    }
+    
+    // If phase has no animations, use a minimal duration
+    if (phaseDuration === 0) {
+      phaseDuration = 100;
+    }
+    
     // Move to next phase (add transition time)
-    currentTime += phase.duration + 500; // 500ms transition between phases
+    currentTime += phaseDuration + 500; // 500ms transition between phases
   });
   
-  const totalDuration = phases.reduce((sum, phase) => sum + phase.duration + 500, 0) - 500;
+  // The currentTime already includes all phase durations and transitions
+  const totalDuration = currentTime - 500; // Remove the last transition
   
   return {
     id: `phase_sequence_${Date.now()}`,
@@ -317,7 +391,9 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
   currentPhaseStartLines: { trajectories: [], arrows: [] },
   recordingPaused: false,
   tokenPaths: {},
+  tokenPathTimestamps: {},
   recordingStartPositions: {},
+  phaseStartTime: 0,
   
   // Animation sequences
   playbackState: initialPlaybackState,
@@ -407,7 +483,10 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         autoResumeUpdate = {
           recording: true, 
           recordingPaused: false,
-          currentPhaseStart: newPhaseStart
+          currentPhaseStart: newPhaseStart,
+          tokenPaths: {}, // Clear paths for new phase
+          tokenPathTimestamps: {},
+          phaseStartTime: performance.now()
         };
       }
       
@@ -604,6 +683,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         ...newState,
         history: addToHistory(newState, get().history),
         tokenPaths: {},
+        tokenPathTimestamps: {},
         recording: false,
       });
     },
@@ -801,6 +881,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
             currentIndex: 0,
           },
           tokenPaths: {},
+          tokenPathTimestamps: {},
           recording: false,
         });
       }
@@ -834,6 +915,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
             ...newState,
             history: addToHistory(newState, get().history),
             tokenPaths: {},
+            tokenPathTimestamps: {},
             recording: false,
           });
         }
@@ -847,7 +929,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       get().tokens.forEach(t => {
         startPositions[t.id] = { x: t.x, y: t.y };
       });
-      set({ recording: true, recordingStartPositions: startPositions, tokenPaths: {} });
+      set({ recording: true, recordingStartPositions: startPositions, tokenPaths: {}, tokenPathTimestamps: {}, phaseStartTime: performance.now() });
     },
 
     stopRecording: () => {
@@ -867,15 +949,20 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       set({ recordingPaused: false });
     },
 
-    addTokenPathPoint: (id: string, point: Point) => {
+    addTokenPathPoint: (id: string, point: Point, timestamp?: number) => {
       set(state => {
         const path = state.tokenPaths[id] || [];
-        return { tokenPaths: { ...state.tokenPaths, [id]: [...path, point] } };
+        const timestamps = state.tokenPathTimestamps[id] || [];
+        const ts = timestamp ?? (performance.now() - state.phaseStartTime);
+        return { 
+          tokenPaths: { ...state.tokenPaths, [id]: [...path, point] },
+          tokenPathTimestamps: { ...state.tokenPathTimestamps, [id]: [...timestamps, ts] }
+        };
       });
     },
 
     clearTokenPaths: () => {
-      set({ tokenPaths: {} });
+      set({ tokenPaths: {}, tokenPathTimestamps: {} });
     },
 
     playTokenPaths: () => {
@@ -926,7 +1013,9 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         currentPhaseStart: startPositions,
         currentPhaseStartLines: initialLines,
         recordingStartPositions: startPositions,
-        tokenPaths: {} 
+        tokenPaths: {},
+        tokenPathTimestamps: {},
+        phaseStartTime: performance.now()
       });
     },
 
@@ -939,16 +1028,32 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         endPositions[t.id] = { x: t.x, y: t.y };
       });
       
+      // Calculate actual phase duration
+      const phaseDuration = performance.now() - state.phaseStartTime;
+      
+      // Capture token paths for this phase
+      const tokenPaths: Record<string, { points: Point[], timestamps: number[] }> = {};
+      Object.keys(state.tokenPaths).forEach(tokenId => {
+        if (state.tokenPaths[tokenId] && state.tokenPaths[tokenId].length > 0) {
+          tokenPaths[tokenId] = {
+            points: [...state.tokenPaths[tokenId]],
+            timestamps: [...(state.tokenPathTimestamps[tokenId] || [])]
+          };
+        }
+      });
+      
       // Create a phase from current positions
       const phase: PhaseRecording = {
         startPositions: { ...state.currentPhaseStart },
         endPositions,
         trajectories: [...state.trajectories],
         arrows: [...state.arrows], 
-        duration: 3000, // 3 seconds as specified
+        duration: Math.max(100, phaseDuration), // Use actual duration
         initialTrajectories: state.currentPhaseStartLines.trajectories,
         initialArrows: state.currentPhaseStartLines.arrows,
-        overlayCanvas: overlayCanvas
+        overlayCanvas: overlayCanvas,
+        tokenPaths,
+        phaseStartTime: state.phaseStartTime
       };
       
       console.log('Pausing phase recording. Phase', state.recordingPhases.length + 1, 'created');
@@ -956,7 +1061,10 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       set({
         recordingPaused: true,
         recordingPhases: [...state.recordingPhases, phase],
-        currentPhaseStart: endPositions // Next phase starts where this one ended
+        currentPhaseStart: endPositions, // Next phase starts where this one ended
+        tokenPaths: {}, // Clear paths for next phase
+        tokenPathTimestamps: {},
+        phaseStartTime: performance.now() // Reset start time for next phase
       });
     },
 
@@ -980,14 +1088,30 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
           endPositions[t.id] = { x: t.x, y: t.y };
         });
         
+        // Calculate actual phase duration
+        const phaseDuration = performance.now() - state.phaseStartTime;
+        
+        // Capture token paths for final phase
+        const tokenPaths: Record<string, { points: Point[], timestamps: number[] }> = {};
+        Object.keys(state.tokenPaths).forEach(tokenId => {
+          if (state.tokenPaths[tokenId] && state.tokenPaths[tokenId].length > 0) {
+            tokenPaths[tokenId] = {
+              points: [...state.tokenPaths[tokenId]],
+              timestamps: [...(state.tokenPathTimestamps[tokenId] || [])]
+            };
+          }
+        });
+        
         const finalPhase: PhaseRecording = {
           startPositions: { ...state.currentPhaseStart },
           endPositions,
           trajectories: [...state.trajectories],
           arrows: [...state.arrows],
-          duration: 3000,
+          duration: Math.max(100, phaseDuration),
           initialTrajectories: state.currentPhaseStartLines.trajectories,
           initialArrows: state.currentPhaseStartLines.arrows,
+          tokenPaths,
+          phaseStartTime: state.phaseStartTime
         };
         
         console.log('Final phase created:', finalPhase);
@@ -1066,7 +1190,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         playbackStartPositions: startPositions,
       });
 
-      // Start animation loop
+      // Start animation loop for playSequence
       const startTime = Date.now();
       const animationLoop = () => {
         const current = get();
@@ -1142,18 +1266,24 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
             const localMs = Math.max(0, Math.min(elapsed - step.timestamp, step.duration));
             if (pts && pts.length > 1) {
               if (times && times.length === pts.length) {
-                // Time-based reveal from recorded drawing
-                const total = Math.max(...times);
-                const tMs = Math.min(localMs, total);
+                // Time-based reveal from recorded drawing - respect original speed
+                const minTime = Math.min(...times);
+                const maxTime = Math.max(...times);
+                const recordedDuration = maxTime - minTime;
+                
+                // Map local playback time to recorded time
+                const playbackProgress = step.duration > 0 ? localMs / step.duration : 1;
+                const recordedTime = minTime + (recordedDuration * playbackProgress);
+                
                 const partial: Point[] = [pts[0]];
                 for (let i=1;i<pts.length;i++) {
-                  if (times[i] <= tMs) {
+                  if (times[i] <= recordedTime) {
                     partial.push(pts[i]);
                   } else {
                     // interpolate between i-1 and i based on time
                     const t0 = times[i-1];
                     const t1 = times[i];
-                    const r = t1 === t0 ? 1 : (tMs - t0) / (t1 - t0);
+                    const r = t1 === t0 ? 1 : (recordedTime - t0) / (t1 - t0);
                     const x = pts[i-1].x + (pts[i].x - pts[i-1].x) * r;
                     const y = pts[i-1].y + (pts[i].y - pts[i-1].y) * r;
                     partial.push({ x, y });
@@ -1162,9 +1292,8 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
                 }
                 temporaryTrajectories.push({ ...step.trajectoryData, points: partial });
               } else {
-                // Fallback: length-based reveal capped to 3s
-                const revealMs = Math.min(3000, step.duration);
-                const pReveal = revealMs > 0 ? Math.min(localMs / revealMs, 1) : 1;
+                // Fallback: length-based reveal
+                const pReveal = step.duration > 0 ? Math.min(localMs / step.duration, 1) : 1;
                 const partial: Point[] = [pts[0]];
                 let total = 0; const segs: number[] = [];
                 for (let i=1;i<pts.length;i++){ const d=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y); segs.push(d); total+=d; }
@@ -1321,21 +1450,50 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
             const toNow = { x: from.x + (to.x - from.x) * pReveal, y: from.y + (to.y - from.y) * pReveal };
             temporaryArrows.push({ ...step.arrowData, to: toNow });
           } else if (step.type === 'show_trajectory' && step.trajectoryData) {
-            const revealMs = Math.min(3000, step.duration);
-            const local = Math.min(Math.max(elapsed - step.timestamp, 0), revealMs);
-            const pReveal = revealMs > 0 ? local / revealMs : 1;
             const pts = step.trajectoryData.points as Point[];
+            const times: number[] | undefined = step.trajectoryData.timeStampsMs as number[] | undefined;
+            const localMs = Math.max(0, Math.min(elapsed - step.timestamp, step.duration));
             if (pts && pts.length > 1) {
-              const partial: Point[] = [pts[0]];
-              let total = 0; const segs: number[] = [];
-              for (let i=1;i<pts.length;i++){ const d=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y); segs.push(d); total+=d; }
-              const target = total * pReveal; let acc = 0;
-              for (let i=1;i<pts.length;i++){
-                const d = segs[i-1];
-                if (acc + d < target) { partial.push(pts[i]); acc += d; }
-                else { const remain = target - acc; const r = d===0?1:remain/d; const x=pts[i-1].x+(pts[i].x-pts[i-1].x)*r; const y=pts[i-1].y+(pts[i].y-pts[i-1].y)*r; partial.push({x,y}); break; }
+              if (times && times.length === pts.length) {
+                // Time-based reveal from recorded drawing - respect original speed
+                const minTime = Math.min(...times);
+                const maxTime = Math.max(...times);
+                const recordedDuration = maxTime - minTime;
+                
+                // Map local playback time to recorded time
+                const playbackProgress = step.duration > 0 ? localMs / step.duration : 1;
+                const recordedTime = minTime + (recordedDuration * playbackProgress);
+                
+                const partial: Point[] = [pts[0]];
+                for (let i=1;i<pts.length;i++) {
+                  if (times[i] <= recordedTime) {
+                    partial.push(pts[i]);
+                  } else {
+                    // interpolate between i-1 and i based on time
+                    const t0 = times[i-1];
+                    const t1 = times[i];
+                    const r = t1 === t0 ? 1 : (recordedTime - t0) / (t1 - t0);
+                    const x = pts[i-1].x + (pts[i].x - pts[i-1].x) * r;
+                    const y = pts[i-1].y + (pts[i].y - pts[i-1].y) * r;
+                    partial.push({ x, y });
+                    break;
+                  }
+                }
+                temporaryTrajectories.push({ ...step.trajectoryData, points: partial });
+              } else {
+                // Fallback: length-based reveal
+                const pReveal = step.duration > 0 ? Math.min(localMs / step.duration, 1) : 1;
+                const partial: Point[] = [pts[0]];
+                let total = 0; const segs: number[] = [];
+                for (let i=1;i<pts.length;i++){ const d=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y); segs.push(d); total+=d; }
+                const target = total * pReveal; let acc = 0;
+                for (let i=1;i<pts.length;i++){
+                  const d = segs[i-1];
+                  if (acc + d < target) { partial.push(pts[i]); acc += d; }
+                  else { const remain = target - acc; const r = d===0?1:remain/d; const x=pts[i-1].x+(pts[i].x-pts[i-1].x)*r; const y=pts[i-1].y+(pts[i].y-pts[i-1].y)*r; partial.push({x,y}); break; }
+                }
+                temporaryTrajectories.push({ ...step.trajectoryData, points: partial });
               }
-              temporaryTrajectories.push({ ...step.trajectoryData, points: partial });
             } else {
               temporaryTrajectories.push(step.trajectoryData);
             }
