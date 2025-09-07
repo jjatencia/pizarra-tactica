@@ -30,6 +30,7 @@ interface BoardStore extends BoardState {
   sequences: AnimationSequence[];
   currentSequence: AnimationSequence | null;
   playbackOverlay?: string | null;
+  playbackStartPositions?: Record<string, Point> | null;
   
   // Token actions
   addToken: (team: Team, x: number, y: number, type?: ObjectType, size?: TokenSize) => void;
@@ -95,10 +96,10 @@ interface BoardStore extends BoardState {
   // Animation sequence actions
   addSequence: (sequence: AnimationSequence) => void;
   removeSequence: (sequenceId: string) => void;
-  playSequence: (sequenceId: string) => void;
+    playSequence: (sequenceId: string) => void;
   pauseSequence: () => void;
   resumeSequence: () => void;
-  stopSequence: () => void;
+    stopSequence: () => void;
   setPlaybackSpeed: (speed: number) => void;
   seekTo: (time: number) => void;
 }
@@ -1066,11 +1067,35 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
               y: y * fieldHeight,
             };
           } else if (step.type === 'show_arrow' && step.arrowData) {
-            // Show arrow during this phase
-            temporaryArrows.push(step.arrowData);
+            const revealMs = Math.min(3000, step.duration);
+            const local = Math.min(Math.max(elapsed - step.timestamp, 0), revealMs);
+            const pReveal = revealMs > 0 ? local / revealMs : 1;
+            const from = step.arrowData.from;
+            const to = step.arrowData.to;
+            const toNow = {
+              x: from.x + (to.x - from.x) * pReveal,
+              y: from.y + (to.y - from.y) * pReveal,
+            };
+            temporaryArrows.push({ ...step.arrowData, to: toNow });
           } else if (step.type === 'show_trajectory' && step.trajectoryData) {
-            // Show trajectory during this phase  
-            temporaryTrajectories.push(step.trajectoryData);
+            const revealMs = Math.min(3000, step.duration);
+            const local = Math.min(Math.max(elapsed - step.timestamp, 0), revealMs);
+            const pReveal = revealMs > 0 ? local / revealMs : 1;
+            const pts = step.trajectoryData.points as Point[];
+            if (pts && pts.length > 1) {
+              const partial: Point[] = [pts[0]];
+              let total = 0; const segs: number[] = [];
+              for (let i=1;i<pts.length;i++){ const d=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y); segs.push(d); total+=d; }
+              const target = total * pReveal; let acc = 0;
+              for (let i=1;i<pts.length;i++){
+                const d = segs[i-1];
+                if (acc + d < target) { partial.push(pts[i]); acc += d; }
+                else { const remain = target - acc; const r = d===0?1:remain/d; const x=pts[i-1].x+(pts[i].x-pts[i-1].x)*r; const y=pts[i-1].y+(pts[i].y-pts[i-1].y)*r; partial.push({x,y}); break; }
+              }
+              temporaryTrajectories.push({ ...step.trajectoryData, points: partial });
+            } else {
+              temporaryTrajectories.push(step.trajectoryData);
+            }
           } else if (step.type === 'show_canvas' && step.canvasData) {
             overlay = step.canvasData;
           }
@@ -1099,15 +1124,21 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         if (progress < 1) {
           requestAnimationFrame(animationLoop);
         } else {
-          // Animation finished
+          // Animation finished: restore positions, clear visuals
           set(state => ({
             ...state,
+            tokens: state.playbackStartPositions
+              ? state.tokens.map(t => state.playbackStartPositions![t.id] ? { ...t, ...state.playbackStartPositions![t.id] } : t)
+              : state.tokens,
+            arrows: [],
+            trajectories: [],
+            playbackOverlay: null,
+            playbackStartPositions: null,
             playbackState: {
               ...state.playbackState,
               isPlaying: false,
               currentTime: sequence.totalDuration,
             },
-            playbackOverlay: null,
           }));
         }
       };
@@ -1175,9 +1206,31 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
               y: y * fieldHeight,
             };
           } else if (step.type === 'show_arrow' && step.arrowData) {
-            temporaryArrows.push(step.arrowData);
+            const revealMs = Math.min(3000, step.duration);
+            const local = Math.min(Math.max(elapsed - step.timestamp, 0), revealMs);
+            const pReveal = revealMs > 0 ? local / revealMs : 1;
+            const from = step.arrowData.from; const to = step.arrowData.to;
+            const toNow = { x: from.x + (to.x - from.x) * pReveal, y: from.y + (to.y - from.y) * pReveal };
+            temporaryArrows.push({ ...step.arrowData, to: toNow });
           } else if (step.type === 'show_trajectory' && step.trajectoryData) {
-            temporaryTrajectories.push(step.trajectoryData);
+            const revealMs = Math.min(3000, step.duration);
+            const local = Math.min(Math.max(elapsed - step.timestamp, 0), revealMs);
+            const pReveal = revealMs > 0 ? local / revealMs : 1;
+            const pts = step.trajectoryData.points as Point[];
+            if (pts && pts.length > 1) {
+              const partial: Point[] = [pts[0]];
+              let total = 0; const segs: number[] = [];
+              for (let i=1;i<pts.length;i++){ const d=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y); segs.push(d); total+=d; }
+              const target = total * pReveal; let acc = 0;
+              for (let i=1;i<pts.length;i++){
+                const d = segs[i-1];
+                if (acc + d < target) { partial.push(pts[i]); acc += d; }
+                else { const remain = target - acc; const r = d===0?1:remain/d; const x=pts[i-1].x+(pts[i].x-pts[i-1].x)*r; const y=pts[i-1].y+(pts[i].y-pts[i-1].y)*r; partial.push({x,y}); break; }
+              }
+              temporaryTrajectories.push({ ...step.trajectoryData, points: partial });
+            } else {
+              temporaryTrajectories.push(step.trajectoryData);
+            }
           } else if (step.type === 'show_canvas' && step.canvasData) {
             overlay = step.canvasData;
           }
@@ -1208,6 +1261,13 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         } else {
           set(state => ({
             ...state,
+            tokens: state.playbackStartPositions
+              ? state.tokens.map(t => state.playbackStartPositions![t.id] ? { ...t, ...state.playbackStartPositions![t.id] } : t)
+              : state.tokens,
+            arrows: [],
+            trajectories: [],
+            playbackOverlay: null,
+            playbackStartPositions: null,
             playbackState: {
               ...state.playbackState,
               isPlaying: false,
