@@ -311,6 +311,8 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     updateToken: (id: string, updates: Partial<Token>) => {
       const state = get();
       
+      let autoResumeUpdate = {};
+      
       // Check for auto-resume before updating
       if (state.recordingPaused && (updates.x !== undefined || updates.y !== undefined)) {
         console.log('Token moved while recording paused - auto-resuming');
@@ -322,12 +324,13 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         });
         
         console.log('New phase starts with positions:', newPhaseStart);
+        console.log('Setting recording=true, recordingPaused=false');
         
-        set({ 
+        autoResumeUpdate = {
           recording: true, 
           recordingPaused: false,
           currentPhaseStart: newPhaseStart
-        });
+        };
       }
       
       const newTokens = state.tokens.map(token =>
@@ -337,6 +340,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       const newState = {
         ...state,
         tokens: newTokens,
+        ...autoResumeUpdate
       };
       
       set({
@@ -867,11 +871,19 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
 
     stopPhaseRecording: () => {
       const state = get();
+      console.log('stopPhaseRecording called. Current state:', {
+        recording: state.recording,
+        recordingPaused: state.recordingPaused,
+        existingPhases: state.recordingPhases.length,
+        currentPhaseStart: state.currentPhaseStart
+      });
+      
       if (!state.recording) return;
       
       // If recording wasn't paused, create final phase
       let finalPhases = [...state.recordingPhases];
       if (!state.recordingPaused) {
+        console.log('Recording not paused, creating final phase');
         const endPositions: Record<string, Point> = {};
         state.tokens.forEach(t => {
           endPositions[t.id] = { x: t.x, y: t.y };
@@ -884,10 +896,17 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
           arrows: [...state.arrows],
           duration: 3000
         };
+        
+        console.log('Final phase created:', finalPhase);
         finalPhases.push(finalPhase);
+      } else {
+        console.log('Recording was paused, not creating final phase');
       }
       
       console.log('Stopping phase recording. Total phases:', finalPhases.length);
+      finalPhases.forEach((phase, i) => {
+        console.log(`Phase ${i + 1}:`, phase);
+      });
       
       // Generate final sequence from phases
       const sequence = generateSequenceFromPhases(finalPhases);
