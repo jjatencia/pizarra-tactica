@@ -556,9 +556,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           PNG
         </button>
         <button
-          className={clsx("control-btn", {
-            "bg-blue-600 text-white": showAIPanel,
-            "bg-gray-200": !showAIPanel
+          className={clsx('control-btn', {
+            'bg-blue-600 text-white': showAIPanel
           })}
           onClick={toggleAIPanel}
           title="Consulta IA"
