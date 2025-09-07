@@ -12,6 +12,8 @@ interface PhaseRecording {
   initialTrajectories: any[];
   initialArrows: any[];
   overlayCanvas?: string; // snapshot of drawing canvas at pause
+  // Actual paths followed by tokens during this phase
+  tokenPaths: Record<string, Point[]>;
 }
 
 interface BoardStore extends BoardState {
@@ -222,28 +224,34 @@ const generateSequenceFromPhases = (phases: PhaseRecording[]): AnimationSequence
       console.log(`Token ${tokenId}: distance ${distance.toFixed(2)} from (${start.x}, ${start.y}) to (${end.x}, ${end.y})`);
       
       if (distance > 1) { // Minimum movement threshold
-        // Try to attach a curved path if a trajectory in this phase matches start/end
+        // Use the actual recorded path for this token if available
         let pathPoints: Point[] | undefined;
         let pathTimesNorm: number[] | undefined;
-        if (phase.trajectories && phase.trajectories.length > 0) {
-          let bestIdx = -1; let bestScore = Infinity;
-          phase.trajectories.forEach((traj: any, idx: number) => {
-            const pts: Point[] = traj.points || [];
-            if (pts.length < 2) return;
-            const s = Math.hypot(pts[0].x - start.x, pts[0].y - start.y);
-            const e = Math.hypot(pts[pts.length - 1].x - end.x, pts[pts.length - 1].y - end.y);
-            const score = s + e;
-            if (score < bestScore) { bestScore = score; bestIdx = idx; }
-          });
-          if (bestIdx >= 0) {
-            // Normalize to 0..1 for playback rendering
-            const fw = 105, fh = 68;
-            const traj = phase.trajectories[bestIdx];
-            pathPoints = (traj.points as Point[]).map(p => ({ x: p.x / fw, y: p.y / fh }));
-            const tms: number[] | undefined = traj.timeStampsMs as number[] | undefined;
-            if (tms && tms.length === pathPoints.length) {
-              const total = Math.max(...tms);
-              pathTimesNorm = total > 0 ? tms.map(v => v / total) : tms.map(() => 0);
+        const tokenPath = phase.tokenPaths[tokenId];
+        if (tokenPath && tokenPath.length > 1) {
+          // Normalize to 0..1 for playback rendering
+          const fw = 105, fh = 68;
+          pathPoints = tokenPath.map(p => ({ x: p.x / fw, y: p.y / fh }));
+          
+          // Generate time distribution based on path length
+          // This gives a natural speed profile following the recorded movement
+          const segments: number[] = [];
+          let totalLength = 0;
+          for (let i = 1; i < tokenPath.length; i++) {
+            const segLength = Math.hypot(
+              tokenPath[i].x - tokenPath[i-1].x,
+              tokenPath[i].y - tokenPath[i-1].y
+            );
+            segments.push(segLength);
+            totalLength += segLength;
+          }
+          
+          if (totalLength > 0) {
+            pathTimesNorm = [0]; // Start at 0
+            let accLength = 0;
+            for (let i = 0; i < segments.length; i++) {
+              accLength += segments[i];
+              pathTimesNorm.push(accLength / totalLength);
             }
           }
         }
@@ -407,7 +415,8 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         autoResumeUpdate = {
           recording: true, 
           recordingPaused: false,
-          currentPhaseStart: newPhaseStart
+          currentPhaseStart: newPhaseStart,
+          tokenPaths: {} // Clear paths for new phase
         };
       }
       
@@ -948,7 +957,8 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         duration: 3000, // 3 seconds as specified
         initialTrajectories: state.currentPhaseStartLines.trajectories,
         initialArrows: state.currentPhaseStartLines.arrows,
-        overlayCanvas: overlayCanvas
+        overlayCanvas: overlayCanvas,
+        tokenPaths: { ...state.tokenPaths }
       };
       
       console.log('Pausing phase recording. Phase', state.recordingPhases.length + 1, 'created');
@@ -956,7 +966,8 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       set({
         recordingPaused: true,
         recordingPhases: [...state.recordingPhases, phase],
-        currentPhaseStart: endPositions // Next phase starts where this one ended
+        currentPhaseStart: endPositions, // Next phase starts where this one ended
+        tokenPaths: {} // Clear paths for next phase
       });
     },
 
@@ -988,6 +999,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
           duration: 3000,
           initialTrajectories: state.currentPhaseStartLines.trajectories,
           initialArrows: state.currentPhaseStartLines.arrows,
+          tokenPaths: { ...state.tokenPaths }
         };
         
         console.log('Final phase created:', finalPhase);
