@@ -21,6 +21,7 @@ interface DragState {
   selectionRect: { x: number; y: number; width: number; height: number } | null;
   selectedTokenIds: string[];
   initialPositions: Record<string, Point>;
+  drawStartTime?: number;
 }
 
 export const usePointerInteractions = (
@@ -128,6 +129,7 @@ export const usePointerInteractions = (
         selectionRect: null,
         selectedTokenIds: currentSelected,
         initialPositions: {},
+        drawStartTime: performance.now(),
       });
       selectArrow(null);
       if (!recording) selectToken(null);
@@ -230,8 +232,11 @@ export const usePointerInteractions = (
           finalPoints.push(clampedPoint);
         }
         
-        // Create trajectory
-        addTrajectory(finalPoints, trajectoryType);
+        // Create trajectory and record duration based on draw speed
+        const id = addTrajectory(finalPoints, trajectoryType);
+        const start = dragState.drawStartTime || performance.now();
+        const durationMs = Math.min(3000, Math.max(200, Math.round(performance.now() - start)));
+        useBoardStore.getState().updateTrajectory(id, { durationMs });
         // Movement paths are recorded via dragging tokens
       }
       

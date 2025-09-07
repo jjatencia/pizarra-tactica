@@ -47,7 +47,7 @@ interface BoardStore extends BoardState {
   selectArrow: (id: string | null) => void;
   
   // Trajectory actions
-  addTrajectory: (points: { x: number; y: number }[], type: 'pass' | 'movement') => void;
+  addTrajectory: (points: { x: number; y: number }[], type: 'pass' | 'movement') => string;
   updateTrajectory: (id: string, updates: Partial<Trajectory>) => void;
   removeTrajectory: (id: string) => void;
   selectTrajectory: (id: string | null) => void;
@@ -160,7 +160,7 @@ const generateSequenceFromPhases = (phases: PhaseRecording[]): AnimationSequence
   const animationSteps: any[] = [];
   let currentTime = 0;
   
-  console.log(`Generating sequence from ${phases.length} phases`);
+    console.log(`Generating sequence from ${phases.length} phases`);
   
   phases.forEach((phase, phaseIndex) => {
     console.log(`Processing phase ${phaseIndex + 1}:`, {
@@ -187,23 +187,25 @@ const generateSequenceFromPhases = (phases: PhaseRecording[]): AnimationSequence
 
     // Add trajectories and arrows for this phase (show at start of phase)
     phase.trajectories.forEach((trajectory, trajIndex) => {
+      const dur = Math.min(trajectory.durationMs ?? phase.duration, 3000);
       animationSteps.push({
         id: `phase_${phaseIndex}_trajectory_${trajIndex}`,
         timestamp: currentTime,
         type: 'show_trajectory',
         trajectoryData: trajectory,
-        duration: phase.duration,
+        duration: dur,
         description: `Phase ${phaseIndex + 1} trajectory`
       });
     });
     
     phase.arrows.forEach((arrow, arrowIndex) => {
+      const dur = Math.min(3000, phase.duration);
       animationSteps.push({
         id: `phase_${phaseIndex}_arrow_${arrowIndex}`,
         timestamp: currentTime,
         type: 'show_arrow', 
         arrowData: arrow,
-        duration: phase.duration,
+        duration: dur,
         description: `Phase ${phaseIndex + 1} arrow`
       });
     });
@@ -485,8 +487,9 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     
     addTrajectory: (points: { x: number; y: number }[], type: 'pass' | 'movement') => {
       const state = get();
+      const id = generateId();
       const newTrajectory: Trajectory = {
-        id: generateId(),
+        id,
         points,
         type,
         style: type === 'pass' ? 'solid' : 'dashed',
@@ -502,6 +505,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         ...newState,
         history: addToHistory(newState, state.history),
       });
+      return id;
     },
     
     updateTrajectory: (id: string, updates: Partial<Trajectory>) => {
@@ -1124,22 +1128,27 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         if (progress < 1) {
           requestAnimationFrame(animationLoop);
         } else {
-          // Animation finished: restore positions, clear visuals
+          // Animation finished: stop, then restore after 2s
           set(state => ({
             ...state,
-            tokens: state.playbackStartPositions
-              ? state.tokens.map(t => state.playbackStartPositions![t.id] ? { ...t, ...state.playbackStartPositions![t.id] } : t)
-              : state.tokens,
-            arrows: [],
-            trajectories: [],
-            playbackOverlay: null,
-            playbackStartPositions: null,
             playbackState: {
               ...state.playbackState,
               isPlaying: false,
               currentTime: sequence.totalDuration,
             },
           }));
+          setTimeout(() => {
+            const s = get();
+            set({
+              tokens: s.playbackStartPositions
+                ? s.tokens.map(t => s.playbackStartPositions![t.id] ? { ...t, ...s.playbackStartPositions![t.id] } : t)
+                : s.tokens,
+              arrows: [],
+              trajectories: [],
+              playbackOverlay: null,
+              playbackStartPositions: null,
+            });
+          }, 2000);
         }
       };
 

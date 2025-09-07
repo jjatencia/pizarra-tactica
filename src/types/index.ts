@@ -60,6 +60,7 @@ export interface Trajectory {
   points: Point[];
   type: 'pass' | 'movement';
   style: 'solid' | 'dashed';
+  durationMs?: number; // optional: recorded draw duration
 }
 
 export interface PitchDimensions {
