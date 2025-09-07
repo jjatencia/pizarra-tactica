@@ -1016,7 +1016,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         const temporaryTrajectories: any[] = [];
         
         activeSteps.forEach(step => {
-          if (step.tokenId && step.type === 'move') {
+          if (step.tokenId && step.type === 'move' && step.from && step.to) {
             const stepProgress = (elapsed - step.timestamp) / step.duration;
             const easedProgress = applyEasing(stepProgress, step.easing || 'linear');
             
@@ -1121,7 +1121,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         const temporaryTrajectories: any[] = [];
         
         activeSteps.forEach(step => {
-          if (step.tokenId && step.type === 'move') {
+          if (step.tokenId && step.type === 'move' && step.from && step.to) {
             const stepProgress = (elapsed - step.timestamp) / step.duration;
             const easedProgress = applyEasing(stepProgress, step.easing || 'linear');
             
