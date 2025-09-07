@@ -47,8 +47,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onClearCanvas,
   sizeSettings,
   onSizeChange,
-  isRecording,
-  onToggleRecording,
+  // isRecording, // Now using recording from store
+  // onToggleRecording, // Now using handleToggleRecording
   onPlayRecording,
 }) => {
   
@@ -75,6 +75,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     pauseSequence,
     stopSequence,
     // Phase recording functions
+    recording,
     recordingPhases,
     recordingPaused,
     startPhaseRecording,
