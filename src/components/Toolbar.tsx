@@ -74,6 +74,12 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     playSequence,
     pauseSequence,
     stopSequence,
+    // Phase recording functions
+    recordingPhases,
+    recordingPaused,
+    startPhaseRecording,
+    pausePhaseRecording,
+    stopPhaseRecording,
   } = useBoardStore();
   
   const redTokens = tokens.filter(t => t.team === 'red');
@@ -104,12 +110,37 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
   const handlePause = () => {
     if (playbackState.isPlaying) {
+      // Pause playback
       pauseSequence();
+    } else if (recording && !recordingPaused) {
+      // Pause phase recording
+      pausePhaseRecording();
     }
   };
 
   const handleStop = () => {
-    stopSequence();
+    if (playbackState.isPlaying) {
+      // Stop playback
+      stopSequence();
+    } else if (recording) {
+      // Stop phase recording
+      stopPhaseRecording();
+    }
+  };
+
+  // Handle REC button - use new phase recording system
+  const handleToggleRecording = () => {
+    if (recording) {
+      if (recordingPaused) {
+        // Currently paused, don't toggle off - user should use STOP
+        return;
+      }
+      // Stop recording
+      stopPhaseRecording();
+    } else {
+      // Start new phase recording
+      startPhaseRecording();
+    }
   };
 
   const startPress = (key: Team | 'ball' | 'cone' | 'minigoal') => {
@@ -531,9 +562,18 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
       <div className="flex items-center gap-2 border-l border-r border-gray-700 px-3">
         <button
-          className={clsx('control-btn', { 'bg-red-700': isRecording })}
-          onClick={onToggleRecording}
-          title="Grabar"
+          className={clsx('control-btn', { 
+            'bg-red-700': recording && !recordingPaused,
+            'bg-yellow-600': recording && recordingPaused 
+          })}
+          onClick={handleToggleRecording}
+          title={
+            recording 
+              ? recordingPaused 
+                ? `Grabando por fases (Paused) - Fase ${recordingPhases.length + 1}`
+                : `Grabando por fases - Fase ${recordingPhases.length + 1}`
+              : "Iniciar Grabación por Fases"
+          }
         >
           <RecordIcon />
         </button>
@@ -545,18 +585,32 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           <PlayIcon />
         </button>
         <button
-          className={clsx('control-btn', { 'bg-yellow-600': playbackState.isPaused })}
+          className={clsx('control-btn', { 
+            'bg-yellow-600': playbackState.isPaused || recordingPaused 
+          })}
           onClick={handlePause}
-          disabled={!playbackState.isPlaying}
-          title="Pausa"
+          disabled={!playbackState.isPlaying && (!recording || recordingPaused)}
+          title={
+            playbackState.isPlaying 
+              ? "Pausar Reproducción"
+              : recording && !recordingPaused
+                ? "Pausar Grabación (Crear Fase)"
+                : "Pausa"
+          }
         >
           <PauseIcon />
         </button>
         <button
           className="control-btn"
           onClick={handleStop}
-          disabled={!playbackState.isPlaying && !playbackState.isPaused}
-          title="Parar"
+          disabled={!playbackState.isPlaying && !recording}
+          title={
+            playbackState.isPlaying 
+              ? "Detener Reproducción"
+              : recording
+                ? "Finalizar Grabación por Fases"
+                : "Parar"
+          }
         >
           <StopIcon />
         </button>

@@ -2,10 +2,21 @@ import { create } from 'zustand';
 import { BoardState, Token, Arrow, Trajectory, Team, Formation, HistoryState, ObjectType, TokenSize, Point, AnimationSequence, PlaybackState } from '../types';
 import { loadFromStorage, saveToStorage } from '../lib/localStorage';
 
+interface PhaseRecording {
+  startPositions: Record<string, Point>;
+  endPositions: Record<string, Point>;
+  trajectories: any[];
+  arrows: any[];
+  duration: number;
+}
+
 interface BoardStore extends BoardState {
   // History
   history: HistoryState;
   recording: boolean;
+  recordingPhases: PhaseRecording[];
+  currentPhaseStart: Record<string, Point>;
+  recordingPaused: boolean;
   tokenPaths: Record<string, Point[]>;
   recordingStartPositions: Record<string, Point>;
   
@@ -64,9 +75,16 @@ interface BoardStore extends BoardState {
   importState: (data: string) => void;
   startRecording: () => void;
   stopRecording: () => void;
+  pauseRecording: () => void;
+  resumeRecording: () => void;
   addTokenPathPoint: (id: string, point: Point) => void;
   clearTokenPaths: () => void;
   playTokenPaths: () => void;
+  // New phase recording functions
+  startPhaseRecording: () => void;
+  pausePhaseRecording: () => void;
+  stopPhaseRecording: () => void;
+  checkAutoResume: () => void;
   
   // Animation sequence actions
   addSequence: (sequence: AnimationSequence) => void;
@@ -130,6 +148,52 @@ const addToHistory = (currentState: BoardState, history: HistoryState): HistoryS
   };
 };
 
+// Generate animation sequence from recorded phases
+const generateSequenceFromPhases = (phases: PhaseRecording[]): AnimationSequence => {
+  const animationSteps: any[] = [];
+  let currentTime = 0;
+  
+  phases.forEach((phase, phaseIndex) => {
+    console.log(`Processing phase ${phaseIndex + 1}:`, phase);
+    
+    // Create movement steps for each token that moved in this phase
+    Object.keys(phase.startPositions).forEach(tokenId => {
+      const start = phase.startPositions[tokenId];
+      const end = phase.endPositions[tokenId];
+      
+      // Only create animation if token actually moved
+      const distance = Math.hypot(end.x - start.x, end.y - start.y);
+      if (distance > 1) { // Minimum movement threshold
+        animationSteps.push({
+          id: `phase_${phaseIndex}_token_${tokenId}`,
+          timestamp: currentTime,
+          type: 'move',
+          tokenId: tokenId,
+          from: { x: start.x / 105, y: start.y / 68 }, // Normalize to 0-1
+          to: { x: end.x / 105, y: end.y / 68 },
+          duration: phase.duration,
+          easing: 'easeInOut',
+          description: `Phase ${phaseIndex + 1} movement`
+        });
+      }
+    });
+    
+    // Move to next phase (add transition time)
+    currentTime += phase.duration + 500; // 500ms transition between phases
+  });
+  
+  const totalDuration = phases.reduce((sum, phase) => sum + phase.duration + 500, 0) - 500;
+  
+  return {
+    id: `phase_sequence_${Date.now()}`,
+    title: `Secuencia por Fases (${phases.length} fases)`,
+    description: `Secuencia grabada manualmente con ${phases.length} fases secuenciales`,
+    totalDuration,
+    steps: animationSteps,
+    loop: false
+  };
+};
+
 // Easing functions for animations
 const applyEasing = (t: number, easing: 'linear' | 'easeInOut' | 'easeOut'): number => {
   switch (easing) {
@@ -156,6 +220,9 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     ...initialState,
   history: initialHistory,
   recording: false,
+  recordingPhases: [],
+  currentPhaseStart: {},
+  recordingPaused: false,
   tokenPaths: {},
   recordingStartPositions: {},
   
@@ -227,6 +294,16 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     
     updateToken: (id: string, updates: Partial<Token>) => {
       const state = get();
+      
+      // Check for auto-resume before updating
+      if (state.recordingPaused && (updates.x !== undefined || updates.y !== undefined)) {
+        console.log('Token moved while recording paused - auto-resuming');
+        set({ 
+          recording: true, 
+          recordingPaused: false 
+        });
+      }
+      
       const newTokens = state.tokens.map(token =>
         token.id === id ? { ...token, ...updates } : token
       );
@@ -672,6 +749,14 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       }));
     },
 
+    pauseRecording: () => {
+      set({ recordingPaused: true });
+    },
+
+    resumeRecording: () => {
+      set({ recordingPaused: false });
+    },
+
     addTokenPathPoint: (id: string, point: Point) => {
       set(state => {
         const path = state.tokenPaths[id] || [];
@@ -703,6 +788,107 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         requestAnimationFrame(animate);
       };
       animate();
+    },
+
+    // Phase recording functions
+    startPhaseRecording: () => {
+      const state = get();
+      const startPositions: Record<string, Point> = {};
+      
+      // Capture current positions of all tokens
+      state.tokens.forEach(t => {
+        startPositions[t.id] = { x: t.x, y: t.y };
+      });
+      
+      console.log('Starting phase recording with', Object.keys(startPositions).length, 'tokens');
+      
+      set({ 
+        recording: true,
+        recordingPaused: false,
+        recordingPhases: [],
+        currentPhaseStart: startPositions,
+        recordingStartPositions: startPositions,
+        tokenPaths: {} 
+      });
+    },
+
+    pausePhaseRecording: () => {
+      const state = get();
+      if (!state.recording || state.recordingPaused) return;
+      
+      const endPositions: Record<string, Point> = {};
+      state.tokens.forEach(t => {
+        endPositions[t.id] = { x: t.x, y: t.y };
+      });
+      
+      // Create a phase from current positions
+      const phase: PhaseRecording = {
+        startPositions: { ...state.currentPhaseStart },
+        endPositions,
+        trajectories: [...state.trajectories],
+        arrows: [...state.arrows], 
+        duration: 3000 // 3 seconds as specified
+      };
+      
+      console.log('Pausing phase recording. Phase', state.recordingPhases.length + 1, 'created');
+      
+      set({
+        recordingPaused: true,
+        recordingPhases: [...state.recordingPhases, phase],
+        currentPhaseStart: endPositions // Next phase starts where this one ended
+      });
+    },
+
+    stopPhaseRecording: () => {
+      const state = get();
+      if (!state.recording) return;
+      
+      // If recording wasn't paused, create final phase
+      let finalPhases = [...state.recordingPhases];
+      if (!state.recordingPaused) {
+        const endPositions: Record<string, Point> = {};
+        state.tokens.forEach(t => {
+          endPositions[t.id] = { x: t.x, y: t.y };
+        });
+        
+        const finalPhase: PhaseRecording = {
+          startPositions: { ...state.currentPhaseStart },
+          endPositions,
+          trajectories: [...state.trajectories],
+          arrows: [...state.arrows],
+          duration: 3000
+        };
+        finalPhases.push(finalPhase);
+      }
+      
+      console.log('Stopping phase recording. Total phases:', finalPhases.length);
+      
+      // Generate final sequence from phases
+      const sequence = generateSequenceFromPhases(finalPhases);
+      
+      // Reset to original positions
+      const start = state.recordingStartPositions;
+      set(state => ({
+        recording: false,
+        recordingPaused: false,
+        recordingPhases: [],
+        currentPhaseStart: {},
+        tokens: state.tokens.map(t => start[t.id] ? { ...t, x: start[t.id].x, y: start[t.id].y } : t),
+        selectedTokenIds: [],
+        sequences: [...state.sequences, sequence]
+      }));
+    },
+
+    checkAutoResume: () => {
+      const state = get();
+      // Auto-resume recording when user moves tokens after pause
+      if (state.recordingPaused && !state.recording) {
+        console.log('Auto-resuming recording after token movement');
+        set({ 
+          recording: true, 
+          recordingPaused: false 
+        });
+      }
     },
 
     // Animation sequence actions
