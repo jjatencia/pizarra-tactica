@@ -159,10 +159,37 @@ const generateSequenceFromPhases = (phases: PhaseRecording[]): AnimationSequence
     console.log(`Processing phase ${phaseIndex + 1}:`, {
       startPositions: phase.startPositions,
       endPositions: phase.endPositions,
+      trajectories: phase.trajectories.length,
+      arrows: phase.arrows.length,
       duration: phase.duration
     });
     
     let phaseMovements = 0;
+    
+    // Add trajectories and arrows for this phase (show at start of phase)
+    phase.trajectories.forEach((trajectory, trajIndex) => {
+      animationSteps.push({
+        id: `phase_${phaseIndex}_trajectory_${trajIndex}`,
+        timestamp: currentTime,
+        type: 'show_trajectory',
+        trajectoryData: trajectory,
+        duration: phase.duration,
+        description: `Phase ${phaseIndex + 1} trajectory`
+      });
+    });
+    
+    phase.arrows.forEach((arrow, arrowIndex) => {
+      animationSteps.push({
+        id: `phase_${phaseIndex}_arrow_${arrowIndex}`,
+        timestamp: currentTime,
+        type: 'show_arrow', 
+        arrowData: arrow,
+        duration: phase.duration,
+        description: `Phase ${phaseIndex + 1} arrow`
+      });
+    });
+    
+    console.log(`Phase ${phaseIndex + 1} added ${phase.trajectories.length} trajectories and ${phase.arrows.length} arrows`);
     
     // Create movement steps for each token that moved in this phase
     Object.keys(phase.startPositions).forEach(tokenId => {
@@ -985,8 +1012,11 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         );
 
         const tokenUpdates: Record<string, Partial<Token>> = {};
+        const temporaryArrows: any[] = [];
+        const temporaryTrajectories: any[] = [];
+        
         activeSteps.forEach(step => {
-          if (step.tokenId) {
+          if (step.tokenId && step.type === 'move') {
             const stepProgress = (elapsed - step.timestamp) / step.duration;
             const easedProgress = applyEasing(stepProgress, step.easing || 'linear');
             
@@ -1001,32 +1031,33 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
               x: x * fieldWidth,
               y: y * fieldHeight,
             };
+          } else if (step.type === 'show_arrow' && step.arrowData) {
+            // Show arrow during this phase
+            temporaryArrows.push(step.arrowData);
+          } else if (step.type === 'show_trajectory' && step.trajectoryData) {
+            // Show trajectory during this phase  
+            temporaryTrajectories.push(step.trajectoryData);
           }
         });
 
-        // Apply token updates
-        if (Object.keys(tokenUpdates).length > 0) {
-          set(state => ({
-            ...state,
-            tokens: state.tokens.map(token => 
-              tokenUpdates[token.id] 
-                ? { ...token, ...tokenUpdates[token.id] }
-                : token
-            ),
-            playbackState: {
-              ...state.playbackState,
-              currentTime: elapsed,
-            },
-          }));
-        } else {
-          set(state => ({
-            ...state,
-            playbackState: {
-              ...state.playbackState,
-              currentTime: elapsed,
-            },
-          }));
-        }
+        // Apply token updates and temporary lines
+        set(state => ({
+          ...state,
+          tokens: Object.keys(tokenUpdates).length > 0 
+            ? state.tokens.map(token => 
+                tokenUpdates[token.id] 
+                  ? { ...token, ...tokenUpdates[token.id] }
+                  : token
+              )
+            : state.tokens,
+          // Show phase-specific arrows and trajectories during animation
+          arrows: temporaryArrows.length > 0 ? temporaryArrows : state.arrows,
+          trajectories: temporaryTrajectories.length > 0 ? temporaryTrajectories : state.trajectories,
+          playbackState: {
+            ...state.playbackState,
+            currentTime: elapsed,
+          },
+        }));
 
         if (progress < 1) {
           requestAnimationFrame(animationLoop);
@@ -1086,8 +1117,11 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         );
 
         const tokenUpdates: Record<string, Partial<Token>> = {};
+        const temporaryArrows: any[] = [];
+        const temporaryTrajectories: any[] = [];
+        
         activeSteps.forEach(step => {
-          if (step.tokenId) {
+          if (step.tokenId && step.type === 'move') {
             const stepProgress = (elapsed - step.timestamp) / step.duration;
             const easedProgress = applyEasing(stepProgress, step.easing || 'linear');
             
@@ -1101,31 +1135,31 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
               x: x * fieldWidth,
               y: y * fieldHeight,
             };
+          } else if (step.type === 'show_arrow' && step.arrowData) {
+            temporaryArrows.push(step.arrowData);
+          } else if (step.type === 'show_trajectory' && step.trajectoryData) {
+            temporaryTrajectories.push(step.trajectoryData);
           }
         });
 
-        if (Object.keys(tokenUpdates).length > 0) {
-          set(state => ({
-            ...state,
-            tokens: state.tokens.map(token => 
-              tokenUpdates[token.id] 
-                ? { ...token, ...tokenUpdates[token.id] }
-                : token
-            ),
-            playbackState: {
-              ...state.playbackState,
-              currentTime: elapsed,
-            },
-          }));
-        } else {
-          set(state => ({
-            ...state,
-            playbackState: {
-              ...state.playbackState,
-              currentTime: elapsed,
-            },
-          }));
-        }
+        // Apply token updates and temporary lines
+        set(state => ({
+          ...state,
+          tokens: Object.keys(tokenUpdates).length > 0 
+            ? state.tokens.map(token => 
+                tokenUpdates[token.id] 
+                  ? { ...token, ...tokenUpdates[token.id] }
+                  : token
+              )
+            : state.tokens,
+          // Show phase-specific arrows and trajectories during animation
+          arrows: temporaryArrows.length > 0 ? temporaryArrows : state.arrows,
+          trajectories: temporaryTrajectories.length > 0 ? temporaryTrajectories : state.trajectories,
+          playbackState: {
+            ...state.playbackState,
+            currentTime: elapsed,
+          },
+        }));
 
         if (progress < 1) {
           requestAnimationFrame(animationLoop);
