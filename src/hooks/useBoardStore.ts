@@ -578,11 +578,25 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     addTrajectory: (points: { x: number; y: number }[], type: 'pass' | 'movement') => {
       const state = get();
       
+      console.log('🔥 addTrajectory called:', { 
+        recording: state.recording, 
+        recordingPaused: state.recordingPaused, 
+        type, 
+        pointsCount: points.length 
+      });
+      
       let autoResumeUpdate = {};
       
       // Check for auto-resume when drawing trajectory while recording paused
       if (state.recordingPaused) {
-        console.log('Trajectory drawn while recording paused - auto-resuming');
+        console.log('🚀 TRAJECTORY AUTO-RESUME TRIGGERED');
+        console.log('📍 State before auto-resume:', {
+          recording: state.recording,
+          recordingPaused: state.recordingPaused,
+          currentPhaseStart: Object.keys(state.currentPhaseStart).length,
+          trajectoriesCount: state.trajectories.length,
+          arrowsCount: state.arrows.length
+        });
         
         // Capture current positions as start of new phase
         const newPhaseStart: Record<string, Point> = {};
@@ -596,9 +610,11 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
           arrows: [...state.arrows]
         };
         
-        console.log('New phase starts with positions:', newPhaseStart);
-        console.log('New phase starts with lines:', newPhaseStartLines);
-        console.log('Setting recording=true, recordingPaused=false');
+        console.log('📍 New phase setup:', {
+          tokensCount: Object.keys(newPhaseStart).length,
+          initialTrajectoriesCount: newPhaseStartLines.trajectories.length,
+          initialArrowsCount: newPhaseStartLines.arrows.length
+        });
         
         autoResumeUpdate = {
           recording: true, 
@@ -607,6 +623,13 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
           currentPhaseStartLines: newPhaseStartLines,
           tokenPaths: {} // Clear paths for new phase
         };
+        
+        console.log('✅ Auto-resume update prepared:', autoResumeUpdate);
+      } else {
+        console.log('⏸️ No auto-resume needed - recording state:', {
+          recording: state.recording,
+          recordingPaused: state.recordingPaused
+        });
       }
       
       const id = generateId();
@@ -628,11 +651,27 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         ...newState,
         history: addToHistory(newState, state.history),
       });
+      
+      const finalState = get();
+      console.log('📊 Final state after addTrajectory:', {
+        recording: finalState.recording,
+        recordingPaused: finalState.recordingPaused,
+        trajectoriesCount: finalState.trajectories.length
+      });
+      
       return id;
     },
     
     updateTrajectory: (id: string, updates: Partial<Trajectory>) => {
       const state = get();
+      
+      console.log('🔧 updateTrajectory called:', {
+        id,
+        updates: Object.keys(updates),
+        recordingBefore: state.recording,
+        recordingPausedBefore: state.recordingPaused
+      });
+      
       const newTrajectories = state.trajectories.map(trajectory =>
         trajectory.id === id ? { ...trajectory, ...updates } : trajectory
       );
@@ -648,6 +687,11 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         recordingStartPositions: state.recordingStartPositions
       };
       
+      console.log('🔒 Preserving recording state:', {
+        recording: recordingState.recording,
+        recordingPaused: recordingState.recordingPaused
+      });
+      
       const newState = {
         ...state,
         trajectories: newTrajectories,
@@ -657,6 +701,12 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       set({
         ...newState,
         history: addToHistory(newState, state.history),
+      });
+      
+      const finalState = get();
+      console.log('📊 Final state after updateTrajectory:', {
+        recording: finalState.recording,
+        recordingPaused: finalState.recordingPaused
       });
     },
     
