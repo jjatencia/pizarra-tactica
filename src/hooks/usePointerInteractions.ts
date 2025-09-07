@@ -23,6 +23,7 @@ interface DragState {
   initialPositions: Record<string, Point>;
   drawStartTime?: number;
   pathTimes?: number[];
+  tokenDragStartTime?: number;
 }
 
 export const usePointerInteractions = (
@@ -89,6 +90,8 @@ export const usePointerInteractions = (
       positions[t.id] = { x: t.x, y: t.y };
     });
 
+    const dragStartTime = performance.now();
+    
     setDragState({
       isDragging: true,
       dragStartPoint: svgPoint,
@@ -100,12 +103,13 @@ export const usePointerInteractions = (
       selectionRect: null,
       selectedTokenIds: currentSelected,
       initialPositions: positions,
+      tokenDragStartTime: dragStartTime,
     });
 
     if (recording) {
       currentSelected.forEach(id => {
         const pos = positions[id];
-        addTokenPathPoint(id, { x: pos.x, y: pos.y });
+        addTokenPathPoint(id, { x: pos.x, y: pos.y }, 0);
       });
     }
 
@@ -189,8 +193,9 @@ export const usePointerInteractions = (
         const margin = token ? getTokenRadius(token) : 5;
         newPosition = clampToField(newPosition, fieldWidth, fieldHeight, margin);
         updateToken(id, newPosition);
-        if (recording) {
-          addTokenPathPoint(id, newPosition);
+        if (recording && dragState.tokenDragStartTime !== undefined) {
+          const timestamp = performance.now() - dragState.tokenDragStartTime;
+          addTokenPathPoint(id, newPosition, timestamp);
         }
       });
       return;
