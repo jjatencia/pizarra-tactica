@@ -526,9 +526,21 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         arrow.id === id ? { ...arrow, ...updates } : arrow
       );
       
+      // Preserve recording state (don't overwrite auto-resume)
+      const recordingState = {
+        recording: state.recording,
+        recordingPaused: state.recordingPaused,
+        currentPhaseStart: state.currentPhaseStart,
+        currentPhaseStartLines: state.currentPhaseStartLines,
+        tokenPaths: state.tokenPaths,
+        recordingPhases: state.recordingPhases,
+        recordingStartPositions: state.recordingStartPositions
+      };
+      
       const newState = {
         ...state,
         arrows: newArrows,
+        ...recordingState // Ensure recording state is preserved
       };
       
       set({
@@ -625,9 +637,21 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         trajectory.id === id ? { ...trajectory, ...updates } : trajectory
       );
       
+      // Preserve recording state (don't overwrite auto-resume)
+      const recordingState = {
+        recording: state.recording,
+        recordingPaused: state.recordingPaused,
+        currentPhaseStart: state.currentPhaseStart,
+        currentPhaseStartLines: state.currentPhaseStartLines,
+        tokenPaths: state.tokenPaths,
+        recordingPhases: state.recordingPhases,
+        recordingStartPositions: state.recordingStartPositions
+      };
+      
       const newState = {
         ...state,
         trajectories: newTrajectories,
+        ...recordingState // Ensure recording state is preserved
       };
       
       set({
