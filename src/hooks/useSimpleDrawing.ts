@@ -1,5 +1,6 @@
 import { useCallback, useState, useRef, useEffect } from 'react';
 import { DrawingMode } from '../types';
+import { useBoardStore } from './useBoardStore';
 
 interface DrawingState {
   isDrawing: boolean;
@@ -23,6 +24,9 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
   });
 
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
+  
+  // Access recording state for auto-resume
+  const { recording, recordingPaused, tokens, trajectories, arrows } = useBoardStore();
 
   // Initialize canvas
   useEffect(() => {
@@ -84,6 +88,47 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     e.preventDefault();
     e.stopPropagation();
     
+    // Check for auto-resume when starting canvas drawing while recording paused
+    if (recordingPaused) {
+      console.log('🚀 CANVAS DRAWING AUTO-RESUME TRIGGERED');
+      console.log('📍 Canvas drawing state before auto-resume:', {
+        recording,
+        recordingPaused,
+        tokensCount: tokens.length,
+        trajectoriesCount: trajectories.length,
+        arrowsCount: arrows.length
+      });
+      
+      // Capture current positions as start of new phase
+      const newPhaseStart: Record<string, { x: number; y: number }> = {};
+      tokens.forEach(t => {
+        newPhaseStart[t.id] = { x: t.x, y: t.y };
+      });
+      
+      // Update initial lines for new phase (current state)
+      const newPhaseStartLines = {
+        trajectories: [...trajectories],
+        arrows: [...arrows]
+      };
+      
+      console.log('📍 Canvas auto-resume - New phase setup:', {
+        tokensCount: Object.keys(newPhaseStart).length,
+        initialTrajectoriesCount: newPhaseStartLines.trajectories.length,
+        initialArrowsCount: newPhaseStartLines.arrows.length
+      });
+      
+      // Apply auto-resume state update
+      useBoardStore.setState({
+        recording: true, 
+        recordingPaused: false,
+        currentPhaseStart: newPhaseStart,
+        currentPhaseStartLines: newPhaseStartLines,
+        tokenPaths: {} // Clear paths for new phase
+      });
+      
+      console.log('✅ Canvas auto-resume applied');
+    }
+    
     const coords = getCoords(e);
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
@@ -106,7 +151,7 @@ export const useSimpleDrawing = (canvasRef: React.RefObject<HTMLCanvasElement>) 
     }
     
     console.log('✅ Drew starting point');
-  }, [canvasRef, getCoords, state.color, state.lineStyle, state.drawingMode]);
+  }, [canvasRef, getCoords, state.color, state.lineStyle, state.drawingMode, recording, recordingPaused, tokens, trajectories, arrows]);
 
   const draw = useCallback((e: any) => {
     if (!state.isDrawing || !canvasRef.current || !lastPointRef.current) return;
