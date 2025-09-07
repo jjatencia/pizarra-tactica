@@ -153,8 +153,16 @@ const generateSequenceFromPhases = (phases: PhaseRecording[]): AnimationSequence
   const animationSteps: any[] = [];
   let currentTime = 0;
   
+  console.log(`Generating sequence from ${phases.length} phases`);
+  
   phases.forEach((phase, phaseIndex) => {
-    console.log(`Processing phase ${phaseIndex + 1}:`, phase);
+    console.log(`Processing phase ${phaseIndex + 1}:`, {
+      startPositions: phase.startPositions,
+      endPositions: phase.endPositions,
+      duration: phase.duration
+    });
+    
+    let phaseMovements = 0;
     
     // Create movement steps for each token that moved in this phase
     Object.keys(phase.startPositions).forEach(tokenId => {
@@ -163,8 +171,10 @@ const generateSequenceFromPhases = (phases: PhaseRecording[]): AnimationSequence
       
       // Only create animation if token actually moved
       const distance = Math.hypot(end.x - start.x, end.y - start.y);
+      console.log(`Token ${tokenId}: distance ${distance.toFixed(2)} from (${start.x}, ${start.y}) to (${end.x}, ${end.y})`);
+      
       if (distance > 1) { // Minimum movement threshold
-        animationSteps.push({
+        const step = {
           id: `phase_${phaseIndex}_token_${tokenId}`,
           timestamp: currentTime,
           type: 'move',
@@ -174,9 +184,15 @@ const generateSequenceFromPhases = (phases: PhaseRecording[]): AnimationSequence
           duration: phase.duration,
           easing: 'easeInOut',
           description: `Phase ${phaseIndex + 1} movement`
-        });
+        };
+        
+        animationSteps.push(step);
+        phaseMovements++;
+        console.log(`Added animation step for token ${tokenId} in phase ${phaseIndex + 1}`);
       }
     });
+    
+    console.log(`Phase ${phaseIndex + 1} generated ${phaseMovements} movements`);
     
     // Move to next phase (add transition time)
     currentTime += phase.duration + 500; // 500ms transition between phases
@@ -298,9 +314,19 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       // Check for auto-resume before updating
       if (state.recordingPaused && (updates.x !== undefined || updates.y !== undefined)) {
         console.log('Token moved while recording paused - auto-resuming');
+        
+        // Capture current positions as start of new phase
+        const newPhaseStart: Record<string, Point> = {};
+        state.tokens.forEach(t => {
+          newPhaseStart[t.id] = { x: t.x, y: t.y };
+        });
+        
+        console.log('New phase starts with positions:', newPhaseStart);
+        
         set({ 
           recording: true, 
-          recordingPaused: false 
+          recordingPaused: false,
+          currentPhaseStart: newPhaseStart
         });
       }
       
