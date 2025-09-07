@@ -190,10 +190,19 @@ const generateSequenceFromPhases = (phases: PhaseRecording[]): AnimationSequence
       });
     }
 
-    // Add trajectories and arrows for this phase (show at start of phase)
-    phase.trajectories.forEach((trajectory, trajIndex) => {
-      // Use the actual drawing duration if available
-      const dur = trajectory.durationMs ?? phase.duration;
+    // Get lines that were added during this phase (not present at start)
+    const newTrajectories = phase.trajectories.filter(traj => 
+      !phase.initialTrajectories.some(initial => initial.id === traj.id)
+    );
+    const newArrows = phase.arrows.filter(arrow => 
+      !phase.initialArrows.some(initial => initial.id === arrow.id)
+    );
+    
+    // Add new trajectories for this phase
+    newTrajectories.forEach((trajectory, trajIndex) => {
+      // Limit trajectory duration between 1-2 seconds
+      let dur = trajectory.durationMs ?? 1500;
+      dur = Math.max(1000, Math.min(2000, dur)); // Clamp between 1-2 seconds
       animationSteps.push({
         id: `phase_${phaseIndex}_trajectory_${trajIndex}`,
         timestamp: currentTime,
@@ -204,8 +213,9 @@ const generateSequenceFromPhases = (phases: PhaseRecording[]): AnimationSequence
       });
     });
     
-    phase.arrows.forEach((arrow, arrowIndex) => {
-      const dur = Math.min(3000, phase.duration);
+    // Add new arrows for this phase
+    newArrows.forEach((arrow, arrowIndex) => {
+      const dur = Math.min(2000, phase.duration); // Max 2 seconds for arrows
       animationSteps.push({
         id: `phase_${phaseIndex}_arrow_${arrowIndex}`,
         timestamp: currentTime,
@@ -216,7 +226,45 @@ const generateSequenceFromPhases = (phases: PhaseRecording[]): AnimationSequence
       });
     });
     
-    console.log(`Phase ${phaseIndex + 1} added ${phase.trajectories.length} trajectories and ${phase.arrows.length} arrows`);
+    // Calculate when lines should be hidden (if they were deleted)
+    const deletedTrajectories = phase.initialTrajectories.filter(initial =>
+      !phase.trajectories.some(traj => traj.id === initial.id)
+    );
+    const deletedArrows = phase.initialArrows.filter(initial =>
+      !phase.arrows.some(arrow => arrow.id === initial.id)
+    );
+    
+    // Hide deleted lines just before token movement starts
+    if (deletedTrajectories.length > 0 || deletedArrows.length > 0) {
+      const hideTime = currentTime + Math.max(...newTrajectories.map(t => {
+        let dur = t.durationMs ?? 1500;
+        return Math.max(1000, Math.min(2000, dur));
+      }).concat([0]));
+      
+      animationSteps.push({
+        id: `phase_${phaseIndex}_hide_lines`,
+        timestamp: hideTime,
+        type: 'hide_lines',
+        trajectoryIds: deletedTrajectories.map(t => t.id),
+        arrowIds: deletedArrows.map(a => a.id),
+        duration: 0,
+        description: `Phase ${phaseIndex + 1} hide deleted lines`
+      });
+    }
+    
+    console.log(`Phase ${phaseIndex + 1} added ${newTrajectories.length} new trajectories and ${newArrows.length} new arrows`);
+    
+    // Calculate when token movements should start
+    // If we have new lines, wait for them to draw first
+    let tokenMovementStartTime = currentTime;
+    if (newTrajectories.length > 0) {
+      const trajectoryDurations = newTrajectories.map(t => {
+        let dur = t.durationMs ?? 1500;
+        return Math.max(1000, Math.min(2000, dur));
+      });
+      const maxTrajectoryDuration = Math.max(...trajectoryDurations);
+      tokenMovementStartTime = currentTime + maxTrajectoryDuration;
+    }
     
     // Create movement steps for each token that moved in this phase
     Object.keys(phase.startPositions).forEach(tokenId => {
@@ -251,14 +299,17 @@ const generateSequenceFromPhases = (phases: PhaseRecording[]): AnimationSequence
           }
         }
 
+        // Limit token movement duration to max 3 seconds
+        const moveDuration = Math.min(3000, phase.duration);
+        
         const step = {
           id: `phase_${phaseIndex}_token_${tokenId}`,
-          timestamp: currentTime,
+          timestamp: tokenMovementStartTime,
           type: 'move',
           tokenId: tokenId,
           from: { x: start.x / 105, y: start.y / 68 }, // Normalize to 0-1
           to: { x: end.x / 105, y: end.y / 68 },
-          duration: phase.duration,
+          duration: moveDuration,
           easing: 'linear', // Use linear since we have exact path
           pathPoints,
           pathTimes: pathTimesNorm,
@@ -273,11 +324,31 @@ const generateSequenceFromPhases = (phases: PhaseRecording[]): AnimationSequence
     
     console.log(`Phase ${phaseIndex + 1} generated ${phaseMovements} movements`);
     
+    // Calculate actual phase duration considering sequential line drawing and movement
+    let phaseDuration = 0;
+    if (newTrajectories.length > 0) {
+      const trajectoryDurations = newTrajectories.map(t => {
+        let dur = t.durationMs ?? 1500;
+        return Math.max(1000, Math.min(2000, dur));
+      });
+      phaseDuration = Math.max(...trajectoryDurations);
+    }
+    if (phaseMovements > 0) {
+      const moveDuration = Math.min(3000, phase.duration);
+      phaseDuration = Math.max(phaseDuration, tokenMovementStartTime - currentTime + moveDuration);
+    }
+    
+    // If phase has no animations, use a minimal duration
+    if (phaseDuration === 0) {
+      phaseDuration = 100;
+    }
+    
     // Move to next phase (add transition time)
-    currentTime += phase.duration + 500; // 500ms transition between phases
+    currentTime += phaseDuration + 500; // 500ms transition between phases
   });
   
-  const totalDuration = phases.reduce((sum, phase) => sum + phase.duration + 500, 0) - 500;
+  // The currentTime already includes all phase durations and transitions
+  const totalDuration = currentTime - 500; // Remove the last transition
   
   return {
     id: `phase_sequence_${Date.now()}`,
@@ -1119,7 +1190,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         playbackStartPositions: startPositions,
       });
 
-      // Start animation loop
+      // Start animation loop for playSequence
       const startTime = Date.now();
       const animationLoop = () => {
         const current = get();
