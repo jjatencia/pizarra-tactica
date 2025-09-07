@@ -222,6 +222,25 @@ const generateSequenceFromPhases = (phases: PhaseRecording[]): AnimationSequence
       console.log(`Token ${tokenId}: distance ${distance.toFixed(2)} from (${start.x}, ${start.y}) to (${end.x}, ${end.y})`);
       
       if (distance > 1) { // Minimum movement threshold
+        // Try to attach a curved path if a trajectory in this phase matches start/end
+        let pathPoints: Point[] | undefined;
+        if (phase.trajectories && phase.trajectories.length > 0) {
+          let bestIdx = -1; let bestScore = Infinity;
+          phase.trajectories.forEach((traj: any, idx: number) => {
+            const pts: Point[] = traj.points || [];
+            if (pts.length < 2) return;
+            const s = Math.hypot(pts[0].x - start.x, pts[0].y - start.y);
+            const e = Math.hypot(pts[pts.length - 1].x - end.x, pts[pts.length - 1].y - end.y);
+            const score = s + e;
+            if (score < bestScore) { bestScore = score; bestIdx = idx; }
+          });
+          if (bestIdx >= 0) {
+            // Normalize to 0..1 for playback rendering
+            const fw = 105, fh = 68;
+            pathPoints = (phase.trajectories[bestIdx].points as Point[]).map(p => ({ x: p.x / fw, y: p.y / fh }));
+          }
+        }
+
         const step = {
           id: `phase_${phaseIndex}_token_${tokenId}`,
           timestamp: currentTime,
@@ -231,6 +250,7 @@ const generateSequenceFromPhases = (phases: PhaseRecording[]): AnimationSequence
           to: { x: end.x / 105, y: end.y / 68 },
           duration: phase.duration,
           easing: 'easeInOut',
+          pathPoints,
           description: `Phase ${phaseIndex + 1} movement`
         };
         
@@ -1022,6 +1042,10 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       const sequence = state.sequences.find(s => s.id === sequenceId);
       if (!sequence) return;
 
+      // Snapshot start positions
+      const startPositions: Record<string, Point> = {};
+      state.tokens.forEach(t => { startPositions[t.id] = { x: t.x, y: t.y }; });
+
       set({
         currentSequence: sequence,
         playbackState: {
@@ -1031,6 +1055,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
           currentTime: 0,
           sequence,
         },
+        playbackStartPositions: startPositions,
       });
 
       // Start animation loop
@@ -1058,18 +1083,26 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
           if (step.tokenId && step.type === 'move' && step.from && step.to) {
             const stepProgress = (elapsed - step.timestamp) / step.duration;
             const easedProgress = applyEasing(stepProgress, step.easing || 'linear');
-            
-            const x = step.from.x + (step.to.x - step.from.x) * easedProgress;
-            const y = step.from.y + (step.to.y - step.from.y) * easedProgress;
-            
-            // Convert normalized coordinates to field coordinates
-            const fieldWidth = 105;
-            const fieldHeight = 68;
-            
-            tokenUpdates[step.tokenId] = {
-              x: x * fieldWidth,
-              y: y * fieldHeight,
-            };
+            const fw = 105, fh = 68;
+            if (step.pathPoints && step.pathPoints.length > 1) {
+              // Move along polyline path
+              const pts = step.pathPoints.map(p => ({ x: p.x * fw, y: p.y * fh }));
+              // Compute total length
+              let total = 0; const segs: number[] = [];
+              for (let i=1;i<pts.length;i++){ const d=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y); segs.push(d); total+=d; }
+              const target = total * Math.max(0, Math.min(1, easedProgress));
+              let acc = 0; let pos = pts[0];
+              for (let i=1;i<pts.length;i++){
+                const d = segs[i-1];
+                if (acc + d < target) { acc += d; pos = pts[i]; }
+                else { const r = d===0?1:(target-acc)/d; pos = { x: pts[i-1].x + (pts[i].x-pts[i-1].x)*r, y: pts[i-1].y + (pts[i].y-pts[i-1].y)*r }; break; }
+              }
+              tokenUpdates[step.tokenId] = { x: pos.x, y: pos.y };
+            } else {
+              const x = step.from.x + (step.to.x - step.from.x) * easedProgress;
+              const y = step.from.y + (step.to.y - step.from.y) * easedProgress;
+              tokenUpdates[step.tokenId] = { x: x * fw, y: y * fh };
+            }
           } else if (step.type === 'show_arrow' && step.arrowData) {
             const revealMs = Math.min(3000, step.duration);
             const local = Math.min(Math.max(elapsed - step.timestamp, 0), revealMs);

@@ -85,6 +85,8 @@ export interface AnimationStep {
   trajectoryData?: any;
   // Additional data for raster overlay
   canvasData?: string; // dataURL for canvas overlay
+  // If present, move token along this polyline path (normalized 0..1 coords)
+  pathPoints?: Point[];
 }
 
 export interface AnimationSequence {
