@@ -47,6 +47,7 @@ function App() {
     pan,
     showFullField,
     gridSnap,
+    showAIPanel,
 
     addToken,
     addObject,
@@ -786,11 +787,13 @@ function App() {
         onPlayRecording={handlePlayRecording}
         />
         
-        {/* Tactical Description Input */}
-        <TacticalDescriptionInput
-          onSequenceGenerated={handleSequenceGenerated}
-          onError={handleSequenceError}
-        />
+        {/* Tactical Description Input - Only show when AI panel is active */}
+        {showAIPanel && (
+          <TacticalDescriptionInput
+            onSequenceGenerated={handleSequenceGenerated}
+            onError={handleSequenceError}
+          />
+        )}
         
       </div>
       

@@ -64,6 +64,7 @@ interface BoardStore extends BoardState {
   setPan: (pan: { x: number; y: number }) => void;
   toggleGridSnap: () => void;
   toggleFullField: () => void;
+  toggleAIPanel: () => void;
   
   // Utility actions
   reset: () => void;
@@ -120,6 +121,7 @@ const initialState: BoardState = {
   selectedTokenIds: [],
   selectedArrowId: null,
   selectedTrajectoryId: null,
+  showAIPanel: false,
 };
 
 const initialHistory: HistoryState = {
@@ -746,6 +748,10 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     
     toggleFullField: () => {
       set(state => ({ showFullField: !state.showFullField }));
+    },
+    
+    toggleAIPanel: () => {
+      set(state => ({ showAIPanel: !state.showAIPanel }));
     },
     
     reset: () => {

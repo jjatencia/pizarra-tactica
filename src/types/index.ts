@@ -38,6 +38,7 @@ export interface BoardState {
   selectedTokenIds: string[];
   selectedArrowId: string | null;
   selectedTrajectoryId: string | null;
+  showAIPanel: boolean;
 }
 
 export interface HistoryState {

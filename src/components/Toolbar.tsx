@@ -83,6 +83,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     startPhaseRecording,
     pausePhaseRecording,
     stopPhaseRecording,
+    showAIPanel,
+    toggleAIPanel,
   } = useBoardStore();
   
   const redTokens = tokens.filter(t => t.team === 'red');
@@ -552,6 +554,16 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           onClick={handleExportPNG}
         >
           PNG
+        </button>
+        <button
+          className={clsx("control-btn", {
+            "bg-blue-600 text-white": showAIPanel,
+            "bg-gray-200": !showAIPanel
+          })}
+          onClick={toggleAIPanel}
+          title="Consulta IA"
+        >
+          Consulta IA
         </button>
         <button 
           className="bg-red-700 hover:bg-red-600 text-white font-bold py-2 px-3 rounded transition-colors text-sm flex items-center justify-center"
