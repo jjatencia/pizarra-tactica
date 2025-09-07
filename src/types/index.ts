@@ -61,6 +61,7 @@ export interface Trajectory {
   type: 'pass' | 'movement';
   style: 'solid' | 'dashed';
   durationMs?: number; // optional: recorded draw duration
+  timeStampsMs?: number[]; // optional: per-point timestamps from drawing
 }
 
 export interface PitchDimensions {
@@ -87,6 +88,8 @@ export interface AnimationStep {
   canvasData?: string; // dataURL for canvas overlay
   // If present, move token along this polyline path (normalized 0..1 coords)
   pathPoints?: Point[];
+  // Optional normalized times [0..1] aligned with pathPoints for speed profile
+  pathTimes?: number[];
 }
 
 export interface AnimationSequence {
