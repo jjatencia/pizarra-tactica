@@ -72,7 +72,7 @@ export interface PitchDimensions {
 export interface AnimationStep {
   id: string;
   timestamp: number; // milliseconds from sequence start
-  type: 'move' | 'pass' | 'pressure' | 'intercept' | 'show_arrow' | 'show_trajectory';
+  type: 'move' | 'pass' | 'pressure' | 'intercept' | 'show_arrow' | 'show_trajectory' | 'show_canvas';
   tokenId?: string; // token that performs the action
   from?: Point;
   to?: Point;
@@ -82,6 +82,8 @@ export interface AnimationStep {
   // Additional data for line rendering
   arrowData?: any;
   trajectoryData?: any;
+  // Additional data for raster overlay
+  canvasData?: string; // dataURL for canvas overlay
 }
 
 export interface AnimationSequence {

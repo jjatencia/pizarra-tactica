@@ -65,6 +65,7 @@ function App() {
     reset,
     addSequence,
     removeSequence,
+    playbackOverlay,
   } = useBoardStore();
   
   // Field dimensions
@@ -768,6 +769,7 @@ function App() {
         onShowPresets={() => setShowPresets(true)}
         onShowFormations={() => setShowFormations(true)}
         onOpenAIPackSelector={() => setShowAIPackSelector(true)}
+        getCanvasImage={() => canvasRef.current ? canvasRef.current.toDataURL() : null}
         drawColor={drawColor}
         drawingMode={drawingMode}
         canUndoDraw={canUndoDraw}
@@ -934,6 +936,16 @@ function App() {
                 endDrawing();
               }}
             />
+
+            {/* Playback overlay for recorded canvas (non-interactive) */}
+            {playbackOverlay && (
+              <img
+                src={playbackOverlay as string}
+                alt="overlay"
+                className="absolute top-0 left-0 w-full h-full pointer-events-none"
+                style={{ zIndex: 2 }}
+              />
+            )}
             
       {/* Zoom indicator */}
       {zoom !== 1 && (

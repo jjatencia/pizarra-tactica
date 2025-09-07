@@ -11,6 +11,7 @@ interface ToolbarProps {
   onShowPresets: () => void;
   onShowFormations: () => void;
   onOpenAIPackSelector?: () => void;
+  getCanvasImage?: () => string | null;
   drawColor: string;
   drawingMode: DrawingMode;
   canUndoDraw: boolean;
@@ -34,6 +35,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   // onShowPresets, // Will be used later
   onShowFormations,
   onOpenAIPackSelector,
+  getCanvasImage,
   drawColor,
   // drawLineStyle, // Not used with new mode system
   drawingMode,
@@ -114,8 +116,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       // Pause playback
       pauseSequence();
     } else if (recording && !recordingPaused) {
-      // Pause phase recording
-      pausePhaseRecording();
+      // Pause phase recording, capture current canvas overlay if provided
+      const overlay = getCanvasImage ? (getCanvasImage() || undefined) : undefined;
+      pausePhaseRecording(overlay);
     }
   };
 

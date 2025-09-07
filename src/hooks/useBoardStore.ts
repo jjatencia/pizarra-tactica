@@ -8,6 +8,10 @@ interface PhaseRecording {
   trajectories: any[];
   arrows: any[];
   duration: number;
+  // Lines present at the START of this phase (not at the end)
+  initialTrajectories: any[];
+  initialArrows: any[];
+  overlayCanvas?: string; // snapshot of drawing canvas at pause
 }
 
 interface BoardStore extends BoardState {
@@ -16,6 +20,7 @@ interface BoardStore extends BoardState {
   recording: boolean;
   recordingPhases: PhaseRecording[];
   currentPhaseStart: Record<string, Point>;
+  currentPhaseStartLines: { trajectories: any[], arrows: any[] };
   recordingPaused: boolean;
   tokenPaths: Record<string, Point[]>;
   recordingStartPositions: Record<string, Point>;
@@ -24,6 +29,7 @@ interface BoardStore extends BoardState {
   playbackState: PlaybackState;
   sequences: AnimationSequence[];
   currentSequence: AnimationSequence | null;
+  playbackOverlay?: string | null;
   
   // Token actions
   addToken: (team: Team, x: number, y: number, type?: ObjectType, size?: TokenSize) => void;
@@ -82,7 +88,7 @@ interface BoardStore extends BoardState {
   playTokenPaths: () => void;
   // New phase recording functions
   startPhaseRecording: () => void;
-  pausePhaseRecording: () => void;
+  pausePhaseRecording: (overlayCanvas?: string) => void;
   stopPhaseRecording: () => void;
   checkAutoResume: () => void;
   
@@ -166,6 +172,18 @@ const generateSequenceFromPhases = (phases: PhaseRecording[]): AnimationSequence
     
     let phaseMovements = 0;
     
+    // Add optional canvas overlay for this phase
+    if (phase.overlayCanvas) {
+      animationSteps.push({
+        id: `phase_${phaseIndex}_canvas`,
+        timestamp: currentTime,
+        type: 'show_canvas',
+        duration: phase.duration,
+        canvasData: phase.overlayCanvas,
+        description: `Phase ${phaseIndex + 1} canvas overlay`
+      });
+    }
+
     // Add trajectories and arrows for this phase (show at start of phase)
     phase.trajectories.forEach((trajectory, trajIndex) => {
       animationSteps.push({
@@ -265,6 +283,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
   recording: false,
   recordingPhases: [],
   currentPhaseStart: {},
+  currentPhaseStartLines: { trajectories: [], arrows: [] },
   recordingPaused: false,
   tokenPaths: {},
   recordingStartPositions: {},
@@ -273,6 +292,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
   playbackState: initialPlaybackState,
   sequences: [],
   currentSequence: null,
+  playbackOverlay: null,
     
     addToken: (team: Team, x: number, y: number, type: ObjectType = 'player', size: TokenSize = 'medium') => {
       const state = get();
@@ -859,17 +879,25 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       
       console.log('Starting phase recording with', Object.keys(startPositions).length, 'tokens');
       
+      // Capture initial lines for this phase
+      const initialLines = {
+        trajectories: [...state.trajectories],
+        arrows: [...state.arrows]
+      };
+      console.log('Captured initial lines:', initialLines);
+      
       set({ 
         recording: true,
         recordingPaused: false,
         recordingPhases: [],
         currentPhaseStart: startPositions,
+        currentPhaseStartLines: initialLines,
         recordingStartPositions: startPositions,
         tokenPaths: {} 
       });
     },
 
-    pausePhaseRecording: () => {
+    pausePhaseRecording: (overlayCanvas?: string) => {
       const state = get();
       if (!state.recording || state.recordingPaused) return;
       
@@ -884,7 +912,10 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         endPositions,
         trajectories: [...state.trajectories],
         arrows: [...state.arrows], 
-        duration: 3000 // 3 seconds as specified
+        duration: 3000, // 3 seconds as specified
+        initialTrajectories: state.currentPhaseStartLines.trajectories,
+        initialArrows: state.currentPhaseStartLines.arrows,
+        overlayCanvas: overlayCanvas
       };
       
       console.log('Pausing phase recording. Phase', state.recordingPhases.length + 1, 'created');
@@ -921,7 +952,9 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
           endPositions,
           trajectories: [...state.trajectories],
           arrows: [...state.arrows],
-          duration: 3000
+          duration: 3000,
+          initialTrajectories: state.currentPhaseStartLines.trajectories,
+          initialArrows: state.currentPhaseStartLines.arrows,
         };
         
         console.log('Final phase created:', finalPhase);
@@ -1014,6 +1047,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         const tokenUpdates: Record<string, Partial<Token>> = {};
         const temporaryArrows: any[] = [];
         const temporaryTrajectories: any[] = [];
+        let overlay: string | null = null;
         
         activeSteps.forEach(step => {
           if (step.tokenId && step.type === 'move' && step.from && step.to) {
@@ -1037,6 +1071,8 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
           } else if (step.type === 'show_trajectory' && step.trajectoryData) {
             // Show trajectory during this phase  
             temporaryTrajectories.push(step.trajectoryData);
+          } else if (step.type === 'show_canvas' && step.canvasData) {
+            overlay = step.canvasData;
           }
         });
 
@@ -1053,6 +1089,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
           // Show phase-specific arrows and trajectories during animation
           arrows: temporaryArrows.length > 0 ? temporaryArrows : state.arrows,
           trajectories: temporaryTrajectories.length > 0 ? temporaryTrajectories : state.trajectories,
+          playbackOverlay: overlay,
           playbackState: {
             ...state.playbackState,
             currentTime: elapsed,
@@ -1070,6 +1107,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
               isPlaying: false,
               currentTime: sequence.totalDuration,
             },
+            playbackOverlay: null,
           }));
         }
       };
@@ -1119,6 +1157,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         const tokenUpdates: Record<string, Partial<Token>> = {};
         const temporaryArrows: any[] = [];
         const temporaryTrajectories: any[] = [];
+        let overlay: string | null = null;
         
         activeSteps.forEach(step => {
           if (step.tokenId && step.type === 'move' && step.from && step.to) {
@@ -1139,6 +1178,8 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
             temporaryArrows.push(step.arrowData);
           } else if (step.type === 'show_trajectory' && step.trajectoryData) {
             temporaryTrajectories.push(step.trajectoryData);
+          } else if (step.type === 'show_canvas' && step.canvasData) {
+            overlay = step.canvasData;
           }
         });
 
@@ -1155,6 +1196,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
           // Show phase-specific arrows and trajectories during animation
           arrows: temporaryArrows.length > 0 ? temporaryArrows : state.arrows,
           trajectories: temporaryTrajectories.length > 0 ? temporaryTrajectories : state.trajectories,
+          playbackOverlay: overlay,
           playbackState: {
             ...state.playbackState,
             currentTime: elapsed,
@@ -1187,6 +1229,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
           isPaused: false,
           currentTime: 0,
         },
+        playbackOverlay: null,
       }));
     },
 
