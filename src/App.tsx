@@ -69,30 +69,23 @@ function App() {
     playbackOverlay,
   } = useBoardStore();
   
-  // Field dimensions
+  // Field dimensions (logical coordinates)
   const fieldWidth = 105;
   const fieldHeight = 68;
   const viewBoxWidth = showFullField ? fieldWidth : fieldWidth / 2;
   
-  // Calculate SVG dimensions to maintain aspect ratio
-  const aspectRatio = viewBoxWidth / fieldHeight;
-  
+  // Calculate SVG dimensions to use full available space
   // More accurate toolbar height calculation for PWA
   const toolbarHeight = 80; // Increased for PWA safe areas
   const safeAreaBottom = 34; // Typical safe area bottom on iPad
   const extraPadding = 20; // Extra padding for comfort
   
   const availableHeight = containerSize.height - toolbarHeight - safeAreaBottom - extraPadding;
-  const availableWidth = containerSize.width - 32; // Account for container padding
+  const availableWidth = containerSize.width; // Use full width
   
+  // Use full available dimensions for SVG container
   let svgWidth = availableWidth;
-  let svgHeight = availableWidth / aspectRatio;
-  
-  // Ensure the field fits in available height with extra margin
-  if (svgHeight > availableHeight) {
-    svgHeight = availableHeight;
-    svgWidth = availableHeight * aspectRatio;
-  }
+  let svgHeight = availableHeight;
   
   // Zoom and pan setup
   const { attachWheelListener, attachTouchListeners } = useZoomPan(svgRef);
@@ -799,24 +792,22 @@ function App() {
       
       {/* Main Content: Pitch */}
       <main 
-        className="flex items-center justify-center p-2"
+        className="flex items-stretch justify-stretch"
         style={{ 
           gridArea: 'content',
           minHeight: 0,
           height: '100%',
-          paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))'
+          padding: 0
         }}
       >
-        <div id="board" className={clsx("shadow-2xl rounded-lg relative bg-gray-900 p-1", {
+        <div id="board" className={clsx("shadow-2xl rounded-lg relative bg-gray-900", {
           'erase-mode': mode === 'erase'
         })} style={{ 
           touchAction: 'none',
-          aspectRatio: '105/68',
           width: '100%',
           height: '100%',
           maxWidth: '100%',
-          maxHeight: '100%',
-          objectFit: 'contain'
+          maxHeight: '100%'
         }}>
           <div id="pitch" className="pitch w-full h-full rounded-md relative">
             <svg
@@ -824,6 +815,7 @@ function App() {
               width={svgWidth}
               height={svgHeight}
               viewBox={`0 0 ${viewBoxWidth} ${fieldHeight}`}
+              preserveAspectRatio="none"
               className="w-full h-full select-none absolute top-0 left-0"
               style={{
                 touchAction: 'none',
